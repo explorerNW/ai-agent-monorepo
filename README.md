@@ -1,1 +1,68 @@
-# ollama-agent-monorepo
+# AI Agent Monorepo
+
+A monorepo for LangChain Graph with NestJS backend and React frontend, featuring automated Git commit workflow control.
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start backend server
+pnpm start:server
+
+# Start frontend UI
+pnpm start:ui
+
+# Build all packages
+pnpm build
+```
+
+## 📋 Git Commit Workflow
+
+This project uses **Husky** and **lint-staged** to enforce code quality and commit message standards.
+
+### Features
+
+- ✅ **Pre-commit hooks**: Automatically lint and format staged files
+- ✅ **Commit message validation**: Enforces [Conventional Commits](https://www.conventionalcommits.org/) specification
+- ✅ **Automated setup**: Hooks are installed automatically via `pnpm install`
+
+### Commit Message Format
+
+Use conventional commits format:
+
+```bash
+git commit -m "feat: add new feature"
+git commit -m "fix: resolve bug in module"
+git commit -m "docs: update documentation"
+```
+
+**Allowed types:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+For detailed information, see [GIT_WORKFLOW.md](./GIT_WORKFLOW.md).
+
+## 📦 Project Structure
+
+```
+ai-agent-monorepo/
+├── packages/
+│   ├── back-end/      # NestJS backend with LangChain integration
+│   └── front-end/     # React frontend with Vite
+├── .husky/            # Git hooks configuration
+├── .lintstagedrc.json # Lint-staged configuration
+└── commitlint.config.js # Commit message validation rules
+```
+
+## 🛠️ Development
+
+See individual package README files for more details:
+
+- [Backend Documentation](./packages/back-end/README.md)
+- [Frontend Documentation](./packages/front-end/README.md)
+
+## 📚 Learn More
+
+- [Git Workflow Guide](./GIT_WORKFLOW.md)
+- [Husky Documentation](https://typicode.github.io/husky/)
+- [Conventional Commits](https://www.conventionalcommits.org/)

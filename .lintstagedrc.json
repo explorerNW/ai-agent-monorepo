@@ -1,0 +1,10 @@
+{
+  "packages/back-end/src/**/*.{ts,js}": [
+    "cd packages/back-end && pnpm lint",
+    "cd packages/back-end && pnpm format"
+  ],
+  "packages/front-end/**/*.{ts,tsx,js,jsx}": [
+    "cd packages/front-end && pnpm typecheck"
+  ],
+  "*.{json,md}": ["prettier --write"]
+}
