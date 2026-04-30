@@ -1,0 +1,34 @@
+{
+  "name": "lang-chain-monorepo",
+  "version": "1.0.0",
+  "description": "Monorepo for LangChain Graph with NestJS backend and React frontend",
+  "scripts": {
+    "build": "pnpm -r build",
+    "start:server": "pnpm -F llm start:dev",
+    "start:ui": "pnpm -F my-app dev",
+    "prepare": "husky",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "commitlint": "commitlint --edit"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0"
+  }
+}
