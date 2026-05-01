@@ -14,7 +14,7 @@ export class ReviewService {
   private readonly difyClient: AxiosInstance;
   private readonly githubClient: AxiosInstance;
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-  private octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  private octokit: Octokit;
 
   constructor() {
     // 验证环境变量
@@ -27,6 +27,8 @@ export class ReviewService {
     if (!difyApiKey) {
       throw new Error('DIFY_API_KEY environment variable is not set');
     }
+
+    this.octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
     const githubToken = process.env.GITHUB_TOKEN;
     if (!githubToken) {
