@@ -6,12 +6,15 @@ import {
   DifyResponse,
   DifyFileUploadResponse,
 } from '../types/dto';
+import { Octokit } from '@octokit/rest';
 
 @Injectable()
 export class ReviewService {
   private readonly logger = new Logger(ReviewService.name);
   private readonly difyClient: AxiosInstance;
   private readonly githubClient: AxiosInstance;
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  private octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
   constructor() {
     // 验证环境变量
@@ -20,12 +23,22 @@ export class ReviewService {
       throw new Error('DIFY_BASE_URL environment variable is not set');
     }
 
+    const difyApiKey = process.env.DIFY_API_KEY;
+    if (!difyApiKey) {
+      throw new Error('DIFY_API_KEY environment variable is not set');
+    }
+
+    const githubToken = process.env.GITHUB_TOKEN;
+    if (!githubToken) {
+      throw new Error('GITHUB_TOKEN environment variable is not set');
+    }
+
     // 初始化 Dify 客户端
     this.difyClient = axios.create({
       method: 'post',
       baseURL: difyBaseUrl,
       headers: {
-        Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
+        Authorization: `Bearer ${difyApiKey}`,
         'Content-Type': 'application/json',
       },
     });
@@ -35,7 +48,7 @@ export class ReviewService {
       baseURL: 'https://api.github.com',
       headers: {
         // Fine-grained PAT 必须使用 'token' 前缀，不能使用 'Bearer'
-        Authorization: `token ${process.env.GITHUB_TOKEN}`,
+        Authorization: `token ${githubToken}`,
         Accept: 'application/vnd.github.v3+json',
       },
     });
@@ -69,6 +82,22 @@ export class ReviewService {
     }
     const headSha = payload.pull_request.head.sha;
 
+    // 这一步会让 PR 页面显示一个黄色的"等待中"图标
+    const [owner, repo] = repoName.split('/');
+
+    const checkRun = await this.octokit.rest.checks.create({
+      owner,
+      repo,
+      name: 'AI Code Review', // 这个名字要和分支保护规则里的一样
+      head_sha: headSha,
+      status: 'in_progress',
+      started_at: new Date().toISOString(),
+      output: {
+        title: 'AI 正在审查代码...',
+        summary: '请稍等，正在呼叫 Dify 进行分析。',
+      },
+    });
+
     this.logger.log(`开始审查 PR #${prNumber} in ${repoName}`);
 
     // 3. 创建 GitHub Status（显示为 pending 状态）
@@ -96,7 +125,20 @@ export class ReviewService {
       const reviewComment = await this.callDifyReview(diffContent);
 
       // 6. 将结果发布到 GitHub PR
-      await this.postGithubComment(repoName, prNumber, reviewComment);
+      // await this.postGithubComment(repoName, prNumber, reviewComment);
+      await this.octokit.rest.checks.update({
+        owner,
+        repo,
+        check_run_id: checkRun.data.id,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        conclusion: 'success', // success / failure / neutral
+        output: {
+          title: '审查摘要',
+          summary: '', // 审查摘要
+          text: reviewComment, // 详细报告
+        },
+      });
 
       // 7. 更新 Status（根据审查结果设置状态）
       const state = this.determineStatus(reviewComment);
