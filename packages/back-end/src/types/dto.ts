@@ -1,6 +1,12 @@
 export interface GitHubWebhookPayload {
   repository: { full_name: string };
-  pull_request?: { number: number; diff_url: string };
+  pull_request?: {
+    number: number;
+    diff_url: string;
+    head: {
+      sha: string;
+    };
+  };
   action: string; // PR 的动作：opened, closed, synchronize, reopened 等
   ref: string;
   commits?: any[];
