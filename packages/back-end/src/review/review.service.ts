@@ -62,25 +62,112 @@ export class ReviewService {
     const repoName = payload.repository.full_name;
     const diffUrl = payload.pull_request.diff_url;
 
-    this.logger.log(`开始审查 PR #${prNumber} in ${repoName}`);
-
-    // 2. 获取代码变更 (Diff)
-    // 注意：这里直接下载 diff 文本，生产环境可能需要过滤大文件
-    const diffResponse: { data: string } = await axios.get(diffUrl, {
-      headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
-    });
-    const diffContent = diffResponse.data;
-
-    if (!diffContent.trim()) {
-      this.logger.log('Diff 为空，无需审查');
+    // 安全获取 head sha
+    if (!payload.pull_request.head?.sha) {
+      this.logger.error('无法获取 PR head SHA');
       return;
     }
+    const headSha = payload.pull_request.head.sha;
 
-    // 3. 调用 Dify 进行审查
-    const reviewComment = await this.callDifyReview(diffContent);
+    this.logger.log(`开始审查 PR #${prNumber} in ${repoName}`);
 
-    // 4. 将结果发布到 GitHub PR
-    await this.postGithubComment(repoName, prNumber, reviewComment);
+    // 3. 创建 GitHub Status（显示为 pending 状态）
+    await this.createStatus(repoName, headSha, 'pending', 'AI 代码审查中...');
+
+    try {
+      // 4. 获取代码变更 (Diff)
+      const diffResponse: { data: string } = await axios.get(diffUrl, {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
+      });
+      const diffContent = diffResponse.data;
+
+      if (!diffContent.trim()) {
+        this.logger.log('Diff 为空，无需审查');
+        await this.createStatus(
+          repoName,
+          headSha,
+          'success',
+          '✅ 没有代码变更需要审查',
+        );
+        return;
+      }
+
+      // 5. 调用 Dify 进行审查
+      const reviewComment = await this.callDifyReview(diffContent);
+
+      // 6. 将结果发布到 GitHub PR
+      await this.postGithubComment(repoName, prNumber, reviewComment);
+
+      // 7. 更新 Status（根据审查结果设置状态）
+      const state = this.determineStatus(reviewComment);
+      await this.createStatus(repoName, headSha, state, reviewComment);
+
+      this.logger.log(`✅ PR #${prNumber} 审查完成`);
+    } catch (error) {
+      // 如果审查过程中出错，标记 Status 为失败
+      const errorMessage = this.extractErrorMessage(error);
+      this.logger.error(`审查过程出错: ${errorMessage}`);
+      await this.createStatus(
+        repoName,
+        headSha,
+        'failure',
+        `❌ 审查过程出错: ${errorMessage}`,
+      );
+    }
+  }
+
+  /**
+   * 创建/更新 GitHub Status
+   */
+  private async createStatus(
+    repo: string,
+    sha: string,
+    state: 'pending' | 'success' | 'failure' | 'error',
+    description: string,
+  ) {
+    const [owner, repoName] = repo.split('/');
+
+    try {
+      await this.githubClient.post(
+        `/repos/${owner}/${repoName}/statuses/${sha}`,
+        {
+          state: state,
+          target_url: process.env.WEBHOOK_URL || '', // 可选：指向详细报告的链接
+          description: description.substring(0, 140), // GitHub API 限制
+          context: 'AI Code Review', // 状态检查的名称
+        },
+      );
+      this.logger.log(`✅ 创建 Status 成功: ${state} - ${description}`);
+    } catch (error) {
+      const errorMessage = this.extractErrorMessage(error);
+      this.logger.error(`创建 Status 失败: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 根据审查结果判断状态
+   */
+  private determineStatus(
+    reviewComment: string,
+  ): 'success' | 'failure' | 'error' {
+    // 如果包含错误或警告关键词，标记为失败
+    const failureKeywords = ['错误', '严重问题', 'critical', 'error', 'bug'];
+    const hasIssues = failureKeywords.some((keyword) =>
+      reviewComment.toLowerCase().includes(keyword.toLowerCase()),
+    );
+
+    if (hasIssues) {
+      return 'failure';
+    }
+
+    // 如果是服务不可用的提示，标记为错误
+    if (reviewComment.includes('暂时不可用')) {
+      return 'error';
+    }
+
+    // 默认为成功
+    return 'success';
   }
 
   /**
