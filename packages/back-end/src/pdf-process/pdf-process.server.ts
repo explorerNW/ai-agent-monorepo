@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
+import * as path from 'path';
 import { fromPath } from 'pdf2pic';
 import Tesseract from 'tesseract.js';
 
@@ -44,46 +45,74 @@ export class PDFProcessService {
   async ocrPDF(pdfPath: string): Promise<string> {
     let fullText = '';
 
+    // 创建临时目录（使用绝对路径）
+    const tempDir = path.join(process.cwd(), 'temp_ocr');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
     // 配置 pdf2pic：将 PDF 每一页转为图片
     // density: 300 (DPI越高识别越准，但速度越慢)
     const storeAsImage = fromPath(pdfPath, {
       density: 300,
-      savePath: './temp_ocr', // 临时存放图片的目录
+      savePath: tempDir,
       format: 'png',
       width: 1200,
     });
 
     try {
-      // 获取页数（这里简化处理，实际可能需要先解析 PDF 获取总页数）
-      // 为了演示，我们假设只处理第一页，或者你可以循环处理所有页
-      // 注意：pdf2pic 的 convert 方法返回的是 Promise<ConvertResponse[]>
-
+      // 获取页数并转换所有页
       const pages = await storeAsImage.bulk(-1); // -1 表示转换所有页
 
       for (const page of pages) {
-        if (!page.path) continue;
+        if (!page.path || !fs.existsSync(page.path)) {
+          console.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
+          continue;
+        }
 
-        // 使用 Tesseract 识别图片文字
-        // lang: 'eng+chi_sim' 支持英文和简体中文
-        const worker = await Tesseract.createWorker('eng+chi_sim');
+        try {
+          // 使用 Tesseract 识别图片文字
+          // lang: 'eng+chi_sim' 支持英文和简体中文
+          const worker = await Tesseract.createWorker('eng+chi_sim');
 
-        const ret = await worker.recognize(page.path);
-        fullText += `\n--- 第 ${pages.indexOf(page) + 1} 页 ---\n`;
-        fullText += ret.data.text;
+          const ret = await worker.recognize(page.path);
+          fullText += `\n--- 第 ${pages.indexOf(page) + 1} 页 ---\n`;
+          fullText += ret.data.text;
 
-        await worker.terminate();
-
-        // 删除临时图片文件
-        fs.unlinkSync(page.path);
+          await worker.terminate();
+        } catch (ocrError) {
+          console.error(
+            `❌ 第 ${pages.indexOf(page) + 1} 页 OCR 识别失败:`,
+            ocrError,
+          );
+        } finally {
+          // 删除临时图片文件
+          try {
+            if (fs.existsSync(page.path)) {
+              fs.unlinkSync(page.path);
+            }
+          } catch (unlinkError) {
+            console.warn(`⚠️ 无法删除临时文件 ${page.path}:`, unlinkError);
+          }
+        }
       }
-
-      // 清理临时目录（如果为空）
-      // fs.rmdirSync('./temp_ocr');
 
       return fullText.trim();
     } catch (error) {
       console.error('❌ OCR 识别失败:', error);
       throw new Error('OCR 识别过程出错');
+    } finally {
+      // 清理临时目录
+      try {
+        if (fs.existsSync(tempDir)) {
+          const files = fs.readdirSync(tempDir);
+          if (files.length === 0) {
+            fs.rmdirSync(tempDir);
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ 清理临时目录失败:', cleanupError);
+      }
     }
   }
 }
