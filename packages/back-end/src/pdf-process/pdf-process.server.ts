@@ -4,8 +4,9 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { fromPath } from 'pdf2pic';
-import Tesseract from 'tesseract.js';
+import Tesseract, { Scheduler, Worker } from 'tesseract.js';
 
 const execAsync = promisify(exec);
 
@@ -37,14 +38,13 @@ export class PDFProcessService {
   }
 
   /**
-   * 2. OCR 识别
-   * 将 PDF 转为图片并进行文字识别
+   * 2. OCR 识别（Worker池优化版本）
+   * 将 PDF 转为图片并进行文字识别，利用多核并行处理和Worker池复用
    * @param pdfPath PDF 文件路径
+   * @param concurrency 并发处理的页面数（默认使用CPU核心数的75%）
    * @returns 识别出的文本内容
    */
-  async ocrPDF(pdfPath: string): Promise<string> {
-    let fullText = '';
-
+  async ocrPDF(pdfPath: string, concurrency?: number): Promise<string> {
     // 创建临时目录（使用绝对路径）
     const tempDir = path.join(process.cwd(), 'temp_ocr');
     if (!fs.existsSync(tempDir)) {
@@ -60,32 +60,56 @@ export class PDFProcessService {
       width: 1200,
     });
 
+    let scheduler: Scheduler | null = null;
+    const workers: Worker[] = [];
+
     try {
       // 获取页数并转换所有页
       const pages = await storeAsImage.bulk(-1); // -1 表示转换所有页
 
-      for (const page of pages) {
+      if (pages.length === 0) {
+        console.warn('⚠️ PDF 没有可识别的页面');
+        return '';
+      }
+
+      console.log(`📄 开始处理 ${pages.length} 页 PDF...`);
+
+      // 计算最佳并发数：使用CPU核心数的75%，但不超过页面数
+      const cpuCount = os.cpus().length;
+      const optimalConcurrency =
+        concurrency ||
+        Math.max(1, Math.min(Math.floor(cpuCount * 0.75), pages.length));
+      console.log(
+        `🔧 使用 ${optimalConcurrency} 个并发任务 (CPU: ${cpuCount} 核)`,
+      );
+
+      // 创建 Worker 池
+      console.log('🔨 创建 Tesseract Worker 池...');
+      scheduler = Tesseract.createScheduler();
+
+      // 创建固定数量的 Worker
+      for (let i = 0; i < optimalConcurrency; i++) {
+        const worker = await Tesseract.createWorker('eng+chi_sim');
+        workers.push(worker);
+        scheduler.addWorker(worker);
+      }
+
+      console.log(`✅ Worker 池创建完成 (${workers.length} 个 Worker)`);
+
+      // 使用 Scheduler 并行处理所有页面
+      // 为每个页面分配任务到 Scheduler
+      const promises = pages.map(async (page, index) => {
+        const pageNumber = index + 1;
+
         if (!page.path || !fs.existsSync(page.path)) {
           console.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
-          continue;
+          return { pageNumber, text: '' };
         }
 
         try {
-          // 使用 Tesseract 识别图片文字
-          // lang: 'eng+chi_sim' 支持英文和简体中文
-          const worker = await Tesseract.createWorker('eng+chi_sim');
+          // 通过 Scheduler 调度任务（自动分配到空闲 Worker）
+          const ret = await scheduler!.addJob('recognize', page.path);
 
-          const ret = await worker.recognize(page.path);
-          fullText += `\n--- 第 ${pages.indexOf(page) + 1} 页 ---\n`;
-          fullText += ret.data.text;
-
-          await worker.terminate();
-        } catch (ocrError) {
-          console.error(
-            `❌ 第 ${pages.indexOf(page) + 1} 页 OCR 识别失败:`,
-            ocrError,
-          );
-        } finally {
           // 删除临时图片文件
           try {
             if (fs.existsSync(page.path)) {
@@ -94,21 +118,66 @@ export class PDFProcessService {
           } catch (unlinkError) {
             console.warn(`⚠️ 无法删除临时文件 ${page.path}:`, unlinkError);
           }
-        }
-      }
 
-      return fullText.trim();
+          const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
+          return { pageNumber, text };
+        } catch (ocrError) {
+          console.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
+          return { pageNumber, text: '' };
+        }
+      });
+
+      // 等待所有任务完成
+      const allResults = await Promise.all(promises);
+
+      // 按页码排序并合并结果
+      allResults.sort((a, b) => a.pageNumber - b.pageNumber);
+      const fullText = allResults
+        .map((r) => r.text)
+        .join('')
+        .trim();
+
+      console.log(`✅ OCR 处理完成，共 ${pages.length} 页`);
+      return fullText;
     } catch (error) {
       console.error('❌ OCR 识别失败:', error);
       throw new Error('OCR 识别过程出错');
     } finally {
+      // 清理 Worker 池
+      try {
+        if (scheduler) {
+          await scheduler.terminate();
+          console.log('🧹 Scheduler 已终止');
+        }
+        // 确保所有 Worker 都被正确终止
+        if (workers.length > 0) {
+          await Promise.all(
+            workers.map(async (worker) => {
+              try {
+                await worker.terminate();
+              } catch {
+                // Worker 可能已经被 scheduler.terminate() 终止
+              }
+            }),
+          );
+          console.log(`🧹 ${workers.length} 个 Worker 已终止`);
+        }
+      } catch (cleanupError) {
+        console.warn('⚠️ 清理 Worker 池失败:', cleanupError);
+      }
+
       // 清理临时目录
       try {
         if (fs.existsSync(tempDir)) {
           const files = fs.readdirSync(tempDir);
-          if (files.length === 0) {
-            fs.rmdirSync(tempDir);
+          for (const file of files) {
+            const filePath = path.join(tempDir, file);
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
           }
+          fs.rmdirSync(tempDir);
+          console.log('🧹 临时目录已清理');
         }
       } catch (cleanupError) {
         console.warn('⚠️ 清理临时目录失败:', cleanupError);
