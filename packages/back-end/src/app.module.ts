@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AiModule } from './ai/ai.module';
 import { ReviewService } from './review/review.service';
 import { ReviewController } from './review/review.controller';
+import { PDFProcessModule } from './pdf-process/pdf-process.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { ReviewController } from './review/review.controller';
       envFilePath: '.env', // 指定 .env 文件路径
     }),
     AiModule,
+    PDFProcessModule,
   ],
   controllers: [AppController, ReviewController],
   providers: [AppService, ReviewService],

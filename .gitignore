@@ -38,5 +38,9 @@ tmp/
 temp/
 *.tmp
 
+# Uploads directory (PDF processing)
+uploads/
+temp_ocr/
+
 # Husky internal files (optional, can be committed)
 # .husky/_/
