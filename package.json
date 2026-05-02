@@ -9,14 +9,14 @@
     "prepare": "husky",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
-    "commitlint": "commitlint --edit"
+    "commitlint": "commitlint --edit",
+    "lint-staged": "lint-staged"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md}": [
+    "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
   },
@@ -24,11 +24,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@10.33.2",
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.4.2"
   }
 }
