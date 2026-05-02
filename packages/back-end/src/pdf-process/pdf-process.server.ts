@@ -95,17 +95,17 @@ export class PDFProcessService {
           'eng+chi_sim',
           undefined, // oem - use default
           {
-            logger: (m: Tesseract.LoggerMessage) => {
-              if (m.status === 'loading tesseract core') {
-                console.log(`[Worker ${i}] 加载 Tesseract 核心...`);
-              } else if (m.status === 'initializing api') {
-                console.log(`[Worker ${i}] 初始化 API...`);
-              } else if (m.status === 'recognizing text') {
-                console.log(
-                  `[Worker ${i}] 识别进度: ${(m.progress * 100).toFixed(1)}%`,
-                );
-              }
-            },
+            // logger: (m: Tesseract.LoggerMessage) => {
+            //   if (m.status === 'loading tesseract core') {
+            //     console.log(`[Worker ${i}] 加载 Tesseract 核心...`);
+            //   } else if (m.status === 'initializing api') {
+            //     console.log(`[Worker ${i}] 初始化 API...`);
+            //   } else if (m.status === 'recognizing text') {
+            //     console.log(
+            //       `[Worker ${i}] 识别进度: ${(m.progress * 100).toFixed(1)}%`,
+            //     );
+            //   }
+            // },
           },
         );
 
