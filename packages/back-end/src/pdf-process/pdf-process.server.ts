@@ -1,4 +1,3 @@
-// src/pdf-process/pdf-process.service.ts
 import { Injectable } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -53,11 +52,14 @@ export class PDFProcessService {
 
     // 配置 pdf2pic：将 PDF 每一页转为图片
     // density: 300 (DPI越高识别越准，但速度越慢)
+    // width/height: 保持宽高比的同时确保足够分辨率
     const storeAsImage = fromPath(pdfPath, {
       density: 300,
       savePath: tempDir,
       format: 'png',
-      width: 1200,
+      width: 1654, // A4纸在300dpi下的宽度（约）
+      height: 2339, // A4纸在300dpi下的高度（约）
+      preserveAspectRatio: true,
     });
 
     let scheduler: Scheduler | null = null;
@@ -87,9 +89,26 @@ export class PDFProcessService {
       console.log('🔨 创建 Tesseract Worker 池...');
       scheduler = Tesseract.createScheduler();
 
-      // 创建固定数量的 Worker
+      // 创建固定数量的 Worker，添加详细配置和日志
       for (let i = 0; i < optimalConcurrency; i++) {
-        const worker = await Tesseract.createWorker('eng+chi_sim');
+        const worker = await Tesseract.createWorker(
+          'eng+chi_sim',
+          undefined, // oem - use default
+          {
+            logger: (m: Tesseract.LoggerMessage) => {
+              if (m.status === 'loading tesseract core') {
+                console.log(`[Worker ${i}] 加载 Tesseract 核心...`);
+              } else if (m.status === 'initializing api') {
+                console.log(`[Worker ${i}] 初始化 API...`);
+              } else if (m.status === 'recognizing text') {
+                console.log(
+                  `[Worker ${i}] 识别进度: ${(m.progress * 100).toFixed(1)}%`,
+                );
+              }
+            },
+          },
+        );
+
         workers.push(worker);
         scheduler.addWorker(worker);
       }
@@ -120,6 +139,16 @@ export class PDFProcessService {
           }
 
           const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
+
+          // 验证识别结果
+          if (!ret.data.text || ret.data.text.trim().length === 0) {
+            console.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
+          } else {
+            console.log(
+              `✓ 第 ${pageNumber} 页识别完成 (${ret.data.text.length} 字符)`,
+            );
+          }
+
           return { pageNumber, text };
         } catch (ocrError) {
           console.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
