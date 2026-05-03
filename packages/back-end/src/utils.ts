@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
+import FormData from 'form-data';
 
 /**
  * 日志记录器
@@ -26,9 +27,11 @@ export async function uploadTextToDify(filePath: string): Promise<string> {
     /* eslint-disable @typescript-eslint/no-unsafe-call */
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     const formData = new FormData();
-    // Convert Buffer to Blob for FormData compatibility
-    const blob = new Blob([fileBuffer], { type: 'text/plain' });
-    formData.append('file', blob, fileName);
+    // Append buffer directly to form-data
+    formData.append('file', fileBuffer, {
+      filename: fileName,
+      contentType: 'text/plain',
+    });
     formData.append('user', 'pdf-processor');
     formData.append('type', 'TXT'); // 必须指定文件类型
 
@@ -38,7 +41,7 @@ export async function uploadTextToDify(filePath: string): Promise<string> {
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          ...formData.getHeaders(),
           Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
         },
       },

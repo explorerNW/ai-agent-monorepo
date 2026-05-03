@@ -3,15 +3,18 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { fromPath } from 'pdf2pic';
 import Tesseract, { Scheduler, Worker } from 'tesseract.js';
+import { ParallelTaskService } from '../parallel-task/parallel-task.service';
 
 const execAsync = promisify(exec);
 
 @Injectable()
 export class PDFProcessService {
   private readonly logger = new Logger(PDFProcessService.name);
+
+  constructor(private readonly parallelTaskService: ParallelTaskService) {}
+
   /**
    * 1. 压缩 PDF
    * 使用 Ghostscript 进行有损压缩（推荐用于大幅减小体积）
@@ -77,37 +80,24 @@ export class PDFProcessService {
 
       this.logger.log(`📄 开始处理 ${pages.length} 页 PDF...`);
 
-      // 计算最佳并发数：使用CPU核心数的75%，但不超过页面数
-      const cpuCount = os.cpus().length;
+      // 计算最佳并发数
       const optimalConcurrency =
         concurrency ||
-        Math.max(1, Math.min(Math.floor(cpuCount * 0.75), pages.length));
+        this.parallelTaskService.calculateOptimalConcurrency(pages.length);
       this.logger.log(
-        `🔧 使用 ${optimalConcurrency} 个并发任务 (CPU: ${cpuCount} 核)`,
+        `🔧 使用 ${optimalConcurrency} 个并发任务 (CPU: ${this.parallelTaskService.getCPUCores()} 核)`,
       );
 
       // 创建 Worker 池
       this.logger.log('🔨 创建 Tesseract Worker 池...');
       scheduler = Tesseract.createScheduler();
 
-      // 创建固定数量的 Worker，添加详细配置和日志
+      // 创建固定数量的 Worker
       for (let i = 0; i < optimalConcurrency; i++) {
         const worker = await Tesseract.createWorker(
           'eng+chi_sim',
-          undefined, // oem - use default
-          {
-            // logger: (m: Tesseract.LoggerMessage) => {
-            //   if (m.status === 'loading tesseract core') {
-            //     this.logger.log(`[Worker ${i}] 加载 Tesseract 核心...`);
-            //   } else if (m.status === 'initializing api') {
-            //     this.logger.log(`[Worker ${i}] 初始化 API...`);
-            //   } else if (m.status === 'recognizing text') {
-            //     this.logger.log(
-            //       `[Worker ${i}] 识别进度: ${(m.progress * 100).toFixed(1)}%`,
-            //     );
-            //   }
-            // },
-          },
+          undefined,
+          {},
         );
 
         workers.push(worker);
@@ -116,59 +106,80 @@ export class PDFProcessService {
 
       this.logger.log(`✅ Worker 池创建完成 (${workers.length} 个 Worker)`);
 
-      // 使用 Scheduler 并行处理所有页面
-      // 为每个页面分配任务到 Scheduler
-      const promises = pages.map(async (page, index) => {
+      // 使用 ParallelTaskService 并行处理所有页面
+      const tasks = pages.map((page, index) => {
         const pageNumber = index + 1;
 
-        if (!page.path || !fs.existsSync(page.path)) {
-          this.logger.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
-          return { pageNumber, text: '' };
-        }
+        return async () => {
+          if (!page.path || !fs.existsSync(page.path)) {
+            this.logger.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
+            return { pageNumber, text: '' };
+          }
 
-        try {
-          // 通过 Scheduler 调度任务（自动分配到空闲 Worker）
-          const ret = await scheduler!.addJob('recognize', page.path);
-
-          // 删除临时图片文件
           try {
-            if (fs.existsSync(page.path)) {
-              fs.unlinkSync(page.path);
+            // 通过 Scheduler 调度任务
+            const ret = await scheduler!.addJob('recognize', page.path);
+
+            // 删除临时图片文件
+            try {
+              if (fs.existsSync(page.path)) {
+                fs.unlinkSync(page.path);
+              }
+            } catch (unlinkError) {
+              this.logger.warn(
+                `⚠️ 无法删除临时文件 ${page.path}:`,
+                unlinkError,
+              );
             }
-          } catch (unlinkError) {
-            this.logger.warn(`⚠️ 无法删除临时文件 ${page.path}:`, unlinkError);
+
+            const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
+
+            if (!ret.data.text || ret.data.text.trim().length === 0) {
+              this.logger.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
+            }
+
+            return { pageNumber, text };
+          } catch (ocrError) {
+            this.logger.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
+            return { pageNumber, text: '' };
           }
-
-          const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
-
-          // 验证识别结果
-          if (!ret.data.text || ret.data.text.trim().length === 0) {
-            this.logger.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
-          }
-          //    else {
-          //     this.logger.log(
-          //       `✓ 第 ${pageNumber} 页识别完成 (${ret.data.text.length} 字符)`,
-          //     );
-          //   }
-
-          return { pageNumber, text };
-        } catch (ocrError) {
-          this.logger.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
-          return { pageNumber, text: '' };
-        }
+        };
       });
 
-      // 等待所有任务完成
-      const allResults = await Promise.all(promises);
+      // 使用 ParallelTaskService 执行并行任务
+      const executionResult =
+        await this.parallelTaskService.executeWithProgress<{
+          pageNumber: number;
+          text: string;
+        }>(
+          tasks,
+          (completed, total) => {
+            this.logger.log(`📊 OCR 进度: ${completed}/${total} 页`);
+          },
+          {
+            concurrency: optimalConcurrency,
+            continueOnError: true,
+          },
+        );
 
       // 按页码排序并合并结果
-      allResults.sort((a, b) => a.pageNumber - b.pageNumber);
+      const allResults = executionResult.results
+        .filter((r) => r.result)
+        .map((r) => r.result!)
+        .sort((a, b) => a.pageNumber - b.pageNumber);
+
       const fullText = allResults
         .map((r) => r.text)
         .join('')
         .trim();
 
-      this.logger.log(`✅ OCR 处理完成，共 ${pages.length} 页`);
+      this.logger.log(
+        `✅ OCR 处理完成: 总计 ${executionResult.summary.total} 页, ` +
+          `成功 ${executionResult.summary.succeeded}, ` +
+          `失败 ${executionResult.summary.failed}, ` +
+          `耗时 ${executionResult.totalDuration}ms`,
+      );
+
       return fullText;
     } catch (error) {
       this.logger.error('❌ OCR 识别失败:', error);
