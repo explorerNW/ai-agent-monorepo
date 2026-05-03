@@ -209,19 +209,40 @@ export class PDFProcessController {
         `准备将文件添加到Dify知识库: ${fileName}, 数据集ID: ${process.env.DIFY_DATASET_ID}`,
       );
 
+      // 创建数据处理配置（自定义模式）
+      const dataConfig = {
+        indexing_technique: 'high_quality', // 高质量索引
+        process_rule: {
+          mode: 'custom', // 自定义处理规则
+          rules: {
+            pre_processing_rules: [
+              { id: 'remove_extra_spaces', enabled: true }, // 移除多余空格
+              { id: 'remove_urls_emails', enabled: true }, // 移除URL和邮箱
+            ],
+            segmentation: {
+              separator: '###', // 分段符
+              max_tokens: 500, // 每段最大token数
+            },
+          },
+        },
+      };
+
       // 创建FormData用于文件上传
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       /* eslint-disable @typescript-eslint/no-unsafe-call */
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
       const formData = new FormData();
-      formData.append('data', fileBuffer, {
+
+      // 添加数据处理配置（作为JSON字符串）
+      formData.append('data', JSON.stringify(dataConfig), {
+        contentType: 'application/json',
+      });
+
+      // 添加文件（使用'file'字段名）
+      formData.append('file', fileBuffer, {
         filename: fileName,
         contentType: 'text/plain',
       });
-
-      // 添加数据处理配置
-      formData.append('indexing_technique', 'high_quality'); // 高质量索引
-      formData.append('process_rule.mode', 'automatic'); // 自动处理规则
 
       // 可选：添加元数据
       const metadata = {
@@ -231,9 +252,9 @@ export class PDFProcessController {
       };
       formData.append('metadata', JSON.stringify(metadata));
 
-      // 调用Dify数据集文档创建API
+      // 调用Dify数据集文档创建API（注意URL中使用连字符）
       const response = await axios.post(
-        `${process.env.DIFY_BASE_URL}/datasets/${process.env.DIFY_DATASET_ID}/document/create_by_file`,
+        `${process.env.DIFY_BASE_URL}/datasets/${process.env.DIFY_DATASET_ID}/document/create-by-file`,
         formData,
         {
           headers: {
@@ -257,7 +278,7 @@ export class PDFProcessController {
 
       return documentId;
     } catch (error) {
-      console.error('❌ 添加到知识库失败:', error);
+      this.logger.error('❌ 添加到知识库失败:', error);
       throw new Error(`Failed to add file to Dify dataset: ${error}`);
     }
   }
