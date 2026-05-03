@@ -55,14 +55,14 @@ export class PDFProcessService {
     }
 
     // 配置 pdf2pic：将 PDF 每一页转为图片
-    // density: 300 (DPI越高识别越准，但速度越慢)
+    // density: 200 (DPI越高识别越准，但速度越慢；200是性能和质量的平衡点)
     // width/height: 保持宽高比的同时确保足够分辨率
     const storeAsImage = fromPath(pdfPath, {
-      density: 300,
+      density: 200,
       savePath: tempDir,
       format: 'png',
-      width: 1654, // A4纸在300dpi下的宽度（约）
-      height: 2339, // A4纸在300dpi下的高度（约）
+      width: 1103, // A4纸在200dpi下的宽度（约）
+      height: 1559, // A4纸在200dpi下的高度（约）
       preserveAspectRatio: true,
     });
 
@@ -154,7 +154,12 @@ export class PDFProcessService {
         }>(
           tasks,
           (completed, total) => {
-            this.logger.log(`📊 OCR 进度: ${completed}/${total} 页`);
+            if (completed === 1) {
+              this.logger.log(`🚀 OCR 处理开始...`);
+            }
+            if (completed === total) {
+              this.logger.log('✅ OCR 处理完成');
+            }
           },
           {
             concurrency: optimalConcurrency,
