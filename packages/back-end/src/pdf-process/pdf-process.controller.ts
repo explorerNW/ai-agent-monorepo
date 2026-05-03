@@ -86,16 +86,11 @@ export class PDFProcessController {
       const textFilePath = compressedPath.replace('.pdf', '.txt');
       fs.writeFileSync(textFilePath, text);
 
-      // 4. 上传到Dify并添加到知识库（如果配置了DIFY_API_KEY和DIFY_DATASET_ID）
-      let difyFileId: string | null = null;
+      // 4.1 如果配置了Dify API密钥，将文件上传到Dify
       let datasetDocumentId: string | null = null;
 
       if (process.env.DIFY_API_KEY && process.env.DIFY_BASE_URL) {
         try {
-          // 4.1 先上传文件
-          difyFileId = await this.uploadTextToDify(textFilePath);
-          this.logger.log(`✅ 文件已上传到Dify，file_id: ${difyFileId}`);
-
           // 4.2 如果配置了数据集ID，将文件添加到知识库
           if (process.env.DIFY_DATASET_ID) {
             datasetDocumentId = await this.addFileToDataset(
@@ -139,10 +134,7 @@ export class PDFProcessController {
         message: '处理成功',
         data: {
           textLength: text.length,
-          preview: text.substring(0, 200) + '...', // 预览前200字
-          downloadUrl: `/uploads/${path.basename(compressedPath)}`,
-          textFileUrl: `/uploads/${path.basename(textFilePath)}`,
-          difyFileId: difyFileId, // Dify文件ID，可用于后续调用
+          preview: text.substring(1000, 1200) + '...', // 预览200字
           datasetDocumentId: datasetDocumentId, // Dify知识库文档ID
         },
       };
@@ -187,58 +179,6 @@ export class PDFProcessController {
       return { success: false, error: e.message };
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-    }
-  }
-
-  /**
-   * 上传文本文件到Dify
-   */
-  private async uploadTextToDify(filePath: string): Promise<string> {
-    try {
-      // 读取文件内容为Buffer
-      const fileBuffer = fs.readFileSync(filePath);
-      const fileName = path.basename(filePath);
-
-      this.logger.log(
-        `准备上传文件到Dify: ${fileName}, 大小: ${fileBuffer.length} bytes`,
-      );
-
-      // 创建FormData用于文件上传
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      /* eslint-disable @typescript-eslint/no-unsafe-call */
-      /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-      const formData = new FormData();
-      formData.append('file', fileBuffer, {
-        filename: fileName,
-        contentType: 'text/plain',
-      });
-      formData.append('user', 'pdf-processor');
-      formData.append('type', 'TXT'); // 必须指定文件类型
-
-      // 上传文件到Dify
-      const response = await axios.post(
-        `${process.env.DIFY_BASE_URL}/files/upload`,
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-            Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
-          },
-        },
-      );
-      /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-      /* eslint-enable @typescript-eslint/no-unsafe-call */
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
-
-      const uploadData = response.data as { id: string; name: string };
-      this.logger.log(
-        `✅ 文件上传成功! file_id: ${uploadData.id}, 文件名: ${uploadData.name}`,
-      );
-
-      return uploadData.id;
-    } catch (error) {
-      this.logger.error('❌ 文件上传失败:', error);
-      throw new Error(`Failed to upload file to Dify: ${error}`);
     }
   }
 
