@@ -143,11 +143,12 @@ export class PDFProcessService {
           // 验证识别结果
           if (!ret.data.text || ret.data.text.trim().length === 0) {
             console.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
-          } else {
-            console.log(
-              `✓ 第 ${pageNumber} 页识别完成 (${ret.data.text.length} 字符)`,
-            );
           }
+          //    else {
+          //     console.log(
+          //       `✓ 第 ${pageNumber} 页识别完成 (${ret.data.text.length} 字符)`,
+          //     );
+          //   }
 
           return { pageNumber, text };
         } catch (ocrError) {
