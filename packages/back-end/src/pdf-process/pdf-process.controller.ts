@@ -94,7 +94,7 @@ export class PDFProcessController {
         try {
           // 4.1 先上传文件
           difyFileId = await this.uploadTextToDify(textFilePath);
-          console.log(`✅ 文件已上传到Dify，file_id: ${difyFileId}`);
+          this.logger.log(`✅ 文件已上传到Dify，file_id: ${difyFileId}`);
 
           // 4.2 如果配置了数据集ID，将文件添加到知识库
           if (process.env.DIFY_DATASET_ID) {
@@ -102,20 +102,37 @@ export class PDFProcessController {
               textFilePath,
               file.originalname.replace('.pdf', '.txt'),
             );
-            console.log(
+            this.logger.log(
               `✅ 文件已添加到Dify知识库，document_id: ${datasetDocumentId}`,
             );
           }
         } catch (uploadError) {
-          console.error('⚠️ Dify操作失败:', uploadError);
+          this.logger.error('⚠️ Dify操作失败:', uploadError);
           // 不阻断流程，继续返回结果
         }
       }
 
-      // 5. 清理临时文件（可选）
-      fs.unlinkSync(originalPath);
-      fs.unlinkSync(compressedPath);
-      // 保留txt文件供Dify使用，或者根据需要删除
+      // 5. 清理临时文件
+      try {
+        fs.unlinkSync(originalPath);
+        this.logger.log(`🧹 已删除原始文件: ${path.basename(originalPath)}`);
+      } catch (error) {
+        this.logger.warn(`⚠️ 删除原始文件失败:`, error);
+      }
+
+      try {
+        fs.unlinkSync(compressedPath);
+        this.logger.log(`🧹 已删除压缩文件: ${path.basename(compressedPath)}`);
+      } catch (error) {
+        this.logger.warn(`⚠️ 删除压缩文件失败:`, error);
+      }
+
+      try {
+        fs.unlinkSync(textFilePath);
+        this.logger.log(`🧹 已删除OCR文本文件: ${path.basename(textFilePath)}`);
+      } catch (error) {
+        this.logger.warn(`⚠️ 删除OCR文本文件失败:`, error);
+      }
 
       return {
         success: true,
@@ -130,6 +147,41 @@ export class PDFProcessController {
         },
       };
     } catch (e: any) {
+      // 发生错误时也要清理临时文件
+      this.logger.error('❌ 处理过程中出错:', e);
+
+      try {
+        if (fs.existsSync(originalPath)) {
+          fs.unlinkSync(originalPath);
+          this.logger.log(`🧹 已清理原始文件: ${path.basename(originalPath)}`);
+        }
+      } catch (cleanupError) {
+        this.logger.warn(`⚠️ 清理原始文件失败:`, cleanupError);
+      }
+
+      try {
+        if (fs.existsSync(compressedPath)) {
+          fs.unlinkSync(compressedPath);
+          this.logger.log(
+            `🧹 已清理压缩文件: ${path.basename(compressedPath)}`,
+          );
+        }
+      } catch (cleanupError) {
+        this.logger.warn(`⚠️ 清理压缩文件失败:`, cleanupError);
+      }
+
+      const textFilePath = compressedPath.replace('.pdf', '.txt');
+      try {
+        if (fs.existsSync(textFilePath)) {
+          fs.unlinkSync(textFilePath);
+          this.logger.log(
+            `🧹 已清理OCR文本文件: ${path.basename(textFilePath)}`,
+          );
+        }
+      } catch (cleanupError) {
+        this.logger.warn(`⚠️ 清理OCR文本文件失败:`, cleanupError);
+      }
+
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       return { success: false, error: e.message };
@@ -147,7 +199,7 @@ export class PDFProcessController {
       const fileBuffer = fs.readFileSync(filePath);
       const fileName = path.basename(filePath);
 
-      console.log(
+      this.logger.log(
         `准备上传文件到Dify: ${fileName}, 大小: ${fileBuffer.length} bytes`,
       );
 
@@ -179,13 +231,13 @@ export class PDFProcessController {
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
       const uploadData = response.data as { id: string; name: string };
-      console.log(
+      this.logger.log(
         `✅ 文件上传成功! file_id: ${uploadData.id}, 文件名: ${uploadData.name}`,
       );
 
       return uploadData.id;
     } catch (error) {
-      console.error('❌ 文件上传失败:', error);
+      this.logger.error('❌ 文件上传失败:', error);
       throw new Error(`Failed to upload file to Dify: ${error}`);
     }
   }
@@ -205,7 +257,7 @@ export class PDFProcessController {
       const fileBuffer = fs.readFileSync(filePath);
       const fileName = originalFileName || path.basename(filePath);
 
-      console.log(
+      this.logger.log(
         `准备将文件添加到Dify知识库: ${fileName}, 数据集ID: ${process.env.DIFY_DATASET_ID}`,
       );
 
@@ -244,14 +296,6 @@ export class PDFProcessController {
         contentType: 'text/plain',
       });
 
-      // 可选：添加元数据
-      const metadata = {
-        source: 'pdf-ocr',
-        original_filename: fileName,
-        processed_at: new Date().toISOString(),
-      };
-      formData.append('metadata', JSON.stringify(metadata));
-
       // 调用Dify数据集文档创建API（注意URL中使用连字符）
       const response = await axios.post(
         `${process.env.DIFY_BASE_URL}/datasets/${process.env.DIFY_DATASET_ID}/document/create-by-file`,
@@ -259,7 +303,7 @@ export class PDFProcessController {
         {
           headers: {
             ...formData.getHeaders(),
-            Authorization: `Bearer ${process.env.DIFY_API_KEY}`,
+            Authorization: `Bearer ${process.env.DIFY_DATASET_API_KEY}`,
           },
         },
       );
@@ -274,7 +318,7 @@ export class PDFProcessController {
         throw new Error('未获取到文档ID');
       }
 
-      console.log(`✅ 文件已成功添加到知识库! document_id: ${documentId}`);
+      this.logger.log(`✅ 文件已成功添加到知识库! document_id: ${documentId}`);
 
       return documentId;
     } catch (error) {
