@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -11,6 +11,7 @@ const execAsync = promisify(exec);
 
 @Injectable()
 export class PDFProcessService {
+  private readonly logger = new Logger(PDFProcessService.name);
   /**
    * 1. 压缩 PDF
    * 使用 Ghostscript 进行有损压缩（推荐用于大幅减小体积）
@@ -29,9 +30,9 @@ export class PDFProcessService {
     const command = `gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/${quality} -dNOPAUSE -dQUIET -dBATCH -sOutputFile="${outputPath}" "${inputPath}"`;
     try {
       await execAsync(command);
-      console.log(`✅ PDF 压缩完成: ${outputPath}`);
+      this.logger.log(`✅ PDF 压缩完成: ${outputPath}`);
     } catch (error) {
-      console.error('❌ Ghostscript 压缩失败:', error);
+      this.logger.error('❌ Ghostscript 压缩失败:', error);
       throw new Error('PDF 压缩失败，请确保服务器已安装 Ghostscript');
     }
   }
@@ -70,23 +71,23 @@ export class PDFProcessService {
       const pages = await storeAsImage.bulk(-1); // -1 表示转换所有页
 
       if (pages.length === 0) {
-        console.warn('⚠️ PDF 没有可识别的页面');
+        this.logger.warn('⚠️ PDF 没有可识别的页面');
         return '';
       }
 
-      console.log(`📄 开始处理 ${pages.length} 页 PDF...`);
+      this.logger.log(`📄 开始处理 ${pages.length} 页 PDF...`);
 
       // 计算最佳并发数：使用CPU核心数的75%，但不超过页面数
       const cpuCount = os.cpus().length;
       const optimalConcurrency =
         concurrency ||
         Math.max(1, Math.min(Math.floor(cpuCount * 0.75), pages.length));
-      console.log(
+      this.logger.log(
         `🔧 使用 ${optimalConcurrency} 个并发任务 (CPU: ${cpuCount} 核)`,
       );
 
       // 创建 Worker 池
-      console.log('🔨 创建 Tesseract Worker 池...');
+      this.logger.log('🔨 创建 Tesseract Worker 池...');
       scheduler = Tesseract.createScheduler();
 
       // 创建固定数量的 Worker，添加详细配置和日志
@@ -97,11 +98,11 @@ export class PDFProcessService {
           {
             // logger: (m: Tesseract.LoggerMessage) => {
             //   if (m.status === 'loading tesseract core') {
-            //     console.log(`[Worker ${i}] 加载 Tesseract 核心...`);
+            //     this.logger.log(`[Worker ${i}] 加载 Tesseract 核心...`);
             //   } else if (m.status === 'initializing api') {
-            //     console.log(`[Worker ${i}] 初始化 API...`);
+            //     this.logger.log(`[Worker ${i}] 初始化 API...`);
             //   } else if (m.status === 'recognizing text') {
-            //     console.log(
+            //     this.logger.log(
             //       `[Worker ${i}] 识别进度: ${(m.progress * 100).toFixed(1)}%`,
             //     );
             //   }
@@ -113,7 +114,7 @@ export class PDFProcessService {
         scheduler.addWorker(worker);
       }
 
-      console.log(`✅ Worker 池创建完成 (${workers.length} 个 Worker)`);
+      this.logger.log(`✅ Worker 池创建完成 (${workers.length} 个 Worker)`);
 
       // 使用 Scheduler 并行处理所有页面
       // 为每个页面分配任务到 Scheduler
@@ -121,7 +122,7 @@ export class PDFProcessService {
         const pageNumber = index + 1;
 
         if (!page.path || !fs.existsSync(page.path)) {
-          console.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
+          this.logger.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
           return { pageNumber, text: '' };
         }
 
@@ -135,24 +136,24 @@ export class PDFProcessService {
               fs.unlinkSync(page.path);
             }
           } catch (unlinkError) {
-            console.warn(`⚠️ 无法删除临时文件 ${page.path}:`, unlinkError);
+            this.logger.warn(`⚠️ 无法删除临时文件 ${page.path}:`, unlinkError);
           }
 
           const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
 
           // 验证识别结果
           if (!ret.data.text || ret.data.text.trim().length === 0) {
-            console.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
+            this.logger.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
           }
           //    else {
-          //     console.log(
+          //     this.logger.log(
           //       `✓ 第 ${pageNumber} 页识别完成 (${ret.data.text.length} 字符)`,
           //     );
           //   }
 
           return { pageNumber, text };
         } catch (ocrError) {
-          console.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
+          this.logger.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
           return { pageNumber, text: '' };
         }
       });
@@ -167,17 +168,17 @@ export class PDFProcessService {
         .join('')
         .trim();
 
-      console.log(`✅ OCR 处理完成，共 ${pages.length} 页`);
+      this.logger.log(`✅ OCR 处理完成，共 ${pages.length} 页`);
       return fullText;
     } catch (error) {
-      console.error('❌ OCR 识别失败:', error);
+      this.logger.error('❌ OCR 识别失败:', error);
       throw new Error('OCR 识别过程出错');
     } finally {
       // 清理 Worker 池
       try {
         if (scheduler) {
           await scheduler.terminate();
-          console.log('🧹 Scheduler 已终止');
+          this.logger.log('🧹 Scheduler 已终止');
         }
         // 确保所有 Worker 都被正确终止
         if (workers.length > 0) {
@@ -190,10 +191,10 @@ export class PDFProcessService {
               }
             }),
           );
-          console.log(`🧹 ${workers.length} 个 Worker 已终止`);
+          this.logger.log(`🧹 ${workers.length} 个 Worker 已终止`);
         }
       } catch (cleanupError) {
-        console.warn('⚠️ 清理 Worker 池失败:', cleanupError);
+        this.logger.warn('⚠️ 清理 Worker 池失败:', cleanupError);
       }
 
       // 清理临时目录
@@ -207,10 +208,10 @@ export class PDFProcessService {
             }
           }
           fs.rmdirSync(tempDir);
-          console.log('🧹 临时目录已清理');
+          this.logger.log('🧹 临时目录已清理');
         }
       } catch (cleanupError) {
-        console.warn('⚠️ 清理临时目录失败:', cleanupError);
+        this.logger.warn('⚠️ 清理临时目录失败:', cleanupError);
       }
     }
   }
