@@ -4,8 +4,8 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fromPath } from 'pdf2pic';
-import Tesseract, { Scheduler, Worker } from 'tesseract.js';
 import { ParallelTaskService } from '../parallel-task/parallel-task.service';
+import { TesseractService, WorkerPool } from '../tesseract/tesseract.service';
 
 const execAsync = promisify(exec);
 
@@ -13,7 +13,10 @@ const execAsync = promisify(exec);
 export class PDFProcessService {
   private readonly logger = new Logger(PDFProcessService.name);
 
-  constructor(private readonly parallelTaskService: ParallelTaskService) {}
+  constructor(
+    private readonly parallelTaskService: ParallelTaskService,
+    private readonly tesseractService: TesseractService,
+  ) {}
 
   /**
    * 1. 压缩 PDF
@@ -66,8 +69,7 @@ export class PDFProcessService {
       preserveAspectRatio: true,
     });
 
-    let scheduler: Scheduler | null = null;
-    const workers: Worker[] = [];
+    let workerPool: WorkerPool | null = null;
 
     try {
       // 获取页数并转换所有页
@@ -88,61 +90,26 @@ export class PDFProcessService {
         `🔧 使用 ${optimalConcurrency} 个并发任务 (CPU: ${this.parallelTaskService.getCPUCores()} 核)`,
       );
 
-      // 创建 Worker 池
-      this.logger.log('🔨 创建 Tesseract Worker 池...');
-      scheduler = Tesseract.createScheduler();
+      // 使用 TesseractService 创建 Worker 池
+      workerPool = await this.tesseractService.createWorkerPool({
+        concurrency: optimalConcurrency,
+        lang: 'eng+chi_sim',
+        enableLogging: true,
+      });
 
-      // 创建固定数量的 Worker
-      for (let i = 0; i < optimalConcurrency; i++) {
-        const worker = await Tesseract.createWorker(
-          'eng+chi_sim',
-          undefined,
-          {},
-        );
-
-        workers.push(worker);
-        scheduler.addWorker(worker);
-      }
-
-      this.logger.log(`✅ Worker 池创建完成 (${workers.length} 个 Worker)`);
+      const { scheduler } = workerPool;
 
       // 使用 ParallelTaskService 并行处理所有页面
       const tasks = pages.map((page, index) => {
         const pageNumber = index + 1;
 
         return async () => {
-          if (!page.path || !fs.existsSync(page.path)) {
-            this.logger.warn(`⚠️ 跳过不存在的页面文件: ${page.path}`);
-            return { pageNumber, text: '' };
-          }
-
-          try {
-            // 通过 Scheduler 调度任务
-            const ret = await scheduler!.addJob('recognize', page.path);
-
-            // 删除临时图片文件
-            try {
-              if (fs.existsSync(page.path)) {
-                fs.unlinkSync(page.path);
-              }
-            } catch (unlinkError) {
-              this.logger.warn(
-                `⚠️ 无法删除临时文件 ${page.path}:`,
-                unlinkError,
-              );
-            }
-
-            const text = `\n--- 第 ${pageNumber} 页 ---\n${ret.data.text}`;
-
-            if (!ret.data.text || ret.data.text.trim().length === 0) {
-              this.logger.warn(`⚠️ 第 ${pageNumber} 页未识别到文字`);
-            }
-
-            return { pageNumber, text };
-          } catch (ocrError) {
-            this.logger.error(`❌ 第 ${pageNumber} 页 OCR 识别失败:`, ocrError);
-            return { pageNumber, text: '' };
-          }
+          // 使用 TesseractService 识别单页
+          return await this.tesseractService.recognizePage(
+            scheduler,
+            page.path,
+            pageNumber,
+          );
         };
       });
 
@@ -190,27 +157,9 @@ export class PDFProcessService {
       this.logger.error('❌ OCR 识别失败:', error);
       throw new Error('OCR 识别过程出错');
     } finally {
-      // 清理 Worker 池
-      try {
-        if (scheduler) {
-          await scheduler.terminate();
-          this.logger.log('🧹 Scheduler 已终止');
-        }
-        // 确保所有 Worker 都被正确终止
-        if (workers.length > 0) {
-          await Promise.all(
-            workers.map(async (worker) => {
-              try {
-                await worker.terminate();
-              } catch {
-                // Worker 可能已经被 scheduler.terminate() 终止
-              }
-            }),
-          );
-          this.logger.log(`🧹 ${workers.length} 个 Worker 已终止`);
-        }
-      } catch (cleanupError) {
-        this.logger.warn('⚠️ 清理 Worker 池失败:', cleanupError);
+      // 清理 Worker 池资源
+      if (workerPool) {
+        await this.tesseractService.cleanupResources(workerPool);
       }
 
       // 清理临时目录
