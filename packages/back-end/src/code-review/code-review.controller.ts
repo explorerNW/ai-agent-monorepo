@@ -1,9 +1,9 @@
 import { Controller, Post, Body, Headers, HttpCode } from '@nestjs/common';
-import { ReviewService } from './review.service';
+import { ReviewService } from './code-review.service';
 import type { GitHubWebhookPayload } from '../types/dto';
 
 @Controller('webhook')
-export class ReviewController {
+export class CodeReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
   @Post('github')
