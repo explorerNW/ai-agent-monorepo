@@ -10,7 +10,7 @@ import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
-import { PDFProcessService } from './pdf-process.server';
+import { PDFProcessService } from './pdf-process.service';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-require-imports */
