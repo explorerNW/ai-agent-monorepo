@@ -137,7 +137,9 @@ export class ReviewService {
           context: 'AI Code Review', // 状态检查的名称
         },
       );
-      this.logger.log(`✅ 创建 Status 成功: ${state} - ${description}`);
+      this.logger.log(
+        `✅ 创建 Status 成功: ${state} - ${description.substring(0, 140)}`,
+      );
     } catch (error) {
       const errorMessage = this.extractErrorMessage(error);
       this.logger.error(`创建 Status 失败: ${errorMessage}`);

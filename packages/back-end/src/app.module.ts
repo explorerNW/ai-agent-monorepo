@@ -3,8 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AiModule } from './ai/ai.module';
-import { ReviewService } from './review/review.service';
-import { ReviewController } from './review/review.controller';
+import { ReviewService } from './code-review/code-review.service';
+import { CodeReviewController } from './code-review/code-review.controller';
 import { PDFProcessModule } from './pdf-process/pdf-process.module';
 
 @Module({
@@ -16,7 +16,7 @@ import { PDFProcessModule } from './pdf-process/pdf-process.module';
     AiModule,
     PDFProcessModule,
   ],
-  controllers: [AppController, ReviewController],
+  controllers: [AppController, CodeReviewController],
   providers: [AppService, ReviewService],
 })
 export class AppModule {}
