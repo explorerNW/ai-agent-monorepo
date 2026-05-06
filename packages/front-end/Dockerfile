@@ -1,7 +1,7 @@
 # ======================
 # 1. 依赖安装阶段 (Dependencies)
 # ======================
-FROM node:20-alpine AS dependencies
+FROM node:20-slim AS dependencies
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN pnpm install --frozen-lockfile
 # ======================
 # 2. 构建阶段 (Builder)
 # ======================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app/packages/front-end
 
