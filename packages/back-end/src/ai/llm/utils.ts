@@ -6,7 +6,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 // 1. 初始化模型
 const model: BaseChatModel = new ChatOllama({
   model: 'llama3.1',
-  baseUrl: 'http://localhost:11434', // 默认地址
+  baseUrl: `http://${process.env.DIFY_API_KEY}:11434`, // 默认地址
   temperature: 0.7,
 });
 

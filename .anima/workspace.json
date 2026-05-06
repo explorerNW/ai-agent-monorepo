@@ -1,0 +1,5 @@
+{
+  "activePackage": "packages/front-end",
+  "subPackages": ["/", "packages/back-end", "packages/front-end"],
+  "workspaceId": "ecfe4579-ae60-4b76-b684-b7e7f4874ed0"
+}
