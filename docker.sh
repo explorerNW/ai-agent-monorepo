@@ -12,6 +12,23 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Detect docker compose command (prefer new plugin syntax, fallback to standalone)
+DOCKER_COMPOSE=""
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo -e "${RED}Error: Neither 'docker compose' nor 'docker-compose' found.${NC}"
+    echo -e "${YELLOW}Please install Docker Compose:${NC}"
+    echo "  - For Docker Desktop: It's included by default"
+    echo "  - For Linux: sudo yum install docker-compose-plugin (CentOS/RHEL)"
+    echo "               or sudo apt-get install docker-compose-plugin (Ubuntu/Debian)"
+    exit 1
+fi
+
+echo -e "${BLUE}Using: $DOCKER_COMPOSE${NC}"
+
 # Functions
 print_help() {
     echo -e "${BLUE}AI Agent Monorepo - Docker Helper${NC}"
@@ -37,7 +54,7 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
-    docker-compose up -d --build
+    $DOCKER_COMPOSE up -d --build
     echo -e "${GREEN}✓ Services started successfully!${NC}"
     echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
@@ -45,7 +62,7 @@ start_prod() {
 
 start_dev() {
     echo -e "${GREEN}Starting services in development mode...${NC}"
-    docker-compose -f docker-compose.dev.yml up -d --build
+    $DOCKER_COMPOSE -f docker-compose.dev.yml up -d --build
     echo -e "${GREEN}✓ Services started successfully!${NC}"
     echo -e "${BLUE}Front-end: http://localhost:5173${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
@@ -54,10 +71,10 @@ start_dev() {
 stop_services() {
     echo -e "${YELLOW}Stopping all services...${NC}"
     if docker ps --format '{{.Names}}' | grep -q 'ai-agent-backend'; then
-        docker-compose down
+        $DOCKER_COMPOSE down
     fi
     if docker ps --format '{{.Names}}' | grep -q 'ai-agent-backend-dev'; then
-        docker-compose -f docker-compose.dev.yml down
+        $DOCKER_COMPOSE -f docker-compose.dev.yml down
     fi
     echo -e "${GREEN}✓ All services stopped${NC}"
 }
@@ -72,24 +89,24 @@ restart_services() {
 view_logs() {
     echo -e "${BLUE}Viewing logs from all services...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
-    docker-compose logs -f
+    $DOCKER_COMPOSE logs -f
 }
 
 view_backend_logs() {
     echo -e "${BLUE}Viewing backend logs...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
-    docker-compose logs -f back-end
+    $DOCKER_COMPOSE logs -f back-end
 }
 
 view_frontend_logs() {
     echo -e "${BLUE}Viewing frontend logs...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
-    docker-compose logs -f front-end
+    $DOCKER_COMPOSE logs -f front-end
 }
 
 build_services() {
     echo -e "${GREEN}Building all services...${NC}"
-    docker-compose build --no-cache
+    $DOCKER_COMPOSE build --no-cache
     echo -e "${GREEN}✓ Build completed${NC}"
 }
 
@@ -99,8 +116,8 @@ clean_all() {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${YELLOW}Cleaning up...${NC}"
-        docker-compose down -v --remove-orphans
-        docker-compose -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
+        $DOCKER_COMPOSE down -v --remove-orphans
+        $DOCKER_COMPOSE -f docker-compose.dev.yml down -v --remove-orphans 2>/dev/null || true
         docker system prune -f
         echo -e "${GREEN}✓ Cleanup completed${NC}"
     else
@@ -110,10 +127,10 @@ clean_all() {
 
 show_status() {
     echo -e "${BLUE}Container Status:${NC}"
-    docker-compose ps
+    $DOCKER_COMPOSE ps
     echo ""
     echo -e "${BLUE}Development Containers:${NC}"
-    docker-compose -f docker-compose.dev.yml ps 2>/dev/null || echo "No dev containers running"
+    $DOCKER_COMPOSE -f docker-compose.dev.yml ps 2>/dev/null || echo "No dev containers running"
 }
 
 shell_backend() {
