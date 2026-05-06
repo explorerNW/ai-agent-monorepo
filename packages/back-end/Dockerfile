@@ -1,63 +1,95 @@
 # ======================
-# 1. 构建阶段 (Builder)
+# 1. 依赖安装阶段 (Dependencies)
+# ======================
+FROM node:20-alpine AS dependencies
+
+WORKDIR /app
+
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy workspace configuration files
+COPY .npmrc ./
+COPY pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
+
+# Copy backend package.json for dependency installation
+COPY packages/back-end/package.json ./packages/back-end/package.json
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile
+
+
+# ======================
+# 2. 构建阶段 (Builder)
 # ======================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. 启用并激活 pnpm
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 2. 【关键步骤】复制 Monorepo 的根配置文件
-# 这是让 pnpm 识别 workspace 的关键
+# Copy workspace configuration
+COPY .npmrc ./
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
-
-# 3. 复制子应用的 package.json
 COPY packages/back-end/package.json ./packages/back-end/package.json
 
-# 4. 安装所有依赖 (包括 devDependencies)
-# 这一步会为整个 workspace 安装依赖，确保 @nestjs/cli 被正确安装
-RUN pnpm install --frozen-lockfile
+# Copy installed dependencies from previous stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/packages/back-end/node_modules ./packages/back-end/node_modules
 
-# 5. 【关键步骤】在依赖安装后，再复制源代码
+# Copy source code
 COPY packages/back-end/. ./packages/back-end/
 
-# 6. 执行构建
-# 使用 --filter 确保从 workspace 根目录正确构建指定的应用
+# Build the application
 RUN pnpm --filter=back-end run build
 
 
 # ======================
-# 2. 生产阶段 (Runner)
+# 3. 生产阶段 (Production)
 # ======================
-FROM node:20-alpine AS runner
+FROM node:20-alpine AS production
+
+# Add labels for better maintainability
+LABEL maintainer="ai-agent-team"
+LABEL description="AI Agent Backend Service"
+LABEL version="1.0.0"
 
 WORKDIR /app/packages/back-end
 
-# 1. 启用 pnpm
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 2. 复制 Monorepo 的根配置文件
-# 即使是生产环境，也需要这些文件来正确解析依赖
+# Copy workspace configuration
+COPY .npmrc ../../
 COPY pnpm-workspace.yaml ../../
 COPY package.json pnpm-lock.yaml ../../
-
-# 3. 复制子应用的 package.json
 COPY packages/back-end/package.json ./
 
-# 4. 仅安装生产环境依赖
-# --ignore-scripts 可以避免不必要的构建脚本执行，加快安装速度
+# Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
-# 5. 从 builder 阶段复制构建产物
+# Copy built application from builder
 COPY --from=builder /app/packages/back-end/dist ./dist
 
-# 6. 创建必要的目录
-RUN mkdir -p uploads
+# Create necessary directories with proper permissions
+RUN mkdir -p uploads && \
+    chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 EXPOSE 3000
 
-# 7. 启动应用
-# 建议直接使用 node 运行编译后的文件，更稳定
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0
+
+# Start the application using node directly (more stable than nest CLI)
 CMD ["node", "dist/main.js"]

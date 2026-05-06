@@ -1,8 +1,11 @@
 # Dependencies
 node_modules
+.pnpm-store
 
 # Build output
 dist
+build
+.react-router
 
 # Documentation
 README.md
@@ -22,6 +25,7 @@ README.md
 .idea
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -37,6 +41,7 @@ logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-error.log*
 
 # Test coverage
 coverage
@@ -46,5 +51,22 @@ coverage
 uploads/*
 !uploads/.gitkeep
 
-# Source maps in production
-*.map
+# Source maps in production (optional - uncomment if not needed)
+# *.map
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Testing
+test
+tests
+*.spec.ts
+*.test.ts
+jest.config.js
+tsconfig.test.json

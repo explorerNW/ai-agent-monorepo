@@ -1,0 +1,71 @@
+# Dependencies (will be installed inside container)
+node_modules
+.pnpm-store
+
+# Build outputs from all packages
+packages/*/dist
+packages/*/build
+packages/*/.react-router
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Environment files (passed via docker-compose)
+.env
+.env.local
+.env.*.local
+packages/*/.env
+packages/*/.env.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker files (not needed in build context)
+Dockerfile
+Dockerfile.dev
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage
+.nyc_output
+packages/*/coverage
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Development tools
+.husky
+.eslintcache
+
+# Sub-package lock files (monorepo uses root lock file only)
+packages/*/pnpm-lock.yaml
+packages/*/package-lock.json
+packages/*/yarn.lock
