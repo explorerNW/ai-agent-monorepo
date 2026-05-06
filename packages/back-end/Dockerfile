@@ -6,12 +6,17 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# Copy .npmrc to ensure proper pnpm workspace behavior
+COPY .npmrc ./
+
 # Copy package files
 COPY packages/back-end/package.json ./
 COPY packages/back-end/pnpm-lock.yaml ./
 
-# Install all dependencies
-RUN pnpm install --frozen-lockfile
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile && \
+    echo "✅ Dependencies installed successfully" && \
+    ls -la node_modules/@nestjs/cli/bin/nest.js
 
 # Copy source code and build
 COPY packages/back-end/. .
