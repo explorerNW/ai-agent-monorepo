@@ -3,14 +3,15 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Copy package files
 COPY packages/back-end/package.json ./
 COPY packages/back-end/pnpm-lock.yaml ./
 
 # Install all dependencies
-RUN corepack enable && \
-    corepack prepare pnpm@latest --activate && \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy source code and build
 COPY packages/back-end/. .
