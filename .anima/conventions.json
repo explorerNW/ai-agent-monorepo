@@ -1,0 +1,14 @@
+{
+  "assetsPath": "packages/front-end/public/images/",
+  "componentLibrary": "none",
+  "componentsPath": "packages/back-end/src",
+  "defaultConfigPath": "/Users/mac/.anima",
+  "framework": "react",
+  "language": "typescript",
+  "nextRouterType": null,
+  "projectRoot": "/Users/mac/code-repo/ai-repo/ai-agent-monorepo",
+  "styleguidePath": "",
+  "styling": "css",
+  "tailwindConfigPath": "",
+  "tailwindConfigReuseEnabled": false
+}

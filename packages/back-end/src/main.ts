@@ -6,6 +6,13 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Enable CORS for frontend development
+  app.enableCors({
+    origin: [`${process.env.FRONT_END_URL}`], // React Router dev server ports
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   // 配置静态文件服务，将 uploads 目录暴露为 /uploads 路径
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
