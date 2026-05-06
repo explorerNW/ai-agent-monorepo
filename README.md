@@ -4,6 +4,8 @@ A monorepo for LangChain Graph with NestJS backend and React frontend, featuring
 
 ## 🚀 Quick Start
 
+### Local Development
+
 ```bash
 # Install dependencies
 pnpm install
@@ -17,6 +19,25 @@ pnpm start:ui
 # Build all packages
 pnpm build
 ```
+
+### Docker Deployment
+
+For containerized deployment, see [DOCKER.md](./DOCKER.md) for detailed instructions.
+
+**Quick start with Docker:**
+
+```bash
+# Production mode
+docker-compose up -d --build
+
+# Development mode (with hot-reload)
+docker-compose -f docker-compose.dev.yml up -d --build
+```
+
+Access the application:
+
+- **Front-end**: http://localhost:3001 (production) or http://localhost:5173 (development)
+- **Back-end API**: http://localhost:3000
 
 ## 📋 Git Commit Workflow
 

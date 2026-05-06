@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy package files
+COPY packages/front-end/package.json ./
+COPY packages/front-end/pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/front-end/. .
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Start development server with host binding
+CMD ["pnpm", "run", "dev", "--host", "0.0.0.0"]

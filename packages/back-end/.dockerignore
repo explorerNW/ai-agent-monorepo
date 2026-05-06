@@ -2,8 +2,7 @@
 node_modules
 
 # Build output
-build
-.react-router
+dist
 
 # Documentation
 README.md
@@ -42,3 +41,10 @@ pnpm-debug.log*
 # Test coverage
 coverage
 .nyc_output
+
+# Uploads (should be mounted as volume)
+uploads/*
+!uploads/.gitkeep
+
+# Source maps in production
+*.map

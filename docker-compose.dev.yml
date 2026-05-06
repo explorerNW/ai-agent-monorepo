@@ -1,0 +1,52 @@
+services:
+  back-end:
+    build:
+      context: .
+      dockerfile: packages/back-end/Dockerfile
+    container_name: ai-agent-backend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - FRONT_END_URL=http://localhost:5173
+    env_file:
+      - ./packages/back-end/.env
+    volumes:
+      - ./packages/back-end/src:/app/src
+      - backend-uploads-dev:/app/uploads
+    command: pnpm run start:dev
+    restart: unless-stopped
+    networks:
+      - ai-agent-network-dev
+
+  front-end:
+    build:
+      context: .
+      dockerfile: packages/front-end/Dockerfile.dev
+    container_name: ai-agent-frontend-dev
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+      - VITE_API_BASE_URL=http://localhost:3000
+    env_file:
+      - ./packages/front-end/.env
+    volumes:
+      - ./packages/front-end:/app
+      - /app/node_modules
+    depends_on:
+      - back-end
+    command: pnpm run dev --host 0.0.0.0
+    restart: unless-stopped
+    networks:
+      - ai-agent-network-dev
+
+volumes:
+  backend-uploads-dev:
+    driver: local
+
+networks:
+  ai-agent-network-dev:
+    driver: bridge

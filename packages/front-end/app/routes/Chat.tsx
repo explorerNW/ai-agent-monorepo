@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
+import {
+  sendChatMessage,
+  processStream,
+  type ChatMessage,
+} from "~/services/api";
+import { env } from "~/config/env";
 
 export default function Chat() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>(
-    [],
-  );
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const currentMessageRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -17,7 +21,7 @@ export default function Chat() {
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage: ChatMessage = { role: "user", content: input };
     // 1. 先把用户的消息上屏，并预留一条空的 AI 消息
     setMessages((prev) => [
       ...prev,
@@ -29,26 +33,13 @@ export default function Chat() {
     currentMessageRef.current = "";
 
     try {
-      const response = await fetch("http://niewang.uunat.com:41061/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
-      });
+      // 2. 使用 API 服务发送消息（使用环境变量配置的 URL）
+      const stream = await sendChatMessage([...messages, userMessage]);
 
-      if (!response.body) throw new Error("No response body");
-
-      // 2. 获取流式读取器
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let done = false;
-
-      // 3. 循环读取流式数据
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
+      // 3. 处理流式响应
+      await processStream(
+        stream,
+        (chunk) => {
           currentMessageRef.current += chunk;
 
           // 4. 使用 ref 中的完整内容更新最后一条 AI 消息（避免重复）
@@ -58,11 +49,21 @@ export default function Chat() {
               currentMessageRef.current;
             return newMessages;
           });
-        }
-      }
+        },
+        () => {
+          // Stream complete
+          setIsLoading(false);
+          currentMessageRef.current = "";
+        },
+      );
     } catch (error) {
       console.error("Chat error:", error);
-    } finally {
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1].content =
+          "Sorry, an error occurred. Please try again.";
+        return newMessages;
+      });
       setIsLoading(false);
       currentMessageRef.current = "";
     }
@@ -80,7 +81,7 @@ export default function Chat() {
       {/* Header */}
       <header className="flex items-center justify-center px-6 py-4 bg-white shadow-sm border-b border-gray-200">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          AI Assistant
+          {env.appName}
         </h1>
       </header>
 
@@ -89,7 +90,7 @@ export default function Chat() {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <div className="text-6xl mb-4">🤖</div>
-            <p className="text-lg">Start a conversation with AI Assistant</p>
+            <p className="text-lg">Start a conversation with {env.appName}</p>
           </div>
         ) : (
           messages.map((msg, index) => (
@@ -105,7 +106,7 @@ export default function Chat() {
                 }`}
               >
                 <div className="text-sm font-semibold mb-1 opacity-75">
-                  {msg.role === "user" ? "You" : "AI Assistant"}
+                  {msg.role === "user" ? "You" : env.appName}
                 </div>
                 <div className="whitespace-pre-wrap break-words leading-relaxed">
                   {msg.content}
