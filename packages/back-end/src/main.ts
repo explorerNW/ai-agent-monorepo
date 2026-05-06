@@ -8,7 +8,7 @@ async function bootstrap() {
 
   // Enable CORS for frontend development
   app.enableCors({
-    origin: [`${process.env.FRONT_END_URL}`], // React Router dev server ports
+    origin: [`${process.env.FRONT_END_URL}`, 'http://localhost:3001'], // React Router dev server ports
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

@@ -12,6 +12,7 @@ A modern, production-ready template for building full-stack React applications u
 - 🔄 Data loading and mutations
 - 🔒 TypeScript by default
 - 🎉 TailwindCSS for styling
+- 🌍 Environment variable support
 - 📖 [React Router docs](https://reactrouter.com/)
 
 ## Getting Started
@@ -23,6 +24,20 @@ Install the dependencies:
 ```bash
 npm install
 ```
+
+### Configuration
+
+Set up environment variables:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your values
+nano .env
+```
+
+See [Environment Variables Guide](./ENV_VARIABLES.md) for details.
 
 ### Development
 

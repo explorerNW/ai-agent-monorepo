@@ -10,7 +10,15 @@
     "lint": "pnpm -r lint",
     "format": "pnpm -r format",
     "commitlint": "commitlint --edit",
-    "lint-staged": "lint-staged"
+    "lint-staged": "lint-staged",
+    "docker:start": "./docker.sh start",
+    "docker:start:dev": "./docker.sh start:dev",
+    "docker:stop": "./docker.sh stop",
+    "docker:restart": "./docker.sh restart",
+    "docker:logs": "./docker.sh logs",
+    "docker:build": "./docker.sh build",
+    "docker:clean": "./docker.sh clean",
+    "docker:status": "./docker.sh status"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
