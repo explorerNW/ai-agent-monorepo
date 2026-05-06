@@ -1,8 +1,10 @@
 # Dependencies
 node_modules
+.pnpm-store
 
 # Build output
 build
+dist
 .react-router
 
 # Documentation
@@ -23,6 +25,7 @@ README.md
 .idea
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -32,13 +35,37 @@ Thumbs.db
 Dockerfile
 docker-compose*.yml
 .dockerignore
+nginx.conf
 
 # Logs
 logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-error.log*
 
 # Test coverage
 coverage
 .nyc_output
+
+# Source maps in production (optional - uncomment if not needed)
+# *.map
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Testing
+test
+tests
+*.spec.tsx
+*.test.tsx
+vitest.config.ts
+
+# Development
+public/dev-only/*
