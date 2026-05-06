@@ -6,7 +6,7 @@ import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
 export class AiService {
   // 初始化大模型，这里可以使用 OpenAI、通义千问等兼容 OpenAI 协议的模型
   private chatModel = new ChatOpenAI({
-    modelName: 'process.env.AI_MODEL_NAME', // 从环境变量读取模型名称
+    modelName: process.env.AI_MODEL_NAME, // 从环境变量读取模型名称
     apiKey: process.env.DASHSCOPE_API_KEY, // 使用 DashScope 兼容接口
     configuration: {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', // 替换为你使用的模型服务商地址
