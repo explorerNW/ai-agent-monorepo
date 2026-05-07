@@ -10,8 +10,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       `${process.env.FRONT_END_URL}`,
-      `${process.env.BACK_END_URL}`,
-      'http://localhost:3001',
+      `${process.env.FRONT_END_URL_DEV}`,
     ], // React Router dev server ports
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
