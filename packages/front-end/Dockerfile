@@ -25,23 +25,31 @@ RUN pnpm install --frozen-lockfile
 # ======================
 FROM node:20-slim AS builder
 
-WORKDIR /app/packages/front-end
+WORKDIR /app
 
 # Enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy workspace configuration
-COPY .npmrc ../../
-COPY pnpm-workspace.yaml ../../
-COPY package.json pnpm-lock.yaml ../../
-COPY packages/front-end/package.json ./
+COPY .npmrc ./
+COPY pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
-# Copy installed dependencies from previous stage
-COPY --from=dependencies /app/node_modules ../../node_modules
-COPY --from=dependencies /app/packages/front-end/node_modules ./node_modules
+# Copy frontend package.json for dependency installation
+COPY packages/front-end/package.json ./packages/front-end/package.json
+
+# Install all dependencies (including devDependencies for build)
+RUN pnpm install --frozen-lockfile --force && \
+    # Verify @react-router/dev is installed
+    if [ ! -d "node_modules/@react-router" ]; then \
+      echo "ERROR: @react-router not found in root node_modules"; \
+      ls -la node_modules/ | head -20; \
+      exit 1; \
+    fi && \
+    echo "✓ @react-router installed successfully"
 
 # Copy source code
-COPY packages/front-end/. .
+COPY packages/front-end/. ./packages/front-end/
 
 # Accept build arguments for environment variables
 ARG VITE_API_BASE_URL
@@ -53,8 +61,10 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
-# Build the application
-RUN pnpm run build
+# Build the application - run from workspace root where binaries are accessible
+WORKDIR /app/packages/front-end
+# Use NODE_PATH to help Node.js resolve modules from workspace root node_modules
+RUN NODE_PATH=/app/node_modules node /app/node_modules/@react-router/dev/bin.js build
 
 
 # ======================
@@ -75,9 +85,6 @@ COPY packages/front-end/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built static files from builder
 COPY --from=builder /app/packages/front-end/build/client /usr/share/nginx/html
-
-# Create directory for server-side rendering if needed
-COPY --from=builder /app/packages/front-end/build/server /usr/share/nginx/html/server
 
 # Expose port
 EXPOSE 3001

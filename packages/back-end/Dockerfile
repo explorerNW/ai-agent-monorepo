@@ -13,11 +13,12 @@ COPY .npmrc ./
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
 
-# Copy backend package.json for dependency installation
+# Copy all package.json files for dependency installation
 COPY packages/back-end/package.json ./packages/back-end/package.json
 
 # Install all dependencies (including devDependencies for build)
-RUN pnpm install --frozen-lockfile
+# Use --force to ensure optional dependencies are installed on Alpine
+RUN pnpm install --frozen-lockfile --force
 
 
 # ======================
@@ -36,15 +37,16 @@ COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
 COPY packages/back-end/package.json ./packages/back-end/package.json
 
-# Copy installed dependencies from previous stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/packages/back-end/node_modules ./packages/back-end/node_modules
+# Install all dependencies (including devDependencies for build)
+# Use --force to ensure optional dependencies are installed on Alpine
+RUN pnpm install --frozen-lockfile --force
 
 # Copy source code
 COPY packages/back-end/. ./packages/back-end/
 
-# Build the application
-RUN pnpm --filter=back-end run build
+# Build the application from workspace root using the correct package name filter
+WORKDIR /app
+RUN pnpm --filter=llm build
 
 
 # ======================
@@ -92,4 +94,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0
 
 # Start the application using node directly (more stable than nest CLI)
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
