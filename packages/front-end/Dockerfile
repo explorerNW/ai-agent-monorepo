@@ -5,8 +5,10 @@ FROM node:20-slim AS dependencies
 
 WORKDIR /app
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable pnpm with Chinese mirror
+RUN corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration files
 COPY .npmrc ./
@@ -27,8 +29,10 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable pnpm with Chinese mirror
+RUN corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration
 COPY .npmrc ./

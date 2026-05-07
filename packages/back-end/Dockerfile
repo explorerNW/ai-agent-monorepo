@@ -5,11 +5,10 @@ FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Set corepack registry
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-
-# Enable pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Enable pnpm with Chinese mirror
+RUN corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration files
 COPY .npmrc ./
