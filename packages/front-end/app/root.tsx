@@ -26,7 +26,9 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
     media: "print",
-    onLoad: "this.media='all'",
+    onLoad: (event: { target: HTMLLinkElement }) => {
+      (event.target as HTMLLinkElement).media = "all";
+    },
   },
 ];
 
@@ -66,10 +68,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 
   if (isRouteErrorResponse(error)) {
     // Silently handle well-known URL requests from browser devtools
-    if (error.status === 404 && error.data?.includes('.well-known')) {
+    if (error.status === 404 && error.data?.includes(".well-known")) {
       return null;
     }
-    
+
     message = error.status === 404 ? "404" : "Error";
     details =
       error.status === 404
