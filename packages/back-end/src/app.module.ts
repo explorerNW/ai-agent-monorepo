@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AiModule } from './ai-qwen/ai.module';
 import { ReviewService } from './code-review/code-review.service';
 import { CodeReviewController } from './code-review/code-review.controller';
 import { PDFProcessModule } from './pdf-process/pdf-process.module';
+import { AnalyticsModule } from './analysis/analytics.module';
 
 @Module({
   imports: [
@@ -15,6 +17,7 @@ import { PDFProcessModule } from './pdf-process/pdf-process.module';
     }),
     AiModule,
     PDFProcessModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, CodeReviewController],
   providers: [AppService, ReviewService],
