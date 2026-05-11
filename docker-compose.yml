@@ -1,14 +1,16 @@
 services:
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4-management
     container_name: ai-agent-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=explorernw
-      - RABBITMQ_DEFAULT_PASS=admin@me
-      - RABBITMQ_URL=amqp://explorernw:admin@me@192.168.1.118:5672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+    env_file:
+      - ./packages/back-end/micro-service/rabbit-mq/.env # 确保此文件在 .gitignore 中
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
@@ -30,7 +32,7 @@ services:
       - "3002:3002"
     environment:
       - NODE_ENV=production
-      - RABBITMQ_URL=amqp://explorernw:admin@me@192.168.1.118:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
     env_file:
       - ./packages/back-end/micro-service/rabbit-mq/.env
     depends_on:
