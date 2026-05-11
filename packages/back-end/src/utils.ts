@@ -23,9 +23,7 @@ export async function uploadTextToDify(filePath: string): Promise<string> {
     );
 
     // 创建FormData用于文件上传
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-    /* eslint-disable @typescript-eslint/no-unsafe-call */
-    /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
     const formData = new FormData();
     // Append buffer directly to form-data
     formData.append('file', fileBuffer, {
@@ -46,9 +44,6 @@ export async function uploadTextToDify(filePath: string): Promise<string> {
         },
       },
     );
-    /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-    /* eslint-enable @typescript-eslint/no-unsafe-call */
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
     const uploadData = response.data as { id: string; name: string };
     logger.log(

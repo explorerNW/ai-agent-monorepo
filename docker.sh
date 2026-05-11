@@ -43,12 +43,17 @@ print_help() {
     echo "  logs          View logs from all services"
     echo "  logs:backend  View backend logs"
     echo "  logs:frontend View frontend logs"
+    echo "  logs:rabbitmq View RabbitMQ server logs"
+    echo "  logs:rabbitmq-service View RabbitMQ microservice logs"
     echo "  build         Build all services"
     echo "  clean         Stop and remove all containers, networks, and volumes"
     echo "  status        Show container status"
     echo "  shell:backend Open shell in backend container"
     echo "  shell:frontend Open shell in frontend container"
+    echo "  shell:rabbitmq Open shell in RabbitMQ container"
     echo "  help          Show this help message"
+    echo ""
+    echo "RabbitMQ Management UI: http://localhost:15672 (guest/guest)"
     echo ""
 }
 
@@ -104,6 +109,18 @@ view_frontend_logs() {
     $DOCKER_COMPOSE logs -f front-end
 }
 
+view_rabbitmq_logs() {
+    echo -e "${BLUE}Viewing RabbitMQ server logs...${NC}"
+    echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
+    $DOCKER_COMPOSE logs -f rabbitmq
+}
+
+view_rabbitmq_service_logs() {
+    echo -e "${BLUE}Viewing RabbitMQ microservice logs...${NC}"
+    echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
+    $DOCKER_COMPOSE logs -f rabbit-mq-service
+}
+
 build_services() {
     echo -e "${GREEN}Building all services...${NC}"
     $DOCKER_COMPOSE build --no-cache
@@ -143,6 +160,11 @@ shell_frontend() {
     docker exec -it ai-agent-frontend sh
 }
 
+shell_rabbitmq() {
+    echo -e "${BLUE}Opening shell in RabbitMQ container...${NC}"
+    docker exec -it ai-agent-rabbitmq sh
+}
+
 # Main command handler
 case "${1:-help}" in
     start)
@@ -166,6 +188,12 @@ case "${1:-help}" in
     logs:frontend)
         view_frontend_logs
         ;;
+    logs:rabbitmq)
+        view_rabbitmq_logs
+        ;;
+    logs:rabbitmq-service)
+        view_rabbitmq_service_logs
+        ;;
     build)
         build_services
         ;;
@@ -180,6 +208,9 @@ case "${1:-help}" in
         ;;
     shell:frontend)
         shell_frontend
+        ;;
+    shell:rabbitmq)
+        shell_rabbitmq
         ;;
     help|*)
         print_help

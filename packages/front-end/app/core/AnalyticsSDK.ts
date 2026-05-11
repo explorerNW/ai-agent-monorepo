@@ -13,6 +13,8 @@ export class AnalyticsSDK {
   private flushInterval = 5000; // 每5秒强制上报一次
   private timer: any = null;
   private serverUrl: string;
+  private retryCount = 0; // 重试计数器
+  private maxRetries = 5; // 最大重试次数
 
   constructor(serverUrl: string) {
     this.serverUrl = serverUrl;
@@ -58,16 +60,32 @@ export class AnalyticsSDK {
     if (isSync && navigator.sendBeacon) {
       // 页面卸载时使用 sendBeacon，异步但可靠
       navigator.sendBeacon(this.serverUrl, payload);
+      this.retryCount = 0; // 成功后重置计数器
     } else {
       // 普通场景使用 fetch
       fetch(this.serverUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: payload,
-      }).catch(() => {
-        // 失败重试逻辑：将数据重新放回队列头部
-        this.queue.unshift(...eventsToSend);
-      });
+      })
+        .then(() => {
+          // 成功时重置重试计数器
+          this.retryCount = 0;
+        })
+        .catch(() => {
+          // 失败重试逻辑：将数据重新放回队列头部
+          this.queue.unshift(...eventsToSend);
+          this.retryCount++;
+
+          // 重试5次后还不成功就clearInterval
+          if (this.retryCount >= this.maxRetries) {
+            console.error(
+              `Analytics SDK: Failed to send data after ${this.maxRetries} attempts. Stopping retries.`,
+            );
+            clearInterval(this.timer);
+            this.timer = null;
+          }
+        });
     }
   }
 
