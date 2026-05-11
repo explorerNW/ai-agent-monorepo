@@ -32,7 +32,7 @@ services:
       - "3002:3002"
     environment:
       - NODE_ENV=production
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:5672
     env_file:
       - ./packages/back-end/micro-service/rabbit-mq/.env
     depends_on:
@@ -52,7 +52,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - FRONT_END_URL=http://niewang.uunat.com:16974
+      - FRONT_END_URL=${FRONT_END_URL}
     env_file:
       - ./packages/back-end/.env
     volumes:
@@ -79,18 +79,16 @@ services:
       context: .
       dockerfile: packages/front-end/Dockerfile
       args:
-        - VITE_API_URL=http://niewang.uunat.com:41061
-        - VITE_API_BASE_URL=http://niewang.uunat.com:41061
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
         - VITE_APP_NAME=AI Assistant
         - VITE_APP_VERSION=1.0.0
+        - VITE_API_URL=${VITE_API_URL}
     container_name: ai-agent-frontend
     ports:
       - "3001:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - BACK_END_URL=http://back-end:3000
-      - VITE_API_URL=http://niewang.uunat.com:41061
     env_file:
       - ./packages/front-end/.env
     depends_on:

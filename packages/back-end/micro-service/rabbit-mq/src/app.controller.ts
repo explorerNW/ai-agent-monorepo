@@ -1,32 +1,26 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Logger } from '@nestjs/common';
 import { AppService } from './app.service';
-import {
-  Ctx,
-  MessagePattern,
-  Payload,
-  RmqContext,
-} from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AnalyticsDto } from './analytics.dto';
+import { catchError, map, of } from 'rxjs';
 
 @Controller()
 export class AppController {
+  private readonly logger = new Logger(AppController.name);
   constructor(private readonly appService: AppService) {}
 
   @MessagePattern('rmq-message')
-  async message(
-    @Payload() payload: AnalyticsDto[],
-    @Ctx() context: RmqContext,
-  ) {
-    try {
-      console.log('📨 收到消息:', payload);
-      await this.appService.message(payload);
-
-      console.log('✅ 消息处理完成');
-
-      return { message_send: true };
-    } catch (error) {
-      console.error('❌ 消息处理失败:', error);
-      throw error;
-    }
+  message(@Payload() payload: AnalyticsDto[]) {
+    this.logger.log('📨 收到消息:', payload);
+    return this.appService.message(payload).pipe(
+      map(() => {
+        this.logger.log('✅ 消息处理完成');
+        return { message_send: true };
+      }),
+      catchError((error) => {
+        this.logger.error('❌ 消息处理失败:', error);
+        return of({ message_send: false, error });
+      }),
+    );
   }
 }
