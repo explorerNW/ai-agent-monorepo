@@ -21,4 +21,4 @@ async function bootstrap() {
     console.log(`Micro-server: rabbitMQ start on: ${5672}`);
   });
 }
-bootstrap();
+void bootstrap();
