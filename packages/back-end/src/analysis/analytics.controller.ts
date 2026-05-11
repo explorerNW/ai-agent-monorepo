@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  HttpCode,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, Logger } from '@nestjs/common';
 import { map } from 'rxjs/operators';
 
 import { AnalyticsService } from './analytics.service';
@@ -17,10 +10,8 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Post()
-  @HttpCode(HttpStatus.OK) // 直接返回200，减少握手时间
-  track(@Body() createAnalyticsArrayDto: CreateAnalyticsArrayDto) {
-    const events = createAnalyticsArrayDto.events;
-
+  @HttpCode(200) // 直接返回200，减少握手时间
+  track(@Body() events: CreateAnalyticsArrayDto[]) {
     if (!events || events.length === 0) {
       this.logger.warn('⚠️ 收到空事件数组');
       return { status: 'fail', error: 'No events to track' };

@@ -1,4 +1,45 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ai-agent-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=explorernw
+      - RABBITMQ_DEFAULT_PASS=admin@me
+      - RABBITMQ_URL=amqp://explorernw:admin@me@192.168.1.118:5672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - ai-agent-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  rabbit-mq-service:
+    build:
+      context: ./packages/back-end/micro-service/rabbit-mq
+      dockerfile: Dockerfile
+    container_name: ai-agent-rabbitmq-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - RABBITMQ_URL=amqp://explorernw:admin@me@192.168.1.118:5672
+    env_file:
+      - ./packages/back-end/micro-service/rabbit-mq/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai-agent-network
+
   back-end:
     build:
       context: .
@@ -27,6 +68,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      rabbit-mq-service:
+        condition: service_started
 
   front-end:
     build:
@@ -44,6 +88,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - BACK_END_URL=http://back-end:3000
+      - VITE_API_URL=http://niewang.uunat.com:41061
     env_file:
       - ./packages/front-end/.env
     depends_on:
@@ -55,6 +100,8 @@ services:
 
 volumes:
   backend-uploads:
+    driver: local
+  rabbitmq-data:
     driver: local
 
 networks:

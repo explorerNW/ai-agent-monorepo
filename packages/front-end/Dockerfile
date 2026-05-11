@@ -7,7 +7,7 @@ WORKDIR /app
 
 # Enable pnpm with Chinese mirror
 RUN corepack enable && \
-    corepack prepare pnpm@latest --activate && \
+    corepack prepare pnpm@9.15.0 --activate && \
     npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration files
@@ -31,7 +31,7 @@ WORKDIR /app
 
 # Enable pnpm with Chinese mirror
 RUN corepack enable && \
-    corepack prepare pnpm@latest --activate && \
+    corepack prepare pnpm@9.15.0 --activate && \
     npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration

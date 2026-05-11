@@ -39,7 +39,7 @@ export class PDFProcessController {
   @UseInterceptors(
     FileInterceptor('file', {
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      /* eslint-disable @typescript-eslint/no-unsafe-call */
+
       storage: diskStorage({
         destination: './uploads',
         filename: (
@@ -53,7 +53,7 @@ export class PDFProcessController {
           cb(null, `${uniqueSuffix}-${file.originalname}`);
         },
       }),
-      /* eslint-enable @typescript-eslint/no-unsafe-call */
+
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
     }),
   )
@@ -221,7 +221,7 @@ export class PDFProcessController {
 
       // 创建FormData用于文件上传
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-      /* eslint-disable @typescript-eslint/no-unsafe-call */
+
       /* eslint-disable @typescript-eslint/no-unsafe-member-access */
       const formData = new FormData();
 
@@ -248,7 +248,7 @@ export class PDFProcessController {
         },
       );
       /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-      /* eslint-enable @typescript-eslint/no-unsafe-call */
+
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
       const responseData = response.data as { document: { id: string } };
