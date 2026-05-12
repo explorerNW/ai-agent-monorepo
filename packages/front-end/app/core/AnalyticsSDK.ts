@@ -367,6 +367,7 @@ export class AnalyticsSDK {
     // 将所有性能指标合并为一条事件上报
     this.track("web_vitals_summary", {
       metrics: metricsData,
+      navigationType: this.getNavigationType(),
       timestamp: Date.now(),
       url: window.location.href,
     });
