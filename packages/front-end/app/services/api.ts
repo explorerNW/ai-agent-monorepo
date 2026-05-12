@@ -46,6 +46,62 @@ export async function sendChatMessage(
   return response.body;
 }
 
+export interface WebVitalsMetric {
+  value: number;
+  rating: string;
+  navigationType?: string;
+}
+
+export interface WebVitalsData {
+  id: number;
+  eventName: string;
+  userId?: string;
+  url: string;
+  metrics: {
+    lcp?: WebVitalsMetric;
+    fcp?: WebVitalsMetric;
+    cls?: WebVitalsMetric;
+    fid?: WebVitalsMetric;
+    ttfb?: WebVitalsMetric;
+  };
+  navigationType?: string;
+  timestamp: string;
+  createdAt: string;
+}
+
+/**
+ * Query Web Vitals statistics from backend
+ * @param days - Number of days to query (default: 7)
+ * @param url - Optional URL filter
+ * @returns Web Vitals statistics data
+ */
+export async function getWebVitalsStats(
+  days: number = 7,
+  url?: string,
+): Promise<WebVitalsData[]> {
+  const params = new URLSearchParams();
+  params.append("days", days.toString());
+  if (url) {
+    params.append("url", url);
+  }
+
+  const response = await fetch(
+    `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 /**
  * Utility: Process streaming response chunk by chunk
  * @param stream - ReadableStream from API response

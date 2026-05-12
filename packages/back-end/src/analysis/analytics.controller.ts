@@ -6,6 +6,8 @@ import {
   Body,
   HttpCode,
   Logger,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { AnalyticsService } from './analytics.service';
@@ -98,9 +100,12 @@ export class AnalyticsController {
 
   @Get('web-vitals/stats')
   async getWebVitalsStats(
-    @Query('days') days?: number,
+    @Query('days', new DefaultValuePipe(7), new ParseIntPipe()) days: number,
     @Query('url') url?: string,
   ) {
-    return this.analyticsService.getWebVitalsStats(url, days);
+    // Validate days parameter: must be positive number, default to 7
+    const validDays = days && days > 0 ? days : 7;
+
+    return this.analyticsService.getWebVitalsStats(url, validDays);
   }
 }
