@@ -12,11 +12,9 @@ import * as path from 'path';
 import axios from 'axios';
 import { PDFProcessService } from './pdf-process.service';
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-require-imports */
 const FormData = require('form-data');
 /* eslint-enable @typescript-eslint/no-require-imports */
-/* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
 interface MulterFile {
   fieldname: string;
@@ -38,8 +36,6 @@ export class PDFProcessController {
   @Post('process')
   @UseInterceptors(
     FileInterceptor('file', {
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
       storage: diskStorage({
         destination: './uploads',
         filename: (
@@ -53,8 +49,6 @@ export class PDFProcessController {
           cb(null, `${uniqueSuffix}-${file.originalname}`);
         },
       }),
-
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
     }),
   )
   async processFile(@UploadedFile() file: MulterFile) {
@@ -174,11 +168,7 @@ export class PDFProcessController {
         this.logger.warn(`⚠️ 清理OCR文本文件失败:`, cleanupError);
       }
 
-      /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       return { success: false, error: e.message };
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
-      /* eslint-enable @typescript-eslint/no-unsafe-member-access */
     }
   }
 
@@ -220,9 +210,7 @@ export class PDFProcessController {
       };
 
       // 创建FormData用于文件上传
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
-      /* eslint-disable @typescript-eslint/no-unsafe-member-access */
       const formData = new FormData();
 
       // 添加数据处理配置（作为JSON字符串）
@@ -247,9 +235,6 @@ export class PDFProcessController {
           },
         },
       );
-      /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
       const responseData = response.data as { document: { id: string } };
       const documentId = responseData.document?.id;
