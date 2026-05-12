@@ -13,6 +13,7 @@ export default function Analytics() {
   const lcpChartRef = useRef<HTMLDivElement>(null);
   const fcpChartRef = useRef<HTMLDivElement>(null);
   const clsChartRef = useRef<HTMLDivElement>(null);
+  const ttfbChartRef = useRef<HTMLDivElement>(null);
   const timelineChartRef = useRef<HTMLDivElement>(null);
 
   // Fetch data on component mount or when days changes
@@ -40,6 +41,7 @@ export default function Analytics() {
       initLCPChart();
       initFCPChart();
       initCLSChart();
+      initTTFBChart();
       initTimelineChart();
     }
   }, [data]);
@@ -52,7 +54,13 @@ export default function Analytics() {
   }, []);
 
   const disposeCharts = () => {
-    [lcpChartRef, fcpChartRef, clsChartRef, timelineChartRef].forEach((ref) => {
+    [
+      lcpChartRef,
+      fcpChartRef,
+      clsChartRef,
+      ttfbChartRef,
+      timelineChartRef,
+    ].forEach((ref) => {
       if (ref.current) {
         const chart = echarts.getInstanceByDom(ref.current);
         if (chart) {
@@ -135,6 +143,13 @@ export default function Analytics() {
       .map((item) => item.metrics.fcp?.value || 0)
       .filter((v) => v > 0);
 
+    const stats = { good: 0, needsImprovement: 0, poor: 0 };
+    fcpValues.forEach((v) => {
+      if (v <= 1800) stats.good++;
+      else if (v <= 3000) stats.needsImprovement++;
+      else stats.poor++;
+    });
+
     const option: EChartsOption = {
       title: {
         text: "FCP Distribution",
@@ -166,11 +181,7 @@ export default function Analytics() {
         {
           name: "FCP",
           type: "bar",
-          data: [
-            fcpValues.filter((v) => v <= 1800).length,
-            fcpValues.filter((v) => v > 1800 && v <= 3000).length,
-            fcpValues.filter((v) => v > 3000).length,
-          ],
+          data: [stats.good, stats.needsImprovement, stats.poor],
           itemStyle: {
             color: (params) => {
               const colors = ["#52c41a", "#faad14", "#ff4d4f"];
@@ -191,6 +202,13 @@ export default function Analytics() {
     const clsValues = data
       .map((item) => item.metrics.cls?.value || 0)
       .filter((v) => v > 0);
+
+    const stats = { good: 0, needsImprovement: 0, poor: 0 };
+    clsValues.forEach((v) => {
+      if (v <= 0.1) stats.good++;
+      else if (v <= 0.25) stats.needsImprovement++;
+      else stats.poor++;
+    });
 
     const option: EChartsOption = {
       title: {
@@ -223,10 +241,67 @@ export default function Analytics() {
         {
           name: "CLS",
           type: "bar",
+          data: [stats.good, stats.needsImprovement, stats.poor],
+          itemStyle: {
+            color: (params) => {
+              const colors = ["#52c41a", "#faad14", "#ff4d4f"];
+              return colors[params.dataIndex];
+            },
+          },
+        },
+      ],
+    };
+
+    chart.setOption(option);
+  };
+
+  const initTTFBChart = () => {
+    if (!ttfbChartRef.current) return;
+
+    const chart = echarts.init(ttfbChartRef.current);
+    const ttfbValues = data
+      .map((item) => item.metrics.ttfb?.value || 0)
+      .filter((v) => v > 0);
+
+    const option: EChartsOption = {
+      title: {
+        text: "TTFB Distribution",
+        left: "center",
+        textStyle: { color: "#fff" },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+      },
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: "3%",
+        containLabel: true,
+      },
+      xAxis: {
+        type: "category",
+        data: [
+          "Good (≤800ms)",
+          "Needs Improvement (800-1800ms)",
+          "Poor (>1800ms)",
+        ],
+        axisLabel: { color: "#999" },
+      },
+      yAxis: {
+        type: "value",
+        name: "Count",
+        axisLabel: { color: "#999" },
+        splitLine: { lineStyle: { color: "#333" } },
+      },
+      series: [
+        {
+          name: "TTFB",
+          type: "bar",
           data: [
-            clsValues.filter((v) => v <= 0.1).length,
-            clsValues.filter((v) => v > 0.1 && v <= 0.25).length,
-            clsValues.filter((v) => v > 0.25).length,
+            ttfbValues.filter((v) => v <= 800).length,
+            ttfbValues.filter((v) => v > 800 && v <= 1800).length,
+            ttfbValues.filter((v) => v > 1800).length,
           ],
           itemStyle: {
             color: (params) => {
@@ -249,7 +324,7 @@ export default function Analytics() {
     // Group data by date or time based on days selection
     const groupedData: Record<
       string,
-      { lcp: number[]; fcp: number[]; cls: number[] }
+      { lcp: number[]; fcp: number[]; cls: number[]; ttfb: number[] }
     > = {};
 
     data.forEach((item) => {
@@ -261,7 +336,7 @@ export default function Analytics() {
           : timestamp.toLocaleDateString();
 
       if (!groupedData[key]) {
-        groupedData[key] = { lcp: [], fcp: [], cls: [] };
+        groupedData[key] = { lcp: [], fcp: [], cls: [], ttfb: [] };
       }
       if (item.metrics.lcp?.value) {
         groupedData[key].lcp.push(item.metrics.lcp.value);
@@ -271,6 +346,9 @@ export default function Analytics() {
       }
       if (item.metrics.cls?.value) {
         groupedData[key].cls.push(item.metrics.cls.value);
+      }
+      if (item.metrics.ttfb?.value) {
+        groupedData[key].ttfb.push(item.metrics.ttfb.value);
       }
     });
 
@@ -305,6 +383,11 @@ export default function Analytics() {
         groupedData[key].cls.reduce((a, b) => a + b, 0) /
           groupedData[key].cls.length || 0,
     );
+    const avgTTFB = keys.map(
+      (key) =>
+        groupedData[key].ttfb.reduce((a, b) => a + b, 0) /
+          groupedData[key].ttfb.length || 0,
+    );
 
     const option: EChartsOption = {
       title: {
@@ -325,7 +408,7 @@ export default function Analytics() {
         },
       },
       legend: {
-        data: ["LCP", "FCP", "CLS"],
+        data: ["LCP", "FCP", "CLS", "TTFB"],
         textStyle: { color: "#999" },
         top: 30,
       },
@@ -384,6 +467,13 @@ export default function Analytics() {
           data: avgCLS,
           smooth: true,
           itemStyle: { color: "#faad14" },
+        },
+        {
+          name: "TTFB",
+          type: "line",
+          data: avgTTFB,
+          smooth: true,
+          itemStyle: { color: "#722ed1" },
         },
       ],
     };
@@ -495,6 +585,20 @@ export default function Analytics() {
                 </div>
               </div>
             </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-gray-900 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Avg TTFB</div>
+                <div className="text-2xl font-bold text-purple-400">
+                  {(
+                    data.reduce(
+                      (sum, item) => sum + (item.metrics.ttfb?.value || 0),
+                      0,
+                    ) / data.length
+                  ).toFixed(0)}
+                  ms
+                </div>
+              </div>
+            </div>
 
             {/* Timeline Chart */}
             <div className="bg-gray-900 rounded-lg p-4">
@@ -502,7 +606,7 @@ export default function Analytics() {
             </div>
 
             {/* Metric Distribution Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-gray-900 rounded-lg p-4">
                 <div ref={lcpChartRef} className="w-full h-64"></div>
               </div>
@@ -511,6 +615,9 @@ export default function Analytics() {
               </div>
               <div className="bg-gray-900 rounded-lg p-4">
                 <div ref={clsChartRef} className="w-full h-64"></div>
+              </div>
+              <div className="bg-gray-900 rounded-lg p-4">
+                <div ref={ttfbChartRef} className="w-full h-64"></div>
               </div>
             </div>
           </>
