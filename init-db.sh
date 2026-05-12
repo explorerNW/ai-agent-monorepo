@@ -21,27 +21,30 @@ fi
 
 # 进入 PostgreSQL 容器并创建表
 echo "✅ 正在创建数据表..."
-docker exec -i ai-agent-postgres psql -U ${DB_USER:-admin} -d ${DB_NAME:-analytics} <<EOF
+docker exec -i ai-agent-postgres psql -U ${DB_USER:-admin} -d ${DB_NAME:-analytics} <<'EOF'
 
--- 创建 Web Vitals 事件表
-CREATE TABLE IF NOT EXISTS web_vitals_events (
+-- 删除旧表（如果存在）以重新创建
+DROP TABLE IF EXISTS web_vitals_events CASCADE;
+
+-- 创建 Web Vitals 事件表（使用 camelCase 列名以匹配 TypeORM 实体）
+CREATE TABLE web_vitals_events (
   id SERIAL PRIMARY KEY,
-  event_name VARCHAR(50) NOT NULL,
-  user_id VARCHAR(100),
+  "event_name" VARCHAR(50) NOT NULL,
+  "user_id" VARCHAR(100),
   url TEXT NOT NULL,
   metrics JSONB NOT NULL,
-  navigation_type VARCHAR(20),
+  "navigation_type" VARCHAR(20),
   timestamp TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 创建索引
-CREATE INDEX IF NOT EXISTS idx_web_vitals_timestamp ON web_vitals_events(timestamp DESC);
-CREATE INDEX IF NOT EXISTS idx_web_vitals_user ON web_vitals_events(user_id);
-CREATE INDEX IF NOT EXISTS idx_web_vitals_event_name ON web_vitals_events(event_name);
+-- 创建索引（注意使用双引号包裹 camelCase 列名）
+CREATE INDEX idx_web_vitals_timestamp ON web_vitals_events(timestamp DESC);
+CREATE INDEX idx_web_vitals_user ON web_vitals_events("user_id");
+CREATE INDEX idx_web_vitals_event_name ON web_vitals_events("event_name");
 
 -- 创建 GIN 索引用于 JSONB 查询
-CREATE INDEX IF NOT EXISTS idx_web_vitals_metrics ON web_vitals_events USING GIN (metrics);
+CREATE INDEX idx_web_vitals_metrics ON web_vitals_events USING GIN (metrics);
 
 -- 显示表结构
 \d web_vitals_events

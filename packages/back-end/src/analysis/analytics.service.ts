@@ -96,9 +96,13 @@ export class AnalyticsService {
       queryBuilder.andWhere('wv.url LIKE :page', { page: `%${page}%` });
     }
 
+    // Calculate the cutoff date based on days parameter
+    // Supports fractional days (e.g., 1 day = 24 hours)
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
     queryBuilder
       .andWhere('wv.timestamp >= :date', {
-        date: new Date(Date.now() - days * 24 * 60 * 60 * 1000),
+        date: cutoffDate,
       })
       .orderBy('wv.timestamp', 'DESC')
       .take(100);

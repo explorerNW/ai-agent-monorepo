@@ -1,47 +1,42 @@
-import React from 'react';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 
 export function BottomNavigation() {
+  const location = useLocation();
+
   return (
     <div className="relative w-full h-[83px] bg-gradient-to-br from-[#3A4450] to-[#282F39] flex-shrink-0">
       {/* Top separator line */}
       <div className="absolute top-0 left-0 right-0 h-[0.5px] bg-white opacity-15" />
-      
+
       {/* Navigation items container */}
       <div className="flex items-start justify-between px-0 pt-0 h-[49px]">
-        {/* Feed - Inactive */}
-        <NavItem
-          icon={<FeedIcon />}
-          label="Feed"
-          isActive={false}
-        />
-        
+        {/* Feed */}
+        <Link to="/">
+          <NavItem
+            icon={<FeedIcon />}
+            label="Feed"
+            isActive={location.pathname === "/"}
+          />
+        </Link>
+
         {/* Explore - Inactive */}
-        <NavItem
-          icon={<ExploreIcon />}
-          label="Explore"
-          isActive={false}
-        />
-        
-        {/* Notifications - Inactive */}
-        <NavItem
-          icon={<NotificationsIcon />}
-          label="Notifications"
-          isActive={false}
-        />
-        
+        <NavItem icon={<ExploreIcon />} label="Explore" isActive={false} />
+
+        {/* Analytics */}
+        <Link to="/analytics">
+          <NavItem
+            icon={<AnalyticsIcon />}
+            label="Analytics"
+            isActive={location.pathname === "/analytics"}
+          />
+        </Link>
+
         {/* Inbox - Active */}
-        <NavItem
-          icon={<InboxIcon />}
-          label="Inbox"
-          isActive={true}
-        />
-        
+        <NavItem icon={<InboxIcon />} label="Inbox" isActive={false} />
+
         {/* Search - Inactive */}
-        <NavItem
-          icon={<SearchIcon />}
-          label="Search"
-          isActive={false}
-        />
+        <NavItem icon={<SearchIcon />} label="Search" isActive={false} />
       </div>
     </div>
   );
@@ -59,16 +54,17 @@ export function NavItem({
   return (
     <div className="w-[75px] h-[49px] flex flex-col items-center justify-start cursor-pointer">
       {/* Icon */}
-      <div className="mt-[8px] mb-auto">
-        {icon}
-      </div>
-      
+      <div className="mt-[8px] mb-auto">{icon}</div>
+
       {/* Label */}
       <span
         className={`text-[10px] font-normal leading-none tracking-[1.2%] mt-auto mb-0 ${
-          isActive ? 'text-white' : 'text-[#CFD9E4]'
+          isActive ? "text-white" : "text-[#CFD9E4]"
         }`}
-        style={{ fontFamily: 'SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif' }}
+        style={{
+          fontFamily:
+            "SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif",
+        }}
       >
         {label}
       </span>
@@ -228,19 +224,28 @@ export function SearchIcon() {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <circle
-        cx="8.5"
-        cy="8.5"
-        r="6.5"
-        stroke="#AEBECE"
-        strokeWidth="1.5"
-      />
+      <circle cx="8.5" cy="8.5" r="6.5" stroke="#AEBECE" strokeWidth="1.5" />
       <path
         d="M13.5 13.5L18 18"
         stroke="#AEBECE"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
+    </svg>
+  );
+}
+
+export function AnalyticsIcon() {
+  return (
+    <svg
+      className="w-[22px] h-[22px]"
+      viewBox="0 0 22 22"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect x="3" y="13" width="4" height="6" rx="1" fill="currentColor" />
+      <rect x="9" y="8" width="4" height="11" rx="1" fill="currentColor" />
+      <rect x="15" y="3" width="4" height="16" rx="1" fill="currentColor" />
     </svg>
   );
 }
