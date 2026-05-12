@@ -5,10 +5,10 @@ import { map, of } from 'rxjs';
 export class AppService {
   private readonly logger = new Logger(AppService.name);
   message(message: Record<string, any>) {
-    return of().pipe(
-      map(() => {
+    return of(true).pipe(
+      map((value) => {
         this.logger.log('Processing message:', message);
-        return true;
+        return value;
       }),
     );
   }

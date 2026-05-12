@@ -17,7 +17,7 @@ export class AnalyticsController {
       return { status: 'fail', error: 'No events to track' };
     }
 
-    this.logger.log('📨 接收到追踪事件:', events.length, '条');
+    this.logger.log(`📨 接收到追踪事件: ${events.length} 条`);
 
     // 2. 投递到 RabbitMQ (等待确认)
     return this.analyticsService.sendToQueue(events).pipe(

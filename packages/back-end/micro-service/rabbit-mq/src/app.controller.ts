@@ -2,7 +2,7 @@ import { Controller, Logger } from '@nestjs/common';
 import { AppService } from './app.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AnalyticsDto } from './analytics.dto';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, throwError } from 'rxjs';
 
 @Controller()
 export class AppController {
@@ -19,7 +19,8 @@ export class AppController {
       }),
       catchError((error) => {
         this.logger.error('❌ 消息处理失败:', error);
-        return of({ message_send: false, error });
+        // 选择重新抛出错误或返回特定的错误对象
+        return throwError(() => ({ message_send: false, error }));
       }),
     );
   }
