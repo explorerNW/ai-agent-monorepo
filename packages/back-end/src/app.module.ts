@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -14,6 +15,21 @@ import { AnalyticsModule } from './analysis/analytics.module';
     ConfigModule.forRoot({
       isGlobal: true, // 使配置模块全局可用
       envFilePath: '.env', // 指定 .env 文件路径
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get('DB_USER', 'admin'),
+        password: configService.get('DB_PASSWORD', 'admin123'),
+        database: configService.get('DB_NAME', 'analytics'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: configService.get('NODE_ENV') !== 'production', // 生产环境禁用自动同步
+        logging: configService.get('NODE_ENV') === 'development',
+      }),
+      inject: [ConfigService],
     }),
     AiModule,
     PDFProcessModule,

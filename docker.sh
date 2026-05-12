@@ -45,15 +45,23 @@ print_help() {
     echo "  logs:frontend View frontend logs"
     echo "  logs:rabbitmq View RabbitMQ server logs"
     echo "  logs:rabbitmq-service View RabbitMQ microservice logs"
+    echo "  logs:postgres View PostgreSQL logs"
     echo "  build         Build all services"
     echo "  clean         Stop and remove all containers, networks, and volumes"
     echo "  status        Show container status"
     echo "  shell:backend Open shell in backend container"
     echo "  shell:frontend Open shell in frontend container"
     echo "  shell:rabbitmq Open shell in RabbitMQ container"
+    echo "  shell:postgres Open shell in PostgreSQL container"
+    echo "  db:init       Initialize database tables"
+    echo "  db:shell      Open PostgreSQL command line"
     echo "  help          Show this help message"
     echo ""
-    echo "RabbitMQ Management UI: http://localhost:15672 (guest/guest)"
+    echo "Services:"
+    echo "  Front-end:    http://localhost:3001"
+    echo "  Back-end:     http://localhost:3000"
+    echo "  RabbitMQ UI:  http://localhost:15672 (guest/guest)"
+    echo "  PostgreSQL:   localhost:5432"
     echo ""
 }
 
@@ -63,6 +71,7 @@ start_prod() {
     echo -e "${GREEN}✓ Services started successfully!${NC}"
     echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
+    echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
 }
 
 start_dev() {
@@ -121,6 +130,12 @@ view_rabbitmq_service_logs() {
     $DOCKER_COMPOSE logs -f rabbit-mq-service
 }
 
+view_postgres_logs() {
+    echo -e "${BLUE}Viewing PostgreSQL logs...${NC}"
+    echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
+    $DOCKER_COMPOSE logs -f postgres
+}
+
 build_services() {
     echo -e "${GREEN}Building all services...${NC}"
     $DOCKER_COMPOSE build --no-cache
@@ -165,6 +180,22 @@ shell_rabbitmq() {
     docker exec -it ai-agent-rabbitmq sh
 }
 
+shell_postgres() {
+    echo -e "${BLUE}Opening shell in PostgreSQL container...${NC}"
+    docker exec -it ai-agent-postgres sh
+}
+
+db_init() {
+    echo -e "${GREEN}Initializing database...${NC}"
+    chmod +x init-db.sh
+    ./init-db.sh
+}
+
+db_shell() {
+    echo -e "${BLUE}Opening PostgreSQL command line...${NC}"
+    docker exec -it ai-agent-postgres psql -U ${DB_USER:-admin} -d ${DB_NAME:-analytics}
+}
+
 # Main command handler
 case "${1:-help}" in
     start)
@@ -194,6 +225,9 @@ case "${1:-help}" in
     logs:rabbitmq-service)
         view_rabbitmq_service_logs
         ;;
+    logs:postgres)
+        view_postgres_logs
+        ;;
     build)
         build_services
         ;;
@@ -211,6 +245,15 @@ case "${1:-help}" in
         ;;
     shell:rabbitmq)
         shell_rabbitmq
+        ;;
+    shell:postgres)
+        shell_postgres
+        ;;
+    db:init)
+        db_init
+        ;;
+    db:shell)
+        db_shell
         ;;
     help|*)
         print_help

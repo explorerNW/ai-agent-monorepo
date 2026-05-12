@@ -286,7 +286,7 @@ export class AnalyticsSDK {
     const eventsToSend = [...this.queue];
     this.queue = []; // 清空队列
 
-    const payload = JSON.stringify(eventsToSend);
+    const payload = JSON.stringify({ events: eventsToSend });
 
     if (isSync && navigator.sendBeacon && eventsToSend.length > 0) {
       // 页面卸载时使用 sendBeacon，异步但可靠
