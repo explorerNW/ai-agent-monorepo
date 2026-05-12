@@ -23,6 +23,7 @@ export class AnalyticsSDK {
   private retryCount = 0; // 重试计数器
   private maxRetries = 5; // 最大重试次数
   private performanceMetrics: Map<string, PerformanceMetric> = new Map();
+  private hasReportedWebVitals = false; // 标记是否已上报过Web Vitals
 
   constructor(serverUrl: string) {
     this.serverUrl = serverUrl;
@@ -288,7 +289,7 @@ export class AnalyticsSDK {
 
     const payload = JSON.stringify({ events: eventsToSend });
 
-    if (isSync && navigator.sendBeacon && eventsToSend.length > 0) {
+    if (isSync && navigator.sendBeacon) {
       // 页面卸载时使用 sendBeacon，异步但可靠
       navigator.sendBeacon(this.serverUrl, payload);
       this.retryCount = 0; // 成功后重置计数器
@@ -353,6 +354,9 @@ export class AnalyticsSDK {
 
   // 汇总上报所有性能指标
   private flushPerformanceMetrics() {
+    // 如果已经上报过，则不再重复上报
+    if (this.hasReportedWebVitals) return;
+
     if (this.performanceMetrics.size === 0) return;
 
     const metricsData: Record<string, any> = {};
@@ -372,7 +376,7 @@ export class AnalyticsSDK {
       url: window.location.href,
     });
 
-    // 清空已上报的指标（可选，根据需求决定是否保留历史数据）
-    // this.performanceMetrics.clear();
+    // 标记已上报，防止重复上报
+    this.hasReportedWebVitals = true;
   }
 }
