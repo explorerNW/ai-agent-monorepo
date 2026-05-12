@@ -11,16 +11,16 @@ export class WebVitalsEvent {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 50 })
+  @Column({ name: 'event_name', length: 50 })
   eventName: string;
 
-  @Column({ nullable: true, length: 100 })
+  @Column({ name: 'user_id', nullable: true, length: 100 })
   userId: string;
 
-  @Column({ type: 'text' })
+  @Column({ name: 'url', type: 'text' })
   url: string;
 
-  @Column('jsonb')
+  @Column({ name: 'metrics', type: 'jsonb' })
   metrics: {
     lcp?: { value: number; rating: string; navigationType?: string };
     fcp?: { value: number; rating: string; navigationType?: string };
@@ -29,13 +29,13 @@ export class WebVitalsEvent {
     ttfb?: { value: number; rating: string; navigationType?: string };
   };
 
-  @Column({ nullable: true, length: 20 })
+  @Column({ name: 'navigation_type', nullable: true, length: 20 })
   navigationType: string;
 
   @Index()
-  @Column({ type: 'timestamp' })
+  @Column({ name: 'timestamp', type: 'timestamp' })
   timestamp: Date;
 
-  @CreateDateColumn({ type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 }
