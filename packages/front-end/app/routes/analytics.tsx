@@ -263,6 +263,13 @@ export default function Analytics() {
       .map((item) => item.metrics.ttfb?.value || 0)
       .filter((v) => v > 0);
 
+    const stats = { good: 0, needsImprovement: 0, poor: 0 };
+    ttfbValues.forEach((v) => {
+      if (v <= 800) stats.good++;
+      else if (v <= 1800) stats.needsImprovement++;
+      else stats.poor++;
+    });
+
     const option: EChartsOption = {
       title: {
         text: "TTFB Distribution",
@@ -298,11 +305,7 @@ export default function Analytics() {
         {
           name: "TTFB",
           type: "bar",
-          data: [
-            ttfbValues.filter((v) => v <= 800).length,
-            ttfbValues.filter((v) => v > 800 && v <= 1800).length,
-            ttfbValues.filter((v) => v > 1800).length,
-          ],
+          data: [stats.good, stats.needsImprovement, stats.poor],
           itemStyle: {
             color: (params) => {
               const colors = ["#52c41a", "#faad14", "#ff4d4f"];
