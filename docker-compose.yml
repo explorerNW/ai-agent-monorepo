@@ -46,6 +46,9 @@ services:
     build:
       context: .
       dockerfile: packages/back-end/Dockerfile
+      args:
+        - FRONT_END_URL=${FRONT_END_URL}
+        - FRONT_END_URL_DEV=${FRONT_END_URL_DEV}
     container_name: ai-agent-backend
     ports:
       - "3000:3000"
@@ -53,6 +56,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - FRONT_END_URL=${FRONT_END_URL}
+      - FRONT_END_URL_DEV=${FRONT_END_URL_DEV}
     env_file:
       - ./packages/back-end/.env
     volumes:
@@ -79,16 +83,16 @@ services:
       context: .
       dockerfile: packages/front-end/Dockerfile
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
         - VITE_APP_NAME=AI Assistant
         - VITE_APP_VERSION=1.0.0
-        - VITE_API_URL=${VITE_API_URL}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     container_name: ai-agent-frontend
     ports:
       - "3001:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     env_file:
       - ./packages/front-end/.env
     depends_on:
