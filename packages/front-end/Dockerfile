@@ -55,11 +55,6 @@ RUN pnpm install --frozen-lockfile --force && \
 # Copy source code
 COPY packages/front-end/. ./packages/front-end/
 
-# Accept build arguments for environment variables
-ARG VITE_API_BASE_URL
-ARG VITE_APP_NAME
-ARG VITE_APP_VERSION
-
 # Set environment variables for build
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
