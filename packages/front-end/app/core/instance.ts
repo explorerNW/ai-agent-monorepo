@@ -1,4 +1,4 @@
-import { API_CONFIG, env } from "~/config/env";
+import { API_CONFIG } from "~/config/env";
 
 import { AnalyticsSDK } from "./AnalyticsSDK";
 const analyticsInstance = new AnalyticsSDK(
@@ -6,3 +6,4 @@ const analyticsInstance = new AnalyticsSDK(
 );
 
 export default analyticsInstance;
+export { analyticsInstance };

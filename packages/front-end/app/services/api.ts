@@ -4,6 +4,8 @@
  */
 
 import { API_CONFIG, env } from "~/config/env";
+import { analyticsInstance } from "~/core/instance";
+import type { WebVitalsData } from "~/types/performance";
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -27,46 +29,33 @@ export interface ChatResponse {
 export async function sendChatMessage(
   messages: ChatMessage[],
 ): Promise<ReadableStream> {
-  const response = await fetch(API_CONFIG.CHAT_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ messages }),
-  });
+  const startTime = performance.now();
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await analyticsInstance.trackedFetch(
+      API_CONFIG.CHAT_ENDPOINT,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("No response body");
+    }
+
+    return response.body;
+  } catch (error) {
+    console.error("Chat API call failed:", error);
+    throw error;
   }
-
-  if (!response.body) {
-    throw new Error("No response body");
-  }
-
-  return response.body;
-}
-
-export interface WebVitalsMetric {
-  value: number;
-  rating: string;
-  navigationType?: string;
-}
-
-export interface WebVitalsData {
-  id: number;
-  eventName: string;
-  userId?: string;
-  url: string;
-  metrics: {
-    lcp?: WebVitalsMetric;
-    fcp?: WebVitalsMetric;
-    cls?: WebVitalsMetric;
-    fid?: WebVitalsMetric;
-    ttfb?: WebVitalsMetric;
-  };
-  navigationType?: string;
-  timestamp: string;
-  createdAt: string;
 }
 
 /**
@@ -85,21 +74,26 @@ export async function getWebVitalsStats(
     params.append("url", url);
   }
 
-  const response = await fetch(
-    `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+  try {
+    const response = await analyticsInstance.trackedFetch(
+      `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    },
-  );
+    );
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Failed to fetch Web Vitals stats:", error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**

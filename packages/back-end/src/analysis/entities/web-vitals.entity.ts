@@ -27,6 +27,21 @@ export class WebVitalsEvent {
     cls?: { value: number; rating: string; navigationType?: string };
     fid?: { value: number; rating: string; navigationType?: string };
     ttfb?: { value: number; rating: string; navigationType?: string };
+    apiCalls?: Array<{
+      url: string;
+      method: string;
+      duration: number;
+      status: number;
+      timestamp: number;
+      success: boolean;
+    }>;
+    routePerformance?: {
+      route: string;
+      loadTime: number;
+      domContentLoaded: number;
+      firstPaint: number;
+      navigationType: string;
+    };
   };
 
   @Column({ name: 'navigation_type', nullable: true, length: 20 })
