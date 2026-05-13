@@ -33,7 +33,13 @@ export function BottomNavigation() {
         </Link>
 
         {/* Inbox - Active */}
-        <NavItem icon={<InboxIcon />} label="Inbox" isActive={false} />
+        <Link to="/chat">
+          <NavItem
+            icon={<InboxIcon />}
+            label="chat"
+            isActive={location.pathname === "/chat"}
+          />
+        </Link>
 
         {/* Search - Inactive */}
         <NavItem icon={<SearchIcon />} label="Search" isActive={false} />
