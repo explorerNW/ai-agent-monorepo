@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts";
 import type { EChartsOption } from "echarts";
-import { getWebVitalsStats, type WebVitalsData } from "~/services/api";
+import { getWebVitalsStats } from "~/services/api";
 import { BottomNavigation } from "~/components/BottomNavigation";
+import type { WebVitalsData } from "~/types/performance";
 
 export default function Analytics() {
   const [data, setData] = useState<WebVitalsData[]>([]);
@@ -15,6 +16,8 @@ export default function Analytics() {
   const clsChartRef = useRef<HTMLDivElement>(null);
   const ttfbChartRef = useRef<HTMLDivElement>(null);
   const timelineChartRef = useRef<HTMLDivElement>(null);
+  const apiPerformanceChartRef = useRef<HTMLDivElement>(null);
+  const routePerformanceChartRef = useRef<HTMLDivElement>(null);
 
   // Fetch data on component mount or when days changes
   useEffect(() => {
@@ -38,11 +41,16 @@ export default function Analytics() {
   // Initialize charts when data changes
   useEffect(() => {
     if (data.length > 0) {
-      initLCPChart();
-      initFCPChart();
-      initCLSChart();
-      initTTFBChart();
-      initTimelineChart();
+      // Use requestAnimationFrame to batch chart updates and avoid blocking UI
+      requestAnimationFrame(() => {
+        initLCPChart();
+        initFCPChart();
+        initCLSChart();
+        initTTFBChart();
+        initTimelineChart();
+        initApiPerformanceChart();
+        initRoutePerformanceChart();
+      });
     }
   }, [data]);
 
@@ -60,6 +68,8 @@ export default function Analytics() {
       clsChartRef,
       ttfbChartRef,
       timelineChartRef,
+      apiPerformanceChartRef,
+      routePerformanceChartRef,
     ].forEach((ref) => {
       if (ref.current) {
         const chart = echarts.getInstanceByDom(ref.current);
@@ -73,7 +83,12 @@ export default function Analytics() {
   const initLCPChart = () => {
     if (!lcpChartRef.current) return;
 
-    const chart = echarts.init(lcpChartRef.current);
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(lcpChartRef.current);
+    if (!chart) {
+      chart = echarts.init(lcpChartRef.current);
+    }
+
     const lcpValues = data
       .map((item) => item.metrics.lcp?.value || 0)
       .filter((v) => v > 0);
@@ -132,13 +147,20 @@ export default function Analytics() {
       ],
     };
 
-    chart.setOption(option);
+    // Use notMerge: false for incremental update (default behavior)
+    // This merges with existing options instead of replacing everything
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
   };
 
   const initFCPChart = () => {
     if (!fcpChartRef.current) return;
 
-    const chart = echarts.init(fcpChartRef.current);
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(fcpChartRef.current);
+    if (!chart) {
+      chart = echarts.init(fcpChartRef.current);
+    }
+
     const fcpValues = data
       .map((item) => item.metrics.fcp?.value || 0)
       .filter((v) => v > 0);
@@ -192,13 +214,18 @@ export default function Analytics() {
       ],
     };
 
-    chart.setOption(option);
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
   };
 
   const initCLSChart = () => {
     if (!clsChartRef.current) return;
 
-    const chart = echarts.init(clsChartRef.current);
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(clsChartRef.current);
+    if (!chart) {
+      chart = echarts.init(clsChartRef.current);
+    }
+
     const clsValues = data
       .map((item) => item.metrics.cls?.value || 0)
       .filter((v) => v > 0);
@@ -252,13 +279,18 @@ export default function Analytics() {
       ],
     };
 
-    chart.setOption(option);
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
   };
 
   const initTTFBChart = () => {
     if (!ttfbChartRef.current) return;
 
-    const chart = echarts.init(ttfbChartRef.current);
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(ttfbChartRef.current);
+    if (!chart) {
+      chart = echarts.init(ttfbChartRef.current);
+    }
+
     const ttfbValues = data
       .map((item) => item.metrics.ttfb?.value || 0)
       .filter((v) => v > 0);
@@ -316,13 +348,29 @@ export default function Analytics() {
       ],
     };
 
-    chart.setOption(option);
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
   };
 
   const initTimelineChart = () => {
     if (!timelineChartRef.current) return;
 
-    const chart = echarts.init(timelineChartRef.current);
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(timelineChartRef.current);
+    if (!chart) {
+      chart = echarts.init(timelineChartRef.current);
+    }
+
+    // Helper function to format timestamp as MM:DD:SS:SSS
+    const formatTimestamp = (timestamp: string): string => {
+      const date = new Date(timestamp);
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+      return `${month}/${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    };
 
     // Group data by date or time based on days selection
     const groupedData: Record<
@@ -335,7 +383,7 @@ export default function Analytics() {
       // Use time format for last 24h, date format for longer periods
       const key =
         days === 1
-          ? timestamp.toISOString().replace(/T/, " ").replace(/\..+/, "") // Format: "2026-05-12 15:32:59"
+          ? timestamp.toISOString() // Format: "2023-07-05T12:34:56.789Z"
           : timestamp.toLocaleDateString();
 
       if (!groupedData[key]) {
@@ -357,17 +405,11 @@ export default function Analytics() {
 
     const keys = Object.keys(groupedData).sort();
 
-    // For last 24h, format the time labels as hh:mm:ss
+    // For last 24h, format the time labels as MM:DD:SS:SSS
     const displayLabels =
       days === 1
         ? keys.map((key) => {
-            const date = new Date(key);
-            return date.toLocaleTimeString("en-US", {
-              hour12: false,
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            });
+            return formatTimestamp(key);
           })
         : keys;
 
@@ -402,10 +444,12 @@ export default function Analytics() {
         trigger: "axis",
         formatter: (params: any) => {
           const originalTime =
-            days === 1 ? keys[params[0].dataIndex] : params[0].axisValue;
+            days === 1
+              ? formatTimestamp(keys[params[0].dataIndex])
+              : params[0].axisValue;
           let result = `<div style="font-weight:bold">${originalTime}</div>`;
           params.forEach((param: any) => {
-            result += `<div>${param.marker} ${param.seriesName}: ${param.value.toFixed(param.seriesName === "CLS" ? 3 : 0)}${param.seriesName === "CLS" ? "" : "ms"}</div>`;
+            result += `<div>${param.marker} ${param.seriesName}: ${param.value.toFixed(param.seriesName === "CLS" ? 5 : 0)}${param.seriesName === "CLS" ? "" : "ms"}</div>`;
           });
           return result;
         },
@@ -479,12 +523,393 @@ export default function Analytics() {
           itemStyle: { color: "#722ed1" },
         },
       ],
+      // Add data zoom for x-axis scalability
+      dataZoom: [
+        {
+          type: "slider",
+          show: true,
+          xAxisIndex: [0],
+          start: 0,
+          end: 100,
+          bottom: 10,
+          height: 20,
+          handleSize: "80%",
+          showDetail: false,
+          textStyle: { color: "#999" },
+          fillerColor: "rgba(24, 144, 255, 0.2)",
+          borderColor: "#333",
+          handleStyle: {
+            color: "#1890ff",
+            borderColor: "#1890ff",
+          },
+        },
+        {
+          type: "inside",
+          xAxisIndex: [0],
+          start: 0,
+          end: 100,
+          zoomOnMouseWheel: true,
+          moveOnMouseMove: true,
+        },
+      ],
+    };
+
+    // Use lazyUpdate to batch render operations
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+  };
+
+  const initApiPerformanceChart = () => {
+    if (!apiPerformanceChartRef.current) return;
+
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(apiPerformanceChartRef.current);
+    if (!chart) {
+      chart = echarts.init(apiPerformanceChartRef.current);
+    }
+
+    // Helper function to extract API path from full URL
+    const extractApiPath = (url: string): string => {
+      try {
+        // If it's a full URL, extract pathname
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+          const urlObj = new URL(url);
+          return urlObj.pathname;
+        }
+        // Otherwise return as-is (already a path)
+        return url;
+      } catch {
+        // Fallback: remove protocol and host manually
+        return url.replace(/^https?:\/\/[^\/]+/, "");
+      }
+    };
+
+    // Extract API call data from metrics - support both camelCase and lowercase
+    const apiCallsData: Array<{
+      url: string;
+      avgDuration: number;
+      successRate: number;
+    }> = [];
+
+    console.log(
+      "[Analytics] Processing API performance data:",
+      data.length,
+      "records",
+    );
+
+    data.forEach((item, index) => {
+      // Try both possible field names
+      const apiCalls = item.metrics.apiCalls || item.metrics.apicalls;
+
+      if (index === 0) {
+        console.log(
+          "[Analytics] First record metrics keys:",
+          Object.keys(item.metrics),
+        );
+        console.log(
+          "[Analytics] API calls found:",
+          !!apiCalls,
+          "Type:",
+          typeof apiCalls,
+        );
+      }
+
+      if (apiCalls && Array.isArray(apiCalls)) {
+        if (index === 0) {
+          console.log("[Analytics] API calls count:", apiCalls.length);
+        }
+        apiCalls.forEach((apiCall) => {
+          apiCallsData.push({
+            url: apiCall.url,
+            avgDuration: apiCall.duration | 0,
+            successRate: apiCall.success ? 100 : 0,
+          });
+        });
+      }
+    });
+
+    console.log("[Analytics] Total API calls extracted:", apiCallsData.length);
+
+    // Group by URL and calculate averages
+    const urlStats: Record<
+      string,
+      { durations: number[]; successes: number[] }
+    > = {};
+    apiCallsData.forEach((call) => {
+      // Extract clean API path for grouping
+      const apiPath = extractApiPath(call.url);
+      if (!urlStats[apiPath]) {
+        urlStats[apiPath] = { durations: [], successes: [] };
+      }
+      urlStats[apiPath].durations.push(call.avgDuration);
+      urlStats[apiPath].successes.push(call.successRate);
+    });
+
+    const urls = Object.keys(urlStats).slice(0, 10); // Top 10 endpoints
+
+    console.log("[Analytics] Unique URLs:", urls.length);
+
+    if (urls.length === 0) {
+      // Show empty state
+      const option: EChartsOption = {
+        title: {
+          text: "API Performance",
+          left: "center",
+          textStyle: { color: "#fff" },
+        },
+        graphic: {
+          type: "text",
+          left: "center",
+          top: "middle",
+          style: {
+            text: "No API performance data available",
+            fill: "#999",
+            fontSize: 16,
+          },
+        },
+      };
+      chart.setOption(option);
+      return;
+    }
+
+    const avgDurations = urls.map((url) => {
+      const stats = urlStats[url];
+      return (
+        (stats.durations.reduce((sum, d) => sum + d, 0) /
+          stats.durations.length) |
+        0
+      );
+    });
+    const successRates = urls.map((url) => {
+      const stats = urlStats[url];
+      return (
+        stats.successes.reduce((sum, s) => sum + s, 0) / stats.successes.length
+      );
+    });
+
+    const option: EChartsOption = {
+      title: {
+        text: "API Performance",
+        left: "center",
+        textStyle: { color: "#fff" },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "cross" },
+      },
+      legend: {
+        data: ["Avg Duration (ms)", "Success Rate (%)"],
+        textStyle: { color: "#999" },
+        top: 30,
+      },
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: "3%",
+        containLabel: true,
+        top: 70,
+      },
+      xAxis: {
+        type: "category",
+        data: urls.map((url) =>
+          url.length > 30 ? url.substring(0, 30) + "..." : url,
+        ),
+        axisLabel: {
+          color: "#999",
+          rotate: 45,
+          fontSize: 10,
+        },
+      },
+      yAxis: [
+        {
+          type: "value",
+          name: "Duration (ms)",
+          position: "left",
+          axisLabel: { color: "#999" },
+          splitLine: { lineStyle: { color: "#333" } },
+        },
+        {
+          type: "value",
+          name: "Success Rate (%)",
+          position: "right",
+          axisLabel: { color: "#999" },
+          splitLine: { show: false },
+          max: 100,
+        },
+      ],
+      series: [
+        {
+          name: "Avg Duration (ms)",
+          type: "bar",
+          data: avgDurations,
+          itemStyle: { color: "#1890ff" },
+        },
+        {
+          name: "Success Rate (%)",
+          type: "line",
+          yAxisIndex: 1,
+          data: successRates,
+          smooth: true,
+          itemStyle: { color: "#52c41a" },
+        },
+      ],
     };
 
     chart.setOption(option);
   };
 
-  if (loading) {
+  const initRoutePerformanceChart = () => {
+    if (!routePerformanceChartRef.current) return;
+
+    // Get existing chart instance or create new one
+    let chart = echarts.getInstanceByDom(routePerformanceChartRef.current);
+    if (!chart) {
+      chart = echarts.init(routePerformanceChartRef.current);
+    }
+
+    // Extract route performance data - support both camelCase and lowercase
+    const routeData: Array<{
+      route: string;
+      loadTime: number;
+      domContentLoaded: number;
+    }> = [];
+
+    console.log("[Analytics] Processing route performance data");
+
+    data.forEach((item, index) => {
+      // Try both possible field names
+      const routePerformance =
+        item.metrics.routePerformance || item.metrics.routeperformance;
+
+      if (index === 0) {
+        console.log("[Analytics] Route performance found:", !!routePerformance);
+        if (routePerformance) {
+          console.log("[Analytics] Route performance data:", routePerformance);
+        }
+      }
+
+      if (routePerformance) {
+        routeData.push({
+          route: routePerformance.route,
+          loadTime: routePerformance.loadTime | 0,
+          domContentLoaded: routePerformance.domContentLoaded | 0,
+        });
+      }
+    });
+
+    console.log("[Analytics] Total route records extracted:", routeData.length);
+
+    // Group by route
+    const routeStats: Record<
+      string,
+      { loadTimes: number[]; domContentLoadedTimes: number[] }
+    > = {};
+    routeData.forEach((route) => {
+      if (!routeStats[route.route]) {
+        routeStats[route.route] = { loadTimes: [], domContentLoadedTimes: [] };
+      }
+      routeStats[route.route].loadTimes.push(route.loadTime);
+      routeStats[route.route].domContentLoadedTimes.push(
+        route.domContentLoaded,
+      );
+    });
+
+    const routes = Object.keys(routeStats);
+
+    console.log("[Analytics] Unique routes:", routes.length);
+
+    if (routes.length === 0) {
+      // Show empty state
+      const option: EChartsOption = {
+        title: {
+          text: "Route Performance",
+          left: "center",
+          textStyle: { color: "#fff" },
+        },
+        graphic: {
+          type: "text",
+          left: "center",
+          top: "middle",
+          style: {
+            text: "No route performance data available",
+            fill: "#999",
+            fontSize: 16,
+          },
+        },
+      };
+      chart.setOption(option);
+      return;
+    }
+
+    const avgLoadTimes = routes.map((route) => {
+      const stats = routeStats[route];
+      return (
+        (stats.loadTimes.reduce((sum, t) => sum + t, 0) /
+          stats.loadTimes.length) |
+        0
+      );
+    });
+    const avgDomContentLoaded = routes.map((route) => {
+      const stats = routeStats[route];
+      return (
+        (stats.domContentLoadedTimes.reduce((sum, t) => sum + t, 0) /
+          stats.domContentLoadedTimes.length) |
+        0
+      );
+    });
+
+    const option: EChartsOption = {
+      title: {
+        text: "Route Performance",
+        left: "center",
+        textStyle: { color: "#fff" },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+      },
+      legend: {
+        data: ["Load Time", "DOM Content Loaded"],
+        textStyle: { color: "#999" },
+        top: 30,
+      },
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: "3%",
+        containLabel: true,
+        top: 70,
+      },
+      xAxis: {
+        type: "category",
+        data: routes,
+        axisLabel: { color: "#999" },
+      },
+      yAxis: {
+        type: "value",
+        name: "Time (ms)",
+        axisLabel: { color: "#999" },
+        splitLine: { lineStyle: { color: "#333" } },
+      },
+      series: [
+        {
+          name: "Load Time",
+          type: "bar",
+          data: avgLoadTimes,
+          itemStyle: { color: "#722ed1" },
+        },
+        {
+          name: "DOM Content Loaded",
+          type: "bar",
+          data: avgDomContentLoaded,
+          itemStyle: { color: "#13c2c2" },
+        },
+      ],
+    };
+
+    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+  };
+
+  if (loading && data.length === 0) {
     return (
       <div className="flex flex-col h-screen bg-black">
         <div className="flex-1 flex items-center justify-center">
@@ -584,7 +1009,7 @@ export default function Analytics() {
                       (sum, item) => sum + (item.metrics.cls?.value || 0),
                       0,
                     ) / data.length
-                  ).toFixed(3)}
+                  ).toFixed(5)}
                 </div>
               </div>
             </div>
@@ -622,6 +1047,16 @@ export default function Analytics() {
               <div className="bg-gray-900 rounded-lg p-4">
                 <div ref={ttfbChartRef} className="w-full h-64"></div>
               </div>
+            </div>
+
+            {/* API Performance Chart */}
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div ref={apiPerformanceChartRef} className="w-full h-80"></div>
+            </div>
+
+            {/* Route Performance Chart */}
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div ref={routePerformanceChartRef} className="w-full h-80"></div>
             </div>
           </>
         )}

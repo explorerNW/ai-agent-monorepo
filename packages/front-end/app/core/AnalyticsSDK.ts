@@ -14,6 +14,24 @@ interface PerformanceMetric {
   navigationType?: string;
 }
 
+interface ApiCallMetric {
+  url: string;
+  method: string;
+  duration: number;
+  status: number;
+  timestamp: number;
+  success: boolean;
+}
+
+interface RoutePerformanceMetric {
+  route: string;
+  loadTime: number;
+  domContentLoaded: number;
+  firstPaint: number;
+  timestamp: number;
+  navigationType: string;
+}
+
 export class AnalyticsSDK {
   private queue: EventData[] = [];
   private maxQueueSize = 10; // 达到10条触发一次上报
@@ -23,11 +41,16 @@ export class AnalyticsSDK {
   private retryCount = 0; // 重试计数器
   private maxRetries = 5; // 最大重试次数
   private performanceMetrics: Map<string, PerformanceMetric> = new Map();
-  private hasReportedWebVitals = false; // 标记是否已上报过Web Vitals
+  private apiCallMetrics: ApiCallMetric[] = [];
+  private routePerformanceMetrics: RoutePerformanceMetric[] = [];
+  private apiMetricsBatchSize = 5; // API指标批量上报阈值
 
   constructor(serverUrl: string) {
     this.serverUrl = serverUrl;
-    this.init();
+    // Only initialize in browser environment
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+      this.init();
+    }
   }
 
   // 初始化：启动定时器和页面卸载监听
@@ -262,6 +285,11 @@ export class AnalyticsSDK {
 
   // 核心上报方法
   public track(eventName: string, properties: Record<string, any> = {}) {
+    // Only track in browser environment
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const event: EventData = {
       eventName,
       properties,
@@ -354,9 +382,6 @@ export class AnalyticsSDK {
 
   // 汇总上报所有性能指标
   private flushPerformanceMetrics() {
-    // 如果已经上报过，则不再重复上报
-    if (this.hasReportedWebVitals) return;
-
     if (this.performanceMetrics.size === 0) return;
 
     const metricsData: Record<string, any> = {};
@@ -368,6 +393,19 @@ export class AnalyticsSDK {
       };
     });
 
+    // Add API call metrics if available
+    if (this.apiCallMetrics.length > 0) {
+      metricsData.apicalls = [...this.apiCallMetrics];
+    }
+
+    // Add route performance metrics if available
+    if (this.routePerformanceMetrics.length > 0) {
+      // Use the most recent route performance metric
+      const latestRoute =
+        this.routePerformanceMetrics[this.routePerformanceMetrics.length - 1];
+      metricsData.routeperformance = latestRoute;
+    }
+
     // 将所有性能指标合并为一条事件上报
     this.track("web_vitals_summary", {
       metrics: metricsData,
@@ -376,7 +414,247 @@ export class AnalyticsSDK {
       url: window.location.href,
     });
 
-    // 标记已上报，防止重复上报
-    this.hasReportedWebVitals = true;
+    // Clear the tracked metrics after reporting
+    this.apiCallMetrics = [];
+    this.routePerformanceMetrics = [];
+  }
+
+  // 跟踪 API 调用性能
+  public trackApiCall(
+    url: string,
+    method: string,
+    duration: number,
+    status: number,
+    success: boolean,
+  ) {
+    const apiMetric: ApiCallMetric = {
+      url,
+      method,
+      duration,
+      status,
+      timestamp: Date.now(),
+      success,
+    };
+
+    this.apiCallMetrics.push(apiMetric);
+
+    // 达到批量阈值时上报
+    if (this.apiCallMetrics.length >= this.apiMetricsBatchSize) {
+      this.flushApiMetrics();
+    }
+  }
+
+  // 批量上报 API 调用指标
+  private flushApiMetrics() {
+    if (this.apiCallMetrics.length === 0) return;
+
+    // Don't send separate event, just keep accumulating
+    // The metrics will be included in the next web_vitals_summary event
+
+    // Log for debugging
+    console.log(
+      `[AnalyticsSDK] Accumulated ${this.apiCallMetrics.length} API call metrics`,
+    );
+  }
+
+  // 包装 fetch 请求以自动追踪性能
+  public trackedFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    // Only track in browser environment
+    if (typeof window === "undefined" || typeof performance === "undefined") {
+      return fetch(input, init);
+    }
+
+    // Sanitize URL to avoid tracking sensitive query parameters
+    const sanitizeUrl = (urlString: string) => {
+      try {
+        const url = new URL(urlString, window.location.origin);
+        url.search = ""; // 移除所有查询参数
+        // 或者只保留白名单参数，如 ?page=1
+        return url.toString();
+      } catch {
+        return urlString;
+      }
+    };
+
+    const startTime = performance.now();
+    const url = typeof input === "string" ? input : input.toString();
+    const method = init?.method || "GET";
+
+    return fetch(input, init)
+      .then((response) => {
+        const duration = performance.now() - startTime;
+        this.trackApiCall(
+          sanitizeUrl(url),
+          method,
+          duration,
+          response.status,
+          response.ok,
+        );
+        return response;
+      })
+      .catch((error) => {
+        const duration = performance.now() - startTime;
+        this.trackApiCall(sanitizeUrl(url), method, duration, 0, false);
+        throw error;
+      });
+  }
+
+  // Track route change start time for SPA navigation
+  private routeChangeStartTime: number | null = null;
+
+  // 跟踪路由页面性能
+  public trackRoutePerformance(route: string) {
+    // Only track in browser environment
+    if (typeof window === "undefined" || typeof performance === "undefined") {
+      return;
+    }
+
+    let loadTime: number;
+    let domContentLoaded: number;
+    let firstPaint: number;
+    let navigationType: string;
+
+    // Check if this is the initial page load or a SPA route change
+    const navigationEntries = performance.getEntriesByType("navigation");
+
+    if (navigationEntries.length > 0 && !this.routeChangeStartTime) {
+      // Initial page load - use Navigation Timing API
+      const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
+      loadTime = navEntry.loadEventEnd - navEntry.startTime;
+      domContentLoaded = navEntry.domContentLoadedEventEnd - navEntry.startTime;
+      firstPaint = this.getFirstPaintTime();
+      navigationType = navEntry.type || "navigate";
+
+      console.log(`[AnalyticsSDK] Initial page load tracked: ${route}`);
+    } else {
+      // SPA route change - use manual timing
+      const now = performance.now();
+
+      // If we don't have a start time, use current time minus a small offset
+      // This approximates when the route change started
+      const startTime = this.routeChangeStartTime || now - 100;
+
+      loadTime = now - startTime;
+      domContentLoaded = loadTime * 0.6; // Estimate DOM ready at ~60% of load time
+      firstPaint = loadTime * 0.3; // Estimate first paint at ~30% of load time
+      navigationType = "spa_navigate";
+
+      // Reset the start time for next route change
+      this.routeChangeStartTime = null;
+
+      console.log(
+        `[AnalyticsSDK] SPA route change tracked: ${route} (${loadTime.toFixed(2)}ms)`,
+      );
+    }
+
+    const routeMetric: RoutePerformanceMetric = {
+      route,
+      loadTime,
+      domContentLoaded,
+      firstPaint,
+      timestamp: Date.now(),
+      navigationType,
+    };
+
+    this.routePerformanceMetrics.push(routeMetric);
+
+    // Don't send separate event, just accumulate
+    // The metrics will be included in the next web_vitals_summary event
+  }
+
+  // Mark the start of a route change (call before navigation)
+  public markRouteChangeStart() {
+    if (typeof performance !== "undefined") {
+      this.routeChangeStartTime = performance.now();
+    }
+  }
+
+  // 获取首次绘制时间
+  private getFirstPaintTime(): number {
+    const paintEntries = performance.getEntriesByType("paint");
+    const fpEntry = paintEntries.find((entry) => entry.name === "first-paint");
+    return fpEntry ? fpEntry.startTime : 0;
+  }
+
+  // 获取 API 调用统计
+  public getApiCallStats(): {
+    totalCalls: number;
+    avgDuration: number;
+    successRate: number;
+    slowestEndpoint: string;
+  } {
+    if (this.apiCallMetrics.length === 0) {
+      return {
+        totalCalls: 0,
+        avgDuration: 0,
+        successRate: 0,
+        slowestEndpoint: "",
+      };
+    }
+
+    const totalCalls = this.apiCallMetrics.length;
+    const avgDuration =
+      this.apiCallMetrics.reduce((sum, m) => sum + m.duration, 0) / totalCalls;
+    const successCount = this.apiCallMetrics.filter((m) => m.success).length;
+    const successRate = (successCount / totalCalls) * 100;
+
+    // 找出最慢的端点
+    const endpointDurations: Record<string, number[]> = {};
+    this.apiCallMetrics.forEach((metric) => {
+      if (!endpointDurations[metric.url]) {
+        endpointDurations[metric.url] = [];
+      }
+      endpointDurations[metric.url].push(metric.duration);
+    });
+
+    let slowestEndpoint = "";
+    let maxAvgDuration = 0;
+    Object.entries(endpointDurations).forEach(([url, durations]) => {
+      const avg = durations.reduce((sum, d) => sum + d, 0) / durations.length;
+      if (avg > maxAvgDuration) {
+        maxAvgDuration = avg;
+        slowestEndpoint = url;
+      }
+    });
+
+    return { totalCalls, avgDuration, successRate, slowestEndpoint };
+  }
+
+  // 获取路由性能统计
+  public getRoutePerformanceStats(): Array<{
+    route: string;
+    avgLoadTime: number;
+    avgDomContentLoaded: number;
+    visitCount: number;
+  }> {
+    if (this.routePerformanceMetrics.length === 0) return [];
+
+    const routeStats: Record<
+      string,
+      { loadTimes: number[]; domContentLoadedTimes: number[] }
+    > = {};
+
+    this.routePerformanceMetrics.forEach((metric) => {
+      if (!routeStats[metric.route]) {
+        routeStats[metric.route] = { loadTimes: [], domContentLoadedTimes: [] };
+      }
+      routeStats[metric.route].loadTimes.push(metric.loadTime);
+      routeStats[metric.route].domContentLoadedTimes.push(
+        metric.domContentLoaded,
+      );
+    });
+
+    return Object.entries(routeStats).map(([route, stats]) => ({
+      route,
+      avgLoadTime:
+        stats.loadTimes.reduce((sum, t) => sum + t, 0) / stats.loadTimes.length,
+      avgDomContentLoaded:
+        stats.domContentLoadedTimes.reduce((sum, t) => sum + t, 0) /
+        stats.domContentLoadedTimes.length,
+      visitCount: stats.loadTimes.length,
+    }));
   }
 }
