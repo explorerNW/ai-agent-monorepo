@@ -45,7 +45,7 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
         apiCalls.forEach((apiCall) => {
           apiCallsData.push({
             url: apiCall.url,
-            avgDuration: apiCall.duration | 0,
+            avgDuration: parseFloat(apiCall.duration.toFixed(3)),
             successRate: apiCall.success ? 100 : 0,
           });
         });
@@ -95,13 +95,13 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
       const stats = urlStats[url];
       return (
         stats.durations.reduce((sum, d) => sum + d, 0) / stats.durations.length
-      );
+      ).toFixed(2);
     });
     const successRates = urls.map((url) => {
       const stats = urlStats[url];
       return (
         stats.successes.reduce((sum, s) => sum + s, 0) / stats.successes.length
-      );
+      ).toFixed(2);
     });
 
     const option: EChartsOption = {

@@ -512,63 +512,170 @@ export class AnalyticsSDK {
       return;
     }
 
-    let loadTime: number;
-    let domContentLoaded: number;
-    let firstPaint: number;
-    let navigationType: string;
-
-    // Check if this is the initial page load or a SPA route change
+    // Check if this is initial page load vs SPA route change
     const navigationEntries = performance.getEntriesByType("navigation");
 
     if (navigationEntries.length > 0 && !this.routeChangeStartTime) {
       // Initial page load - use Navigation Timing API
       const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
-      loadTime = navEntry.loadEventEnd - navEntry.startTime;
-      domContentLoaded = navEntry.domContentLoadedEventEnd - navEntry.startTime;
-      firstPaint = this.getFirstPaintTime();
-      navigationType = navEntry.type || "navigate";
 
-      console.log(`[AnalyticsSDK] Initial page load tracked: ${route}`);
+      const loadTime = navEntry.loadEventEnd - navEntry.startTime;
+      const domContentLoaded =
+        navEntry.domContentLoadedEventEnd - navEntry.startTime;
+      const firstPaint = this.getFirstPaintTime();
+      const navigationType = navEntry.type || "navigate";
+
+      const metrics = {
+        route,
+        loadTime,
+        domContentLoaded,
+        firstPaint,
+        navigationType,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Send immediate event for initial load
+      this.track("web_vitals_summary", {
+        routePerformance: metrics,
+        apicalls: [...this.apiCallMetrics],
+      });
+
+      // Clear sent API calls
+      this.apiCallMetrics = [];
+      this.routePerformanceMetrics = [];
+
+      console.log(`[AnalyticsSDK] Initial page load: ${route}`, metrics);
     } else {
-      // SPA route change - use manual timing
+      // SPA route change - measure actual rendering performance
       const now = performance.now();
+      const startTime = this.routeChangeStartTime || now;
 
-      // If we don't have a start time, use current time minus a small offset
-      // This approximates when the route change started
-      const startTime = this.routeChangeStartTime || now - 100;
+      // Measure actual time from route change start to now
+      const actualLoadTime = now - startTime;
 
-      loadTime = now - startTime;
-      domContentLoaded = loadTime * 0.6; // Estimate DOM ready at ~60% of load time
-      firstPaint = loadTime * 0.3; // Estimate first paint at ~30% of load time
-      navigationType = "spa_navigate";
+      // For SPA, we need to measure actual rendering events
+      // Use requestAnimationFrame to wait for a frame to be painted
+      requestAnimationFrame(() => {
+        // Wait for the next microtask to allow DOM to update
+        Promise.resolve().then(() => {
+          // Get DOM ready time after changes have been applied
+          const domReadyTime = performance.now() - startTime;
 
-      // Reset the start time for next route change
+          // Measure actual paint time if possible
+          if ("measure" in performance) {
+            // Create a custom measure for route change
+            try {
+              performance.measure(
+                `route-change-${route}`,
+                undefined,
+                `route-change-start-${route}`,
+              );
+            } catch (e) {
+              // Ignore if mark doesn't exist
+            }
+
+            // Get the actual measure
+            const measures = performance.getEntriesByName(
+              `route-change-${route}`,
+            );
+            if (measures.length > 0) {
+              const actualMeasure = measures[0];
+
+              const metrics = {
+                route,
+                loadTime: actualMeasure.duration,
+                domContentLoaded: domReadyTime,
+                firstPaint: this.getFirstPaintTime(), // This still gets FP since FP is global
+                navigationType: "spa_navigate",
+                timestamp: new Date().toISOString(),
+              };
+
+              this.track("web_vitals_summary", {
+                routePerformance: metrics,
+                apicalls: [...this.apiCallMetrics],
+              });
+
+              // Clear sent API calls
+              this.apiCallMetrics = [];
+              this.routePerformanceMetrics = [];
+
+              console.log(`[AnalyticsSDK] SPA route change: ${route}`, metrics);
+            } else {
+              // Fallback if measure is not available or failed
+              const metrics = {
+                route,
+                loadTime: actualLoadTime,
+                domContentLoaded: domReadyTime,
+                firstPaint: this.getFirstPaintTime(),
+                navigationType: "spa_navigate",
+                timestamp: new Date().toISOString(),
+              };
+
+              this.track("web_vitals_summary", {
+                routePerformance: metrics,
+                apicalls: [...this.apiCallMetrics],
+              });
+
+              // Clear sent API calls
+              this.apiCallMetrics = [];
+              this.routePerformanceMetrics = [];
+
+              console.log(
+                `[AnalyticsSDK] SPA route change (fallback): ${route}`,
+                metrics,
+              );
+            }
+
+            // Clear the measure mark
+            performance.clearMeasures(`route-change-${route}`);
+            performance.clearMarks(`route-change-start-${route}`);
+          } else {
+            // Fallback if performance.measure is not supported
+            const metrics = {
+              route,
+              loadTime: actualLoadTime,
+              domContentLoaded: domReadyTime,
+              firstPaint: this.getFirstPaintTime(),
+              navigationType: "spa_navigate",
+              timestamp: new Date().toISOString(),
+            };
+
+            this.track("web_vitals_summary", {
+              routePerformance: metrics,
+              apicalls: [...this.apiCallMetrics],
+            });
+
+            // Clear sent API calls
+            this.apiCallMetrics = [];
+            this.routePerformanceMetrics = [];
+
+            console.log(
+              `[AnalyticsSDK] SPA route change (no measure): ${route}`,
+              metrics,
+            );
+          }
+        });
+      });
+
+      // Reset for next navigation
       this.routeChangeStartTime = null;
-
-      console.log(
-        `[AnalyticsSDK] SPA route change tracked: ${route} (${loadTime.toFixed(2)}ms)`,
-      );
     }
-
-    const routeMetric: RoutePerformanceMetric = {
-      route,
-      loadTime,
-      domContentLoaded,
-      firstPaint,
-      timestamp: Date.now(),
-      navigationType,
-    };
-
-    this.routePerformanceMetrics.push(routeMetric);
-
-    // Don't send separate event, just accumulate
-    // The metrics will be included in the next web_vitals_summary event
   }
 
   // Mark the start of a route change (call before navigation)
   public markRouteChangeStart() {
     if (typeof performance !== "undefined") {
       this.routeChangeStartTime = performance.now();
+
+      // Create a performance mark for accurate measurement
+      try {
+        const routeName =
+          typeof window !== "undefined" ? window.location.pathname : "unknown";
+        performance.mark(`route-change-start-${routeName}`);
+      } catch (e) {
+        // Ignore errors if mark already exists
+        console.debug("[AnalyticsSDK] Mark creation error:", e);
+      }
     }
   }
 
