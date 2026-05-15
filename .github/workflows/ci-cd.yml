@@ -9,6 +9,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DEPLOY_DIR: code-repo/ai-repo/ai-agent-monorepo
+  PROJECT_NAME: ai-agent-monorepo
+
 jobs:
   build-and-deploy:
     # 使用自托管 Runner，即时启动无等待
@@ -16,21 +20,124 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # 【重要】建议显式 Checkout 代码，除非你确信 Runner 是持久化且已同步的
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # 如果确实需要浅克隆以加速，可以保留 depth，否则建议移除
+          fetch-depth: 1
+
       # 步骤1: 先进行轻量级检查,快速失败
       - name: Validate Configuration
         run: |
           echo "🔍 Validating deployment configuration..."
+
+          # 验证必需的秘密变量
           if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
             echo "::error::SSH_PRIVATE_KEY secret is not configured"
             exit 1
           fi
-          echo "✅ Configuration validated"
+          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
+            echo "::error::SERVER_HOST secret is not configured"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SERVER_PORT }}" ]; then
+            echo "::error::SERVER_PORT secret is not configured"
+            exit 1
+          fi
 
-      # 步骤2: 部署到服务器
+          # 验证项目目录是否存在
+          if [ ! -d "${{ env.DEPLOY_DIR }}" ]; then
+            echo "::error::Deploy directory ${{ env.DEPLOY_DIR }} not found"
+            exit 1
+          fi
+
+          # 验证关键文件是否存在
+          if [ ! -f "${{ env.DEPLOY_DIR }}/docker.sh" ]; then
+            echo "::error::docker.sh script not found in ${{ env.DEPLOY_DIR }}"
+            exit 1
+          fi
+
+          echo "✅ Configuration validated successfully"
+
+      # 步骤2: 预部署健康检查
+      - name: Pre-deployment Health Check
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: explorernw
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          script_stop: false
+          debug: false
+          script: |
+            echo "🏥 Running pre-deployment health check..."
+
+            # 检查磁盘空间
+            DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+            if [ "$DISK_USAGE" -gt 90 ]; then
+              echo "::warning::Disk usage is at ${DISK_USAGE}%, consider cleanup"
+            else
+              echo "✅ Disk usage: ${DISK_USAGE}%"
+            fi
+
+            # 检查Docker服务状态
+            if ! docker info > /dev/null 2>&1; then
+              echo "::error::Docker service is not running"
+              exit 1
+            fi
+            echo "✅ Docker service is running"
+
+            # 记录当前运行的容器
+            echo "📋 Current running containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+
+            echo "✅ Pre-deployment health check passed"
+
+      # 步骤3: 备份当前版本（用于回滚）
+      - name: Backup Current Version
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script_stop: false
+          debug: false
+          script: |
+            set -e
+
+            echo "💾 Creating backup before deployment..."
+
+            cd ${{ env.DEPLOY_DIR }} || exit 1
+
+            # 创建备份目录
+            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+
+            # 备份docker-compose配置
+            if [ -f docker-compose.yml ]; then
+              cp docker-compose.yml "$BACKUP_DIR/"
+            fi
+
+            # 备份环境变量文件
+            if [ -f .env ]; then
+              cp .env "$BACKUP_DIR/"
+            fi
+
+            # 保留最近5个备份
+            cd backups
+            ls -t | tail -n +6 | xargs -r rm -rf
+
+            echo "✅ Backup created: $BACKUP_DIR"
+
+      # 步骤4: 部署到服务器
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: s0.v100.vip
+          host: ${{ secrets.SERVER_HOST }}
           port: ${{ secrets.SERVER_PORT }}
           username: explorernw
           key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -42,23 +149,102 @@ jobs:
             set -e  # 遇到错误立即退出
 
             echo "🚀 Starting deployment at $(date)"
+            echo "📂 Project: ${{ env.PROJECT_NAME }}"
+            echo "📁 Directory: ${{ env.DEPLOY_DIR }}"
 
             # 进入项目目录
-            cd code-repo/ai-repo/ai-agent-monorepo/ || {
-              echo "::error::Project directory not found"
+            cd ${{ env.DEPLOY_DIR }} || {
+              echo "::error::Project directory not found: ${{ env.DEPLOY_DIR }}"
               exit 1
             }
 
-            # 优化Git拉取 - 使用浅克隆和单分支
-            echo "📦 Pulling latest code..."
-            git fetch --depth=1 origin main
-            git reset --hard origin/main
+            # 由于使用了 actions/checkout，代码已经是最新的，无需 git pull
+            # 如果是持久化目录场景，取消下面注释：
+            # echo "📦 Pulling latest code..."
+            # git fetch --depth=1 origin main
+            # git reset --hard origin/main
+
+            # 显示当前提交信息
+            echo "📝 Current commit:"
+            git log -1 --format="%h - %s (%an, %ar)" || true
 
             # 赋予脚本执行权限
             chmod +x docker.sh
 
             # 执行重启部署脚本
             echo "🔄 Restarting services..."
-            sudo ./docker.sh restart
+            ./docker.sh restart
 
             echo "✅ Deployment completed at $(date)"
+
+      # 步骤5: 部署后验证
+      - name: Post-deployment Verification
+        if: always()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: explorernw
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script_stop: false
+          debug: false
+          script: |
+            echo "🔍 Running post-deployment verification..."
+
+            cd ${{ env.DEPLOY_DIR }} || exit 1
+
+            # 检查容器运行状态
+            echo "📋 Checking container status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+
+            # 检查关键服务是否运行
+            SERVICES=("ai-agent-backend" "ai-agent-frontend")
+            FAILED_SERVICES=()
+
+            for SERVICE in "${SERVICES[@]}"; do
+              if docker ps --filter "name=$SERVICE" --filter "status=running" | grep -q "$SERVICE"; then
+                echo "✅ $SERVICE is running"
+              else
+                echo "::error::$SERVICE is not running"
+                FAILED_SERVICES+=("$SERVICE")
+              fi
+            done
+
+            # 如果有服务失败，提供诊断信息
+            if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+              echo "❌ Failed services: ${FAILED_SERVICES[*]}"
+              echo "📊 Showing recent logs for failed services:"
+              for SERVICE in "${FAILED_SERVICES[@]}"; do
+                echo "--- Logs for $SERVICE ---"
+                docker logs --tail 50 "$SERVICE" 2>&1 || true
+              done
+              exit 1
+            fi
+
+            echo "✅ All services are running properly"
+            echo "🎉 Deployment verification completed successfully"
+
+      # 步骤6: 发送部署通知（可选）
+      - name: Send Deployment Notification
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+          echo "=========================================="
+          echo "📢 Deployment Summary"
+          echo "=========================================="
+          echo "Status: $STATUS"
+          echo "Time: $TIMESTAMP"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "=========================================="
+
+          if [ "$STATUS" = "success" ]; then
+            echo "✅ Deployment succeeded!"
+          else
+            echo "❌ Deployment failed!"
+            echo "Check the logs above for details."
+          fi
