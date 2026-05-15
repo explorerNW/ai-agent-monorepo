@@ -22,11 +22,11 @@ jobs:
 
     steps:
       # 【重要】建议显式 Checkout 代码，除非你确信 Runner 是持久化且已同步的
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          # 如果确实需要浅克隆以加速，可以保留 depth，否则建议移除
-          fetch-depth: 1
+      #- name: Checkout Code
+      #uses: actions/checkout@v4
+      #with:
+      # 如果确实需要浅克隆以加速，可以保留 depth，否则建议移除
+      #fetch-depth: 1
 
       # 步骤1: 先进行轻量级检查,快速失败
       - name: Validate Configuration
