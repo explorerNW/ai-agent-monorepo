@@ -216,6 +216,17 @@ jobs:
             fi
             # -------------------------------------------------
 
+
+            cat > .env <<EOF
+            # 这是一个透传文件，告诉 Compose 这些变量需要被解析
+            RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+            RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
+            RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
+            FRONT_END_URL=${{ secrets.FRONT_END_URL }}
+            FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            EOF
+
             # 由于使用了 actions/checkout，代码已经是最新的，无需 git pull
             # 如果是持久化目录场景，取消下面注释：
             # echo "📦 Pulling latest code..."
