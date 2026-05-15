@@ -1,3 +1,9 @@
+version: "3.8"
+
+env_file:
+  - ./packages/back-end/.env
+  - ./packages/front-end/.env
+
 services:
   postgres:
     image: postgres:16-alpine
