@@ -11,28 +11,54 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
-    # 设置合理的超时时间,防止无限等待(默认6小时太长)
+    # 使用自托管 Runner，即时启动无等待
+    runs-on: self-hosted
     timeout-minutes: 15
 
     steps:
+      # 步骤1: 先进行轻量级检查,快速失败
+      - name: Validate Configuration
+        run: |
+          echo "🔍 Validating deployment configuration..."
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "::error::SSH_PRIVATE_KEY secret is not configured"
+            exit 1
+          fi
+          echo "✅ Configuration validated"
+
+      # 步骤2: 部署到服务器
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: s0.v100.vip # 对应你在 GitHub Secrets 设置的 s0.v100.vip
-          port: ${{ secrets.SERVER_PORT }} # 对应你在 GitHub Secrets 设置的 30034
-          username: explorernw # 你的服务器登录用户名
-          key: ${{ secrets.SSH_PRIVATE_KEY }} # 对应你在 GitHub Secrets 设置的私钥
-          debug: true
+          host: s0.v100.vip
+          port: ${{ secrets.SERVER_PORT }}
+          username: explorernw
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # 优化SSH连接参数,减少连接时间
+          command_timeout: 10m
+          script_stop: true # 遇到错误立即停止
+          debug: false # 生产环境关闭debug日志,减少输出开销
           script: |
-            # ⚠️ 重要:请务必将下面的路径替换为你服务器上真实的项目存放目录!
-            cd code-repo/ai-repo/ai-agent-monorepo/
+            set -e  # 遇到错误立即退出
 
-            # 拉取 GitHub 上的最新代码
-            git pull origin main
+            echo "🚀 Starting deployment at $(date)"
+
+            # 进入项目目录
+            cd code-repo/ai-repo/ai-agent-monorepo/ || {
+              echo "::error::Project directory not found"
+              exit 1
+            }
+
+            # 优化Git拉取 - 使用浅克隆和单分支
+            echo "📦 Pulling latest code..."
+            git fetch --depth=1 origin main
+            git reset --hard origin/main
 
             # 赋予脚本执行权限
             chmod +x docker.sh
 
-            # 执行你的重启部署脚本
+            # 执行重启部署脚本
+            echo "🔄 Restarting services..."
             sudo ./docker.sh restart
+
+            echo "✅ Deployment completed at $(date)"
