@@ -149,6 +149,14 @@ jobs:
           script: |
             set -e  # 遇到错误立即退出
 
+            # -------------------------------------------------
+            # 【修复】确保目录存在
+            # 创建前端和后端的目录（如果不存在），-p 参数可以防止报错
+            echo "📁 Ensuring directory structure..."
+            mkdir -p packages/front-end
+            mkdir -p packages/back-end
+            # -------------------------------------------------
+
             # 在生成后端 .env 的代码块后面，追加这段
             FRONTEND_ENV_PATH="packages/front-end/.env"
             echo "📝 Generating frontend environment file: $FRONTEND_ENV_PATH"
@@ -182,6 +190,20 @@ jobs:
             RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
             RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
             RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
+            PORT=${{ secrets.PORT }}
+            DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}
+            DIFY_BASE_URL=${{ secrets.DIFY_BASE_URL }}
+            DIFY_DATASET_ID=${{ secrets.DIFY_DATASET_ID }}
+            DIFY_DATASET_API_KEY=${{ secrets.DIFY_DATASET_API_KEY }}
+            GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+            GITHUB_OWNER=${{ secrets.GIT_OWNER }}
+            DASHSCOPE_API_KEY=${{ secrets.DASHSCOPE_API_KEY }}
+            AI_MODEL_NAME=${{ secrets.AI_MODEL_NAME }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
             # 如果还有其他变量，请继续添加在这里
             EOF
 
