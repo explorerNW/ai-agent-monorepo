@@ -2,11 +2,18 @@ name: Docker Local CI/CD Pipeline
 
 on:
   push:
-    branches: [main] # 如果你的主分支叫 master，记得改成 master
+    branches: [main] # 如果你的主分支叫 master,记得改成 master
+
+# 添加并发控制,避免相同workflow间的任务堆积
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # 设置合理的超时时间,防止无限等待(默认6小时太长)
+    timeout-minutes: 15
 
     steps:
       - name: Deploy to Server via SSH
@@ -18,7 +25,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }} # 对应你在 GitHub Secrets 设置的私钥
           debug: true
           script: |
-            # ⚠️ 重要：请务必将下面的路径替换为你服务器上真实的项目存放目录！
+            # ⚠️ 重要:请务必将下面的路径替换为你服务器上真实的项目存放目录!
             cd code-repo/ai-repo/ai-agent-monorepo/
 
             # 拉取 GitHub 上的最新代码
