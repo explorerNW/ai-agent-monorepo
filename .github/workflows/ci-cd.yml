@@ -12,7 +12,7 @@ jobs:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.SERVER_HOST }} # 对应你在 GitHub Secrets 设置的 s0.v100.vip
+          host: s0.v100.vip # 对应你在 GitHub Secrets 设置的 s0.v100.vip
           port: ${{ secrets.SERVER_PORT }} # 对应你在 GitHub Secrets 设置的 30034
           username: explorernw # 你的服务器登录用户名
           key: ${{ secrets.SSH_PRIVATE_KEY }} # 对应你在 GitHub Secrets 设置的私钥
