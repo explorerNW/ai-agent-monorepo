@@ -1,4 +1,4 @@
-name: Deploy to Server CI/CD Pipeline
+name: Deploy to Server
 
 on:
   push:
@@ -8,6 +8,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -15,16 +18,8 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          debug: true
           script: |
-            # 进入服务器上的项目真实目录
             cd code-repo/ai-repo/ai-agent-monorepo/
-
-            # 拉取 GitHub 上的最新代码
             git pull origin main
-
-            # 赋予脚本执行权限
             chmod +x docker.sh
-
-            # 执行你的重启部署脚本
             sudo ./docker.sh restart
