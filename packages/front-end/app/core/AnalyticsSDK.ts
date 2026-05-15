@@ -403,7 +403,7 @@ export class AnalyticsSDK {
       // Use the most recent route performance metric
       const latestRoute =
         this.routePerformanceMetrics[this.routePerformanceMetrics.length - 1];
-      metricsData.routeperformance = latestRoute;
+      metricsData.routePerformance = latestRoute;
     }
 
     // 将所有性能指标合并为一条事件上报
@@ -536,8 +536,10 @@ export class AnalyticsSDK {
 
       // Send immediate event for initial load
       this.track("web_vitals_summary", {
-        routePerformance: metrics,
-        apicalls: [...this.apiCallMetrics],
+        metrics: {
+          routePerformance: metrics,
+          apicalls: [...this.apiCallMetrics],
+        },
       });
 
       // Clear sent API calls
@@ -591,8 +593,10 @@ export class AnalyticsSDK {
               };
 
               this.track("web_vitals_summary", {
-                routePerformance: metrics,
-                apicalls: [...this.apiCallMetrics],
+                metrics: {
+                  routePerformance: metrics,
+                  apicalls: [...this.apiCallMetrics],
+                },
               });
 
               // Clear sent API calls
@@ -612,8 +616,10 @@ export class AnalyticsSDK {
               };
 
               this.track("web_vitals_summary", {
-                routePerformance: metrics,
-                apicalls: [...this.apiCallMetrics],
+                metrics: {
+                  routePerformance: metrics,
+                  apicalls: [...this.apiCallMetrics],
+                },
               });
 
               // Clear sent API calls
@@ -641,8 +647,10 @@ export class AnalyticsSDK {
             };
 
             this.track("web_vitals_summary", {
-              routePerformance: metrics,
-              apicalls: [...this.apiCallMetrics],
+              metrics: {
+                routePerformance: metrics,
+                apicalls: [...this.apiCallMetrics],
+              },
             });
 
             // Clear sent API calls

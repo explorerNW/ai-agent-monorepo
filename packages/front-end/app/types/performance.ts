@@ -35,7 +35,6 @@ export interface WebVitalsData {
     apiCalls?: ApiCallMetric[];
     apicalls?: ApiCallMetric[]; // Support lowercase from database
     routePerformance?: RoutePerformanceMetric;
-    routeperformance?: RoutePerformanceMetric; // Support lowercase from database
   };
   navigationType?: string;
   timestamp: string;

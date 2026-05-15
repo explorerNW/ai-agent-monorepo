@@ -26,8 +26,7 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
     }> = [];
 
     data.forEach((item) => {
-      const routePerformance =
-        item.metrics.routePerformance || item.metrics.routeperformance;
+      const routePerformance = item.metrics.routePerformance;
 
       if (routePerformance) {
         routeData.push({
