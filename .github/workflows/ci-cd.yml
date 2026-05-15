@@ -242,7 +242,7 @@ jobs:
 
             # 执行重启部署脚本
             echo "🔄 Restarting services..."
-            ./docker.sh restart
+            ./docker.sh deploy
 
             echo "✅ Deployment completed at $(date)"
 
