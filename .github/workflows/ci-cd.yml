@@ -149,6 +149,14 @@ jobs:
           script: |
             set -e  # 遇到错误立即退出
 
+            # 在生成后端 .env 的代码块后面，追加这段
+            FRONTEND_ENV_PATH="packages/front-end/.env"
+            echo "📝 Generating frontend environment file: $FRONTEND_ENV_PATH"
+            cat > $FRONTEND_ENV_PATH <<EOF
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            # 前端如果有其他变量，继续加在这里
+            EOF
+
             echo "🚀 Starting deployment at $(date)"
             echo "📂 Project: ${{ env.PROJECT_NAME }}"
             echo "📁 Directory: ${{ env.DEPLOY_DIR }}"
