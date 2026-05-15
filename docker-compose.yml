@@ -19,6 +19,14 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   rabbitmq:
     image: rabbitmq:4-management
@@ -43,6 +51,14 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   rabbit-mq-service:
     build:
@@ -62,6 +78,32 @@ services:
     restart: unless-stopped
     networks:
       - ai-agent-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   back-end:
     build:
@@ -102,6 +144,32 @@ services:
         condition: service_healthy
       rabbit-mq-service:
         condition: service_started
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+        monitor: 60s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   front-end:
     build:
@@ -124,6 +192,32 @@ services:
     restart: unless-stopped
     networks:
       - ai-agent-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 45s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
 volumes:
   backend-uploads:
