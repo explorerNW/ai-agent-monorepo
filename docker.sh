@@ -67,7 +67,7 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
-    $DOCKER_COMPOSE up -d --build
+    $DOCKER_COMPOSE up -d --build --parallel
     echo -e "${GREEN}✓ Services started successfully!${NC}"
     echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
