@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { getWebVitalsStats } from "~/services/api";
-import { BottomNavigation } from "~/components/BottomNavigation";
 import {
   DistributionChart,
   TimelineChart,
@@ -8,12 +7,21 @@ import {
   RoutePerformanceChart,
 } from "~/components";
 import type { WebVitalsData } from "~/types/performance";
+import BottomNavigation from "~/components/BottomNavigation";
+import React from "react";
 
 export default function Analytics() {
   const [data, setData] = useState<WebVitalsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(7);
+
+  const [activeTab, setActiveTab] = useState<string>("analytics");
+
+  // Memoize handler to prevent unnecessary re-renders in child components
+  const handleTabChange = React.useCallback((tabId: string) => {
+    setActiveTab(tabId);
+  }, []);
 
   // Fetch data on component mount or when days changes
   useEffect(() => {
@@ -40,7 +48,7 @@ export default function Analytics() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-white text-xl">Loading analytics data...</div>
         </div>
-        <BottomNavigation />
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
     );
   }
@@ -51,7 +59,7 @@ export default function Analytics() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-red-500 text-xl">Error: {error}</div>
         </div>
-        <BottomNavigation />
+        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
       </div>
     );
   }
@@ -240,7 +248,7 @@ export default function Analytics() {
       </div>
 
       {/* Bottom Navigation */}
-      <BottomNavigation />
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 }
