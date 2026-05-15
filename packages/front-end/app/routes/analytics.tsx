@@ -65,7 +65,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-black">
+    <div className="flex flex-col h-screen bg-black pb-12">
       {/* Header */}
       <div className="p-4 border-b border-gray-800">
         <h1 className="text-2xl font-bold text-white mb-4">
