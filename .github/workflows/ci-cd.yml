@@ -149,6 +149,12 @@ jobs:
           script: |
             set -e  # 遇到错误立即退出
 
+            # 进入项目目录
+            cd ${{ env.DEPLOY_DIR }} || {
+              echo "::error::Project directory not found: ${{ env.DEPLOY_DIR }}"
+              exit 1
+            }
+
             # -------------------------------------------------
             # 【修复】确保目录存在
             # 创建前端和后端的目录（如果不存在），-p 参数可以防止报错
@@ -168,12 +174,6 @@ jobs:
             echo "🚀 Starting deployment at $(date)"
             echo "📂 Project: ${{ env.PROJECT_NAME }}"
             echo "📁 Directory: ${{ env.DEPLOY_DIR }}"
-
-            # 进入项目目录
-            cd ${{ env.DEPLOY_DIR }} || {
-              echo "::error::Project directory not found: ${{ env.DEPLOY_DIR }}"
-              exit 1
-            }
 
             # -------------------------------------------------
             # 【新增】动态生成 .env 文件
