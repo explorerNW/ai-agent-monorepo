@@ -159,6 +159,33 @@ jobs:
               exit 1
             }
 
+            # -------------------------------------------------
+            # 【新增】动态生成 .env 文件
+            # 注意：这里的路径是远程服务器上的路径
+            ENV_FILE_PATH="packages/back-end/.env"
+            echo "📝 Generating environment file: $ENV_FILE_PATH"
+
+            # 使用 cat 和 EOF 将 Secrets 写入远程服务器的文件
+            # 请确保这些 Secrets 已在 GitHub Settings -> Secrets 中配置
+            cat > $ENV_FILE_PATH <<EOF
+            FRONT_END_URL=${{ secrets.FRONT_END_URL }}
+            FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+            RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
+            RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
+            # 如果还有其他变量，请继续添加在这里
+            EOF
+
+            # 可选：打印文件存在性确认（不要打印内容，防止密码泄露）
+            if [ -f "$ENV_FILE_PATH" ]; then
+              echo "✅ .env file generated successfully (size: $(du -h $ENV_FILE_PATH | cut -f1))"
+            else
+              echo "::error:: Failed to generate .env file"
+              exit 1
+            fi
+            # -------------------------------------------------
+
             # 由于使用了 actions/checkout，代码已经是最新的，无需 git pull
             # 如果是持久化目录场景，取消下面注释：
             # echo "📦 Pulling latest code..."
