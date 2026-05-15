@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DEPLOY_DIR: code-repo/ai-repo/ai-agent-monorepo
+  DEPLOY_DIR: ${{ github.workspace }}
   PROJECT_NAME: ai-agent-monorepo
 
 jobs:
