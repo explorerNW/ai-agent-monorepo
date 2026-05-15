@@ -1,7 +1,9 @@
 import type { Route } from "./+types/home";
-import { Header, Stories, PublishedPosts } from "../components/FeedComponents";
-import { BottomNavigation } from "../components/BottomNavigation";
-import { usePageView, useTrack } from "~/hooks/useTrack";
+import { usePageView } from "~/hooks/useTrack";
+import FeedPage from "./feed";
+import { useState } from "react";
+import React from "react";
+import BottomNavigation from "~/components/BottomNavigation";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,30 +16,22 @@ export default function Home() {
   // 页面浏览埋点 - 必须在顶层调用
   usePageView();
 
+  const [activeTab, setActiveTab] = useState<string>("feed");
+
+  // Memoize handler to prevent unnecessary re-renders in child components
+  const handleTabChange = React.useCallback((tabId: string) => {
+    setActiveTab(tabId);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-black">
       {/* Content section - scrollable */}
       <div className="flex-1 overflow-y-auto">
-        <Feed />
+        <FeedPage />
       </div>
 
       {/* Bottom Navigation - fixed at bottom */}
-      <BottomNavigation />
-    </div>
-  );
-}
-
-function Feed() {
-  return (
-    <div className="w-full bg-black overflow-hidden">
-      {/* Header */}
-      <Header />
-
-      {/* Stories Section */}
-      <Stories />
-
-      {/* Published Posts Grid */}
-      <PublishedPosts />
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 }
