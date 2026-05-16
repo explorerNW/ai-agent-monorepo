@@ -671,18 +671,31 @@ export class AnalyticsSDK {
   }
 
   // Mark the start of a route change (call before navigation)
-  public markRouteChangeStart() {
+  public markRouteChangeStart(routeName?: string) {
     if (typeof performance !== "undefined") {
       this.routeChangeStartTime = performance.now();
 
       // Create a performance mark for accurate measurement
       try {
-        const routeName =
-          typeof window !== "undefined" ? window.location.pathname : "unknown";
-        performance.mark(`route-change-start-${routeName}`);
+        const route =
+          routeName ||
+          (typeof window !== "undefined"
+            ? window.location.pathname
+            : "unknown");
+        performance.mark(`route-change-start-${route}`);
       } catch (e) {
-        // Ignore errors if mark already exists
-        console.debug("[AnalyticsSDK] Mark creation error:", e);
+        // Clear existing mark if it exists, then create new one
+        try {
+          const route =
+            routeName ||
+            (typeof window !== "undefined"
+              ? window.location.pathname
+              : "unknown");
+          performance.clearMarks(`route-change-start-${route}`);
+          performance.mark(`route-change-start-${route}`);
+        } catch (clearError) {
+          console.debug("[AnalyticsSDK] Mark creation error:", clearError);
+        }
       }
     }
   }
