@@ -29,7 +29,33 @@ jobs:
           fetch-depth: 1
           # 明确指定分支,避免歧义
           ref: ${{ github.ref }}
+          # 启用子模块(如果有)
+          submodules: false
         timeout-minutes: 5
+        # 网络不稳定时重试
+        continue-on-error: false
+
+      # 如果Checkout失败,尝试使用镜像源重试
+      - name: Retry Checkout with Mirror (if failed)
+        if: failure() && steps.checkout.outcome == 'failure'
+        run: |
+          echo "⚠️ Primary checkout failed, retrying with optimized settings..."
+
+          # 清理失败的checkout
+          rm -rf ./*
+
+          # 配置Git优化参数
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
+
+          # 尝试使用GitHub镜像或代理
+          git clone --depth 1 --branch ${{ github.ref_name }} \
+            https://github.com/${{ github.repository }}.git . || \
+          git clone --depth 1 --branch ${{ github.ref_name }} \
+            https://ghproxy.com/https://github.com/${{ github.repository }}.git .
+
+          echo "✅ Checkout completed via mirror/proxy"
 
       # 步骤1: 先进行轻量级检查,快速失败
       - name: Validate Configuration
@@ -64,80 +90,7 @@ jobs:
 
           echo "✅ Configuration validated successfully"
 
-      # 步骤2: 预部署健康检查
-      - name: Pre-deployment Health Check
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 2m
-          script_stop: false
-          debug: false
-          script: |
-            echo "🏥 Running pre-deployment health check..."
-
-            # 检查磁盘空间
-            DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
-            if [ "$DISK_USAGE" -gt 90 ]; then
-              echo "::warning::Disk usage is at ${DISK_USAGE}%, consider cleanup"
-            else
-              echo "✅ Disk usage: ${DISK_USAGE}%"
-            fi
-
-            # 检查Docker服务状态
-            if ! docker info > /dev/null 2>&1; then
-              echo "::error::Docker service is not running"
-              exit 1
-            fi
-            echo "✅ Docker service is running"
-
-            # 记录当前运行的容器
-            echo "📋 Current running containers:"
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
-
-            echo "✅ Pre-deployment health check passed"
-
-      # 步骤3: 备份当前版本（用于回滚）
-      - name: Backup Current Version
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 5m
-          script_stop: false
-          debug: false
-          script: |
-            set -e
-
-            echo "💾 Creating backup before deployment..."
-
-            cd ${{ env.DEPLOY_DIR }} || exit 1
-
-            # 创建备份目录
-            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$BACKUP_DIR"
-
-            # 备份docker-compose配置
-            if [ -f docker-compose.yml ]; then
-              cp docker-compose.yml "$BACKUP_DIR/"
-            fi
-
-            # 备份环境变量文件
-            if [ -f .env ]; then
-              cp .env "$BACKUP_DIR/"
-            fi
-
-            # 保留最近5个备份
-            cd backups
-            ls -t | tail -n +6 | xargs -r rm -rf
-
-            echo "✅ Backup created: $BACKUP_DIR"
-
-      # 步骤4: 部署到服务器
+      # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -145,12 +98,29 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # 优化SSH连接参数,减少连接时间
-          command_timeout: 10m
+          # 优化SSH连接参数,减少国内网络延迟
+          command_timeout: 15m
           script_stop: true # 遇到错误立即停止
           debug: false # 生产环境关闭debug日志,减少输出开销
           script: |
             set -e  # 遇到错误立即退出
+
+            echo "🚀 Starting unified deployment process at $(date)"
+
+            # 1. 网络诊断
+            echo "🌐 Network diagnostics:"
+            PING_RESULT=$(ping -c 3 -W 2 github.com 2>&1 | grep -oP 'time=\K[0-9.]+' | head -1 || echo "N/A")
+            echo "   GitHub latency: ${PING_RESULT}ms"
+
+            # 2. 预检查
+            echo "🏥 Pre-deployment checks..."
+            if ! docker info > /dev/null 2>&1; then
+              echo "::error::Docker service is not running"
+              exit 1
+            fi
+
+            DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+            echo "✅ Disk usage: ${DISK_USAGE}%"
 
             # 进入项目目录
             cd ${{ env.DEPLOY_DIR }} || {
@@ -158,34 +128,36 @@ jobs:
               exit 1
             }
 
-            # -------------------------------------------------
-            # 【修复】确保目录存在
-            # 创建前端和后端的目录（如果不存在），-p 参数可以防止报错
+            # 3. 备份当前版本
+            echo "💾 Creating backup..."
+            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+            if [ -f docker-compose.yml ]; then cp docker-compose.yml "$BACKUP_DIR/"; fi
+            if [ -f .env ]; then cp .env "$BACKUP_DIR/"; fi
+
+            # 保留最近5个备份
+            if [ -d backups ]; then
+              cd backups
+              ls -t | tail -n +6 | xargs -r rm -rf
+              cd ..
+            fi
+            echo "✅ Backup created: $BACKUP_DIR"
+
+            # 4. 准备环境与配置
             echo "📁 Ensuring directory structure..."
             mkdir -p packages/front-end
             mkdir -p packages/back-end
-            # -------------------------------------------------
 
-            # 在生成后端 .env 的代码块后面，追加这段
+            # 生成前端环境变量
             FRONTEND_ENV_PATH="packages/front-end/.env"
-            echo "📝 Generating frontend environment file: $FRONTEND_ENV_PATH"
+            echo "📝 Generating frontend .env..."
             cat > $FRONTEND_ENV_PATH <<EOF
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
-            # 前端如果有其他变量，继续加在这里
             EOF
 
-            echo "🚀 Starting deployment at $(date)"
-            echo "📂 Project: ${{ env.PROJECT_NAME }}"
-            echo "📁 Directory: ${{ env.DEPLOY_DIR }}"
-
-            # -------------------------------------------------
-            # 【新增】动态生成 .env 文件
-            # 注意：这里的路径是远程服务器上的路径
+            # 生成后端环境变量
             ENV_FILE_PATH="packages/back-end/.env"
-            echo "📝 Generating environment file: $ENV_FILE_PATH"
-
-            # 使用 cat 和 EOF 将 Secrets 写入远程服务器的文件
-            # 请确保这些 Secrets 已在 GitHub Settings -> Secrets 中配置
+            echo "📝 Generating backend .env..."
             cat > $ENV_FILE_PATH <<EOF
             FRONT_END_URL=${{ secrets.FRONT_END_URL }}
             FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
@@ -207,21 +179,11 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
-            # 如果还有其他变量，请继续添加在这里
             EOF
 
-            # 可选：打印文件存在性确认（不要打印内容，防止密码泄露）
-            if [ -f "$ENV_FILE_PATH" ]; then
-              echo "✅ .env file generated successfully (size: $(du -h $ENV_FILE_PATH | cut -f1))"
-            else
-              echo "::error:: Failed to generate .env file"
-              exit 1
-            fi
-            # -------------------------------------------------
-
-
+            # 生成根目录 .env (用于 docker-compose)
+            echo "📝 Generating root .env..."
             cat > .env <<EOF
-            # 这是一个透传文件，告诉 Compose 这些变量需要被解析
             RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
             RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
             RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
@@ -230,24 +192,26 @@ jobs:
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
             EOF
 
-            # 由于使用了 actions/checkout，代码已经是最新的，无需 git pull
-            # 如果是持久化目录场景，取消下面注释：
-            # echo "📦 Pulling latest code..."
-            # git fetch --depth=1 origin main
-            # git reset --hard origin/main
-
             # 显示当前提交信息
             echo "📝 Current commit:"
             git log -1 --format="%h - %s (%an, %ar)" || true
 
-            # 赋予脚本执行权限
+            # 5. 执行部署
             chmod +x docker.sh
 
-            # 执行重启部署脚本
-            echo "🔄 Restarting services..."
+            # 配置国内镜像源以加速可能的 npm/pnpm 操作
+            export NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+            export PNPM_REGISTRY=https://registry.npmmirror.com
+
+            echo "🔄 Executing docker.sh deploy..."
             ./docker.sh deploy
 
             echo "✅ Deployment completed at $(date)"
+
+            # 6. 简单验证
+            echo "🔍 Verifying services..."
+            sleep 5
+            docker ps --format "table {{.Names}}\t{{.Status}}" || true
 
       # 步骤5: 部署后验证
       - name: Post-deployment Verification

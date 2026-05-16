@@ -15,44 +15,23 @@ COPY .npmrc ./
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
 
-# Copy frontend package.json for dependency installation
+# Copy ALL workspace package.json files for proper dependency resolution
 COPY packages/front-end/package.json ./packages/front-end/package.json
+COPY packages/back-end/package.json ./packages/back-end/package.json
 
 # Install all dependencies (including devDependencies for build)
+# This creates node_modules with symlinks in monorepo structure
 RUN pnpm install --frozen-lockfile
 
 
 # ======================
 # 2. 构建阶段 (Builder)
 # ======================
-FROM node:22-slim AS builder
+FROM dependencies AS builder
 
 WORKDIR /app
 
-# Enable pnpm with Chinese mirror
-RUN corepack enable && \
-    corepack prepare pnpm@9.15.0 --activate && \
-    npm config set registry https://registry.npmmirror.com
-
-# Copy workspace configuration
-COPY .npmrc ./
-COPY pnpm-workspace.yaml ./
-COPY package.json pnpm-lock.yaml ./
-
-# Copy frontend package.json for dependency installation
-COPY packages/front-end/package.json ./packages/front-end/package.json
-
-# Install all dependencies (including devDependencies for build)
-RUN pnpm install --frozen-lockfile --force && \
-    # Verify @react-router/dev is installed
-    if [ ! -d "node_modules/@react-router" ]; then \
-      echo "ERROR: @react-router not found in root node_modules"; \
-      ls -la node_modules/ | head -20; \
-      exit 1; \
-    fi && \
-    echo "✓ @react-router installed successfully"
-
-# Copy source code
+# Copy source code (after dependencies are installed)
 COPY packages/front-end/. ./packages/front-end/
 
 # Accept build arguments for environment variables
