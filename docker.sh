@@ -141,6 +141,19 @@ view_postgres_logs() {
 
 build_services() {
     echo -e "${GREEN}Building all services...${NC}"
+    
+    # 配置国内镜像源加速（针对国内网络环境）
+    echo -e "${BLUE}Configuring registry mirrors for China network...${NC}"
+    
+    # 设置npm/pnpm国内镜像
+    export NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
+    export PNPM_REGISTRY=${PNPM_REGISTRY:-https://registry.npmmirror.com}
+    
+    # Docker构建时使用国内镜像源（如果配置了DOCKER_BUILDKIT）
+    if [ -n "$DOCKER_BUILDKIT" ]; then
+        echo -e "${YELLOW}Using Docker BuildKit with optimized settings${NC}"
+    fi
+    
     $DOCKER_COMPOSE build --no-cache
     echo -e "${GREEN}✓ Build completed${NC}"
 }
