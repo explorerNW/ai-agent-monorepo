@@ -22,6 +22,15 @@ jobs:
 
     steps:
       # 【重要】建议显式 Checkout 代码,除非你确信 Runner 是持久化且已同步的
+      - name: Configure Git for Slow Networks
+        run: |
+          echo "🔧 Configuring Git for optimized network performance..."
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 999999
+          git config --global http.version HTTP/1.1
+          echo "✅ Git network optimization configured"
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
@@ -31,31 +40,57 @@ jobs:
           ref: ${{ github.ref }}
           # 启用子模块(如果有)
           submodules: false
-        timeout-minutes: 5
-        # 网络不稳定时重试
-        continue-on-error: false
+        timeout-minutes: 10
+        continue-on-error: true
 
       # 如果Checkout失败,尝试使用镜像源重试
       - name: Retry Checkout with Mirror (if failed)
-        if: failure() && steps.checkout.outcome == 'failure'
+        if: steps.checkout.outcome == 'failure' || steps.checkout.outcome == 'cancelled'
         run: |
           echo "⚠️ Primary checkout failed, retrying with optimized settings..."
 
           # 清理失败的checkout
           rm -rf ./*
+          rm -rf .git
 
-          # 配置Git优化参数
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 999999
+          # 配置Git优化参数(再次确保)
+          git init
+          git config http.postBuffer 524288000
+          git config http.lowSpeedLimit 0
+          git config http.lowSpeedTime 999999
 
-          # 尝试使用GitHub镜像或代理
+          # 尝试多种镜像源
+          echo "🔄 Attempting checkout via multiple sources..."
+
+          # 方法1: 直接使用GitHub (带优化参数)
           git clone --depth 1 --branch ${{ github.ref_name }} \
-            https://github.com/${{ github.repository }}.git . || \
-          git clone --depth 1 --branch ${{ github.ref_name }} \
-            https://ghproxy.com/https://github.com/${{ github.repository }}.git .
+            https://github.com/${{ github.repository }}.git . && \
+            echo "✅ Checkout succeeded via direct GitHub" && exit 0 || \
+          echo "❌ Direct GitHub failed, trying mirror..."
 
-          echo "✅ Checkout completed via mirror/proxy"
+          # 方法2: 使用ghproxy镜像
+          git clone --depth 1 --branch ${{ github.ref_name }} \
+            https://ghproxy.com/https://github.com/${{ github.repository }}.git . && \
+            echo "✅ Checkout succeeded via ghproxy" && exit 0 || \
+          echo "❌ ghproxy failed, trying alternative mirror..."
+
+          # 方法3: 使用mirror.ghproxy
+          git clone --depth 1 --branch ${{ github.ref_name }} \
+            https://mirror.ghproxy.com/https://github.com/${{ github.repository }}.git . && \
+            echo "✅ Checkout succeeded via mirror.ghproxy" && exit 0 || \
+          echo "❌ All mirrors failed"
+
+          echo "::error::All checkout methods failed. Please check network connectivity."
+          exit 1
+
+      - name: Verify Checkout Success
+        run: |
+          if [ ! -f "package.json" ]; then
+            echo "::error::Checkout verification failed - package.json not found"
+            exit 1
+          fi
+          echo "✅ Repository successfully checked out"
+          git log -1 --format="%h - %s (%an, %ar)" || true
 
       # 步骤1: 先进行轻量级检查,快速失败
       - name: Validate Configuration

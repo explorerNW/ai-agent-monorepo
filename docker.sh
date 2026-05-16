@@ -10,6 +10,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Detect docker compose command (prefer new plugin syntax, fallback to standalone)
@@ -70,7 +71,7 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
-    $DOCKER_COMPOSE up -d --build --parallel
+    $DOCKER_COMPOSE up -d --build
     echo -e "${GREEN}✓ Services started successfully!${NC}"
     echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
@@ -209,18 +210,31 @@ deploy_rolling() {
     # Update services in dependency order
     echo -e "${BLUE}Updating rabbit-mq-service...${NC}"
     $DOCKER_COMPOSE up -d --no-deps rabbit-mq-service
-    wait_for_healthcheck "rabbit-mq-service" 60 || handle_update_failure "rabbit-mq-service"
+    # rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
+    echo -e "${YELLOW}Waiting for rabbit-mq-service to stabilize...${NC}"
+    sleep 8
+    local container_status=$(docker inspect --format='{{.State.Running}}' "ai-agent-rabbitmq-service" 2>/dev/null || echo "false")
+    if [ "$container_status" = "true" ]; then
+        echo -e "${GREEN}✓ rabbit-mq-service is running${NC}"
+    else
+        echo -e "${RED}✗ rabbit-mq-service failed to start${NC}"
+        handle_update_failure "rabbit-mq-service"
+    fi
     
     sleep 5
     
     echo -e "${BLUE}Updating back-end...${NC}"
     $DOCKER_COMPOSE up -d --no-deps back-end
+    # Wait longer for backend to initialize (includes start_period)
+    sleep 15
     wait_for_healthcheck "back-end" 90 || handle_update_failure "back-end"
     
     sleep 5
     
     echo -e "${BLUE}Updating front-end...${NC}"
     $DOCKER_COMPOSE up -d --no-deps front-end
+    # Wait for frontend to initialize
+    sleep 10
     wait_for_healthcheck "front-end" 60 || handle_update_failure "front-end"
     
     echo ""
@@ -231,15 +245,46 @@ deploy_rolling() {
     verify_deployment
 }
 
+# Helper function to get container name from service name
+get_container_name() {
+    local service_name="$1"
+    case "$service_name" in
+        "back-end")
+            echo "ai-agent-backend"
+            ;;
+        "front-end")
+            echo "ai-agent-frontend"
+            ;;
+        "rabbit-mq-service")
+            echo "ai-agent-rabbitmq-service"
+            ;;
+        *)
+            echo "ai-agent-${service_name}"
+            ;;
+    esac
+}
+
 wait_for_healthcheck() {
     local service_name="$1"
     local timeout="$2"
+    local container_name
+    container_name=$(get_container_name "$service_name")
     local elapsed=0
     
     echo -e "${YELLOW}Waiting for ${service_name} to become healthy...${NC}"
     
     while [ $elapsed -lt $timeout ]; do
-        local health_status=$(docker inspect --format='{{.State.Health.Status}}' "ai-agent-${service_name}" 2>/dev/null || echo "unknown")
+        local health_status
+        health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>&1)
+        local exit_code=$?
+        
+        # If docker inspect fails, treat as not ready yet
+        if [ $exit_code -ne 0 ]; then
+            health_status="error"
+        else
+            # Trim whitespace and newlines
+            health_status=$(echo "$health_status" | tr -d '[:space:]')
+        fi
         
         if [ "$health_status" = "healthy" ]; then
             echo -e "${GREEN}✓ ${service_name} is healthy${NC}"
@@ -261,6 +306,44 @@ wait_for_healthcheck() {
     return 1
 }
 
+wait_for_container_running() {
+    local service_name="$1"
+    local timeout="$2"
+    local container_name
+    container_name=$(get_container_name "$service_name")
+    local elapsed=0
+    
+    echo -e "${YELLOW}Waiting for ${service_name} container to be running...${NC}"
+    
+    # Give container a moment to start/restart after up -d command
+    sleep 5
+    
+    while [ $elapsed -lt $timeout ]; do
+        local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+        local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "-1")
+        
+        if [ "$container_status" = "true" ] && [ "$exit_code" = "0" ]; then
+            echo -e "${GREEN}✓ ${service_name} is running${NC}"
+            return 0
+        elif [ "$container_status" = "false" ]; then
+            echo -e "${RED}✗ ${service_name} container is not running (exit code: ${exit_code})${NC}"
+            return 1
+        fi
+        
+        sleep 2
+        elapsed=$((elapsed + 2))
+        
+        if [ $((elapsed % 10)) -eq 0 ]; then
+            echo -e "${YELLOW}  Still waiting... (${elapsed}s/${timeout}s)${NC}"
+        fi
+    done
+    
+    echo -e "${RED}✗ ${service_name} container start timeout after ${timeout}s${NC}"
+    # Show final status for debugging
+    docker inspect "$container_name" --format='Status: {{.State.Status}}, Running: {{.State.Running}}, ExitCode: {{.State.ExitCode}}' 2>/dev/null || true
+    return 1
+}
+
 handle_update_failure() {
     local service_name="$1"
     echo -e "${RED}Update failed for ${service_name}${NC}"
@@ -279,8 +362,11 @@ verify_deployment() {
     
     local all_healthy=true
     
-    for service in "back-end" "front-end" "rabbit-mq-service"; do
-        local health_status=$(docker inspect --format='{{.State.Health.Status}}' "ai-agent-${service}" 2>/dev/null || echo "not found")
+    # Check back-end and front-end with health checks
+    for service in "back-end" "front-end"; do
+        local container_name
+        container_name=$(get_container_name "$service")
+        local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "not found")
         
         if [ "$health_status" = "healthy" ]; then
             echo -e "${GREEN}✓ ${service}: healthy${NC}"
@@ -289,6 +375,19 @@ verify_deployment() {
             all_healthy=false
         fi
     done
+    
+    # Check rabbit-mq-service (microservice without health check)
+    local container_name
+    container_name=$(get_container_name "rabbit-mq-service")
+    local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+    local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "-1")
+    
+    if [ "$container_status" = "true" ] && [ "$exit_code" = "0" ]; then
+        echo -e "${GREEN}✓ rabbit-mq-service: running${NC}"
+    else
+        echo -e "${RED}✗ rabbit-mq-service: not running (exit code: ${exit_code})${NC}"
+        all_healthy=false
+    fi
     
     if [ "$all_healthy" = true ]; then
         echo ""
