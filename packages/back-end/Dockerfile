@@ -1,7 +1,7 @@
 # ======================
 # 1. 依赖安装阶段 (Dependencies)
 # ======================
-FROM node:20-alpine AS dependencies
+FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN pnpm install --frozen-lockfile --force
 # ======================
 # 2. 构建阶段 (Builder)
 # ======================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -54,7 +54,7 @@ RUN pnpm --filter=llm build
 # ======================
 # 3. 生产阶段 (Production)
 # ======================
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 # Add labels for better maintainability
 LABEL maintainer="ai-agent-team"
