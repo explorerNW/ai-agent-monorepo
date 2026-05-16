@@ -23,8 +23,6 @@ export default function Home() {
     setActiveTab(tabId);
   }, []);
 
-  alert("test!!!!");
-
   return (
     <div className="flex flex-col h-screen bg-black">
       {/* Content section - scrollable */}
