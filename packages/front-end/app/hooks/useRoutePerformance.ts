@@ -58,8 +58,11 @@ export function useRoutePerformance() {
             `[useRoutePerformance] SPA route "${location.pathname}" rendered in ${duration.toFixed(2)}ms`,
           );
 
-          // Track the performance
-          analyticsInstance.trackRoutePerformance(location.pathname);
+          // Track the performance with the accurate start time
+          analyticsInstance.trackRoutePerformance(
+            location.pathname,
+            routeChangeStartRef.current,
+          );
 
           // Reset for next navigation
           routeChangeStartRef.current = null;
