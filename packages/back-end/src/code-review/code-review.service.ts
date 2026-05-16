@@ -1,11 +1,77 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import FormData from 'form-data';
+import pLimit from 'p-limit';
 import {
   GitHubWebhookPayload,
   DifyResponse,
   DifyFileUploadResponse,
 } from '../types/dto';
+
+/**
+ * Diff 切片结果
+ */
+export interface DiffChunk {
+  fileName: string; // 文件名
+  content: string; // diff 内容
+  charCount: number; // 字符数
+  hunkCount?: number; // 代码块数量
+}
+
+/**
+ * Diff 清洗与切片配置
+ */
+const DIFF_CONFIG = {
+  // 需要排除的文件扩展名和模式
+  EXCLUDED_PATTERNS: [
+    // 锁文件
+    'package-lock.json',
+    'yarn.lock',
+    'pnpm-lock.yaml',
+    '.lock',
+
+    // 图片文件
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.bmp',
+    '.svg',
+    '.ico',
+    '.webp',
+
+    // 二进制文件
+    '.exe',
+    '.dll',
+    '.so',
+    '.dylib',
+    '.bin',
+    '.zip',
+    '.tar',
+    '.gz',
+
+    // 其他不需要审查的文件
+    '.min.js',
+    '.min.css',
+  ],
+
+  // 需要排除的目录
+  EXCLUDED_DIRS: [
+    'node_modules/',
+    'dist/',
+    'build/',
+    '.next/',
+    '__pycache__/',
+    '.git/',
+    'vendor/',
+  ],
+
+  // 单个 diff 片段的最大字符数
+  MAX_CHUNK_SIZE: 3000,
+
+  // Hunk 分隔符（Git diff 格式）
+  HUNK_HEADER_REGEX: /^@@ -\d+,\d+ \+\d+,\d+ @@/m,
+};
 
 @Injectable()
 export class ReviewService {
@@ -79,9 +145,9 @@ export class ReviewService {
       const diffResponse: { data: string } = await axios.get(diffUrl, {
         headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
       });
-      const diffContent = diffResponse.data;
+      const rawDiffContent = diffResponse.data;
 
-      if (!diffContent.trim()) {
+      if (!rawDiffContent.trim()) {
         this.logger.log('Diff 为空，无需审查');
         await this.createStatus(
           repoName,
@@ -92,15 +158,45 @@ export class ReviewService {
         return;
       }
 
-      // 5. 调用 Dify 进行审查
-      const reviewComment = await this.callDifyReview(diffContent);
+      // 5. 清洗和切片 Diff
+      const diffChunks = this.cleanAndSliceDiff(rawDiffContent);
 
-      // 6. 将结果发布到 GitHub PR
-      await this.postGithubComment(repoName, prNumber, reviewComment);
+      if (diffChunks.length === 0) {
+        this.logger.log('所有文件都被过滤，无需审查');
+        await this.createStatus(
+          repoName,
+          headSha,
+          'success',
+          '✅ 没有需要审查的代码变更',
+        );
+        return;
+      }
 
-      // 7. 更新 Status（根据审查结果设置状态）
-      const state = this.determineStatus(reviewComment);
-      await this.createStatus(repoName, headSha, state, reviewComment);
+      this.logger.log(`Diff 已切分为 ${diffChunks.length} 个片段`);
+
+      // 6. 对每个切片调用 Dify 进行审查
+      const limit = pLimit(5); // 最多5个并发
+      const reviewPromises = diffChunks.map((chunk, i) =>
+        limit(async () => {
+          this.logger.log(
+            `正在审查片段 ${i + 1}/${diffChunks.length}: ${chunk.fileName} (${chunk.charCount} 字符)`,
+          );
+          const reviewComment = await this.callDifyReview(chunk.content);
+          return `### 📄 ${chunk.fileName}\n\n${reviewComment}`;
+        }),
+      );
+
+      const reviewResults = await Promise.all(reviewPromises);
+
+      // 7. 合并所有审查结果
+      const finalReviewComment = reviewResults.join('\n\n---\n\n');
+
+      // 8. 将结果发布到 GitHub PR
+      await this.postGithubComment(repoName, prNumber, finalReviewComment);
+
+      // 9. 更新 Status（根据审查结果设置状态）
+      const state = this.determineStatus(finalReviewComment);
+      await this.createStatus(repoName, headSha, state, finalReviewComment);
 
       this.logger.log(`✅ PR #${prNumber} 审查完成`);
     } catch (error) {
@@ -114,6 +210,200 @@ export class ReviewService {
         `❌ 审查过程出错: ${errorMessage}`,
       );
     }
+  }
+
+  /**
+   * 清洗和切片 Diff
+   *
+   * @param rawDiff 原始 diff 字符串
+   * @returns 清洗后的 diff 切片数组
+   */
+  private cleanAndSliceDiff(rawDiff: string): DiffChunk[] {
+    this.logger.log(`开始清洗 Diff，原始大小: ${rawDiff.length} 字符`);
+
+    // 1. 按文件分割 diff
+    const fileDiffs = this.splitDiffByFile(rawDiff);
+    this.logger.log(`识别到 ${fileDiffs.length} 个文件变更`);
+
+    // 2. 过滤无关文件
+    const filteredFiles = fileDiffs.filter(({ fileName }) => {
+      const shouldExclude = this.shouldExcludeFile(fileName);
+      if (shouldExclude) {
+        this.logger.debug(`排除文件: ${fileName}`);
+      }
+      return !shouldExclude;
+    });
+
+    this.logger.log(`过滤后剩余 ${filteredFiles.length} 个文件`);
+
+    // 3. 对每个文件的 diff 进行切片
+    const chunks: DiffChunk[] = [];
+    for (const { fileName, content } of filteredFiles) {
+      const fileChunks = this.sliceFileDiff(fileName, content);
+      chunks.push(...fileChunks);
+    }
+
+    this.logger.log(`最终生成 ${chunks.length} 个审查片段`);
+    return chunks;
+  }
+
+  /**
+   * 按文件分割 diff
+   */
+  private splitDiffByFile(
+    diff: string,
+  ): Array<{ fileName: string; content: string }> {
+    const result: Array<{ fileName: string; content: string }> = [];
+
+    // Git diff 以 "diff --git" 开头
+    const filePattern = /^diff --git a\/(.+?) b\/(.+)$/gm;
+    const matches = [...diff.matchAll(filePattern)];
+
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const fileName = match[2]; // 使用 b/ 路径作为文件名
+
+      // 提取当前文件的 diff 内容
+      const startIndex = match.index ?? 0;
+      const endIndex =
+        i + 1 < matches.length
+          ? (matches[i + 1].index ?? diff.length)
+          : diff.length;
+
+      const content = diff.substring(startIndex, endIndex).trim();
+
+      result.push({ fileName, content });
+    }
+
+    return result;
+  }
+
+  /**
+   * 判断是否应该排除该文件
+   */
+  private shouldExcludeFile(fileName: string): boolean {
+    // 检查是否在排除目录中
+    for (const dir of DIFF_CONFIG.EXCLUDED_DIRS) {
+      if (fileName.startsWith(dir) || fileName.includes('/' + dir)) {
+        return true;
+      }
+    }
+
+    // 检查文件扩展名或文件名
+    const lowerFileName = fileName.toLowerCase();
+    for (const pattern of DIFF_CONFIG.EXCLUDED_PATTERNS) {
+      if (pattern.startsWith('.')) {
+        // 扩展名匹配
+        if (lowerFileName.endsWith(pattern)) {
+          return true;
+        }
+      } else {
+        // 完整文件名匹配
+        if (
+          lowerFileName === pattern ||
+          lowerFileName.endsWith('/' + pattern)
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * 对单个文件的 diff 进行切片
+   */
+  private sliceFileDiff(fileName: string, content: string): DiffChunk[] {
+    const chunks: DiffChunk[] = [];
+
+    // 如果文件大小在限制内，直接作为一个切片
+    if (content.length <= DIFF_CONFIG.MAX_CHUNK_SIZE) {
+      chunks.push({
+        fileName,
+        content,
+        charCount: content.length,
+      });
+      return chunks;
+    }
+
+    // 否则按 Hunk 拆分
+    this.logger.log(
+      `文件 ${fileName} 过大 (${content.length} 字符)，按 Hunk 拆分`,
+    );
+
+    const hunks = this.splitByHunks(content);
+    let currentChunk = '';
+    let currentHunkCount = 0;
+
+    for (const hunk of hunks) {
+      // 如果添加这个 hunk 会超过限制，先保存当前切片
+      if (
+        currentChunk &&
+        currentChunk.length + hunk.length > DIFF_CONFIG.MAX_CHUNK_SIZE
+      ) {
+        chunks.push({
+          fileName,
+          content: currentChunk.trim(),
+          charCount: currentChunk.length,
+          hunkCount: currentHunkCount,
+        });
+        currentChunk = '';
+        currentHunkCount = 0;
+      }
+
+      currentChunk += hunk + '\n\n';
+      currentHunkCount++;
+    }
+
+    // 添加最后一个切片
+    if (currentChunk.trim()) {
+      chunks.push({
+        fileName,
+        content: currentChunk.trim(),
+        charCount: currentChunk.length,
+        hunkCount: currentHunkCount,
+      });
+    }
+
+    this.logger.log(`文件 ${fileName} 拆分为 ${chunks.length} 个片段`);
+    return chunks;
+  }
+
+  /**
+   * 按 Hunk 分割 diff
+   */
+  private splitByHunks(diff: string): string[] {
+    const hunks: string[] = [];
+    const lines = diff.split('\n');
+
+    let currentHunk: string[] = [];
+    let inHunk = false;
+
+    for (const line of lines) {
+      // 检测 Hunk 头部
+      if (DIFF_CONFIG.HUNK_HEADER_REGEX.test(line)) {
+        // 保存之前的 hunk
+        if (currentHunk.length > 0) {
+          hunks.push(currentHunk.join('\n'));
+        }
+        // 开始新的 hunk
+        currentHunk = [line];
+        inHunk = true;
+      } else if (inHunk) {
+        currentHunk.push(line);
+      } else {
+        // Hunk 头部的上下文（如 "diff --git" 行）
+        currentHunk.push(line);
+      }
+    }
+
+    // 添加最后一个 hunk
+    if (currentHunk.length > 0) {
+      hunks.push(currentHunk.join('\n'));
+    }
+
+    return hunks;
   }
 
   /**

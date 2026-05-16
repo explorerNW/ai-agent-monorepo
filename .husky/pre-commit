@@ -1,1 +1,5 @@
+#!/usr/bin/env bash
+# Set CI=true to prevent pnpm from requiring TTY confirmation
+export CI=true
+
 pnpm lint-staged
