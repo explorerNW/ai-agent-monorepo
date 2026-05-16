@@ -21,7 +21,8 @@ COPY packages/back-end/package.json ./packages/back-end/package.json
 
 # Install all dependencies (including devDependencies for build)
 # This creates node_modules with symlinks in monorepo structure
-RUN pnpm install --frozen-lockfile
+# Explicitly install devDependencies needed for building
+RUN pnpm install --frozen-lockfile --prod=false
 
 
 # ======================
@@ -46,8 +47,21 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
 # Build the application - run from workspace root where binaries are accessible
 WORKDIR /app/packages/front-end
-# Use NODE_PATH to help Node.js resolve modules from workspace root node_modules
-RUN NODE_PATH=/app/node_modules node /app/node_modules/@react-router/dev/bin.js build
+
+# Debug: Verify @react-router/dev installation
+RUN echo "=== Checking @react-router installation ===" && \
+    if [ -d "/app/node_modules/@react-router" ]; then \
+      echo "✓ @react-router directory exists"; \
+      ls -la /app/node_modules/@react-router/; \
+    else \
+      echo "✗ @react-router NOT found in /app/node_modules"; \
+      echo "Checking pnpm store..."; \
+      find /app/node_modules/.pnpm -name "*@react-router*" -type d 2>/dev/null | head -5 || echo "No pnpm entries"; \
+    fi && \
+    echo "=== End check ==="
+
+# Build using pnpm (preferred method for monorepo)
+RUN pnpm run build
 
 
 # ======================
