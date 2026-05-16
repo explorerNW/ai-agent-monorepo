@@ -506,7 +506,7 @@ export class AnalyticsSDK {
   private routeChangeStartTime: number | null = null;
 
   // 跟踪路由页面性能
-  public trackRoutePerformance(route: string) {
+  public trackRoutePerformance(route: string, customStartTime?: number) {
     // Only track in browser environment
     if (typeof window === "undefined" || typeof performance === "undefined") {
       return;
@@ -515,7 +515,11 @@ export class AnalyticsSDK {
     // Check if this is initial page load vs SPA route change
     const navigationEntries = performance.getEntriesByType("navigation");
 
-    if (navigationEntries.length > 0 && !this.routeChangeStartTime) {
+    if (
+      navigationEntries.length > 0 &&
+      !this.routeChangeStartTime &&
+      !customStartTime
+    ) {
       // Initial page load - use Navigation Timing API
       const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
 
@@ -550,7 +554,12 @@ export class AnalyticsSDK {
     } else {
       // SPA route change - measure actual rendering performance
       const now = performance.now();
-      const startTime = this.routeChangeStartTime || now;
+
+      // Use custom start time if provided, otherwise fall back to instance variable
+      const startTime =
+        customStartTime !== undefined
+          ? customStartTime
+          : this.routeChangeStartTime || now;
 
       // Measure actual time from route change start to now
       const actualLoadTime = now - startTime;
