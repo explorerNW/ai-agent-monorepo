@@ -163,7 +163,46 @@ jobs:
               exit 1
             }
 
-            # 3. 备份当前版本
+            # 3. 拉取最新代码
+            echo "📥 Pulling latest code from repository..."
+
+            # 确保在正确的分支上
+            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+            echo "   Current branch: $CURRENT_BRANCH"
+
+            # 配置 Git（如果需要）
+            git config user.email "ci-cd@github.com" 2>/dev/null || true
+            git config user.name "CI/CD Bot" 2>/dev/null || true
+
+            # 拉取最新代码
+            if git pull origin ${{ github.ref_name }} 2>&1; then
+              echo "✅ Code updated successfully"
+              git log -1 --format="   Latest commit: %h - %s (%an, %ar)" || true
+            else
+              echo "⚠️ Git pull failed, attempting to reset and retry..."
+              
+              # 如果有本地修改，先暂存
+              if ! git diff --quiet 2>/dev/null; then
+                echo "   Stashing local changes..."
+                git stash push -m "CI/CD auto-stash before pull" 2>/dev/null || true
+              fi
+              
+              # 尝试硬重置到远程分支
+              git fetch origin ${{ github.ref_name }} && \
+              git reset --hard origin/${{ github.ref_name }} && \
+              echo "✅ Code reset to latest commit" && \
+              git log -1 --format="   Latest commit: %h - %s (%an, %ar)" || {
+                echo "::error::Failed to update code from repository"
+                exit 1
+              }
+            fi
+
+            # 验证代码是否更新
+            echo "🔍 Verifying code update..."
+            LATEST_COMMIT=$(git rev-parse HEAD)
+            echo "   Deploying commit: $LATEST_COMMIT"
+
+            # 5. 备份当前版本
             echo "💾 Creating backup..."
             BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$BACKUP_DIR"
@@ -178,7 +217,7 @@ jobs:
             fi
             echo "✅ Backup created: $BACKUP_DIR"
 
-            # 4. 准备环境与配置
+            # 6. 准备环境与配置
             echo "📁 Ensuring directory structure..."
             mkdir -p packages/front-end
             mkdir -p packages/back-end
@@ -231,7 +270,7 @@ jobs:
             echo "📝 Current commit:"
             git log -1 --format="%h - %s (%an, %ar)" || true
 
-            # 5. 执行部署
+            # 7. 执行部署
             chmod +x docker.sh
 
             # 配置国内镜像源以加速可能的 npm/pnpm 操作
@@ -243,7 +282,7 @@ jobs:
 
             echo "✅ Deployment completed at $(date)"
 
-            # 6. 简单验证
+            # 8. 简单验证
             echo "🔍 Verifying services..."
             sleep 5
             docker ps --format "table {{.Names}}\t{{.Status}}" || true
