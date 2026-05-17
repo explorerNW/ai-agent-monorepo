@@ -35,7 +35,7 @@ export function DistributionChart({
 
     const values = data
       .map((item) => item.metrics[metricKey]?.value || 0)
-      .filter((v) => v > 0);
+      .filter((v) => v >= 0);
 
     const stats = { good: 0, needsImprovement: 0, poor: 0 };
     values.forEach((v) => {

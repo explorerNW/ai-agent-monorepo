@@ -15,9 +15,9 @@ export interface ApiCallMetric {
 
 export interface RoutePerformanceMetric {
   route: string;
-  loadTime: number;
-  domContentLoaded: number;
-  firstPaint: number;
+  fcp?: number | null;
+  lcp?: number | null;
+  duration?: number;
   navigationType: string;
 }
 
@@ -33,7 +33,6 @@ export interface WebVitalsData {
     fid?: WebVitalsMetric;
     ttfb?: WebVitalsMetric;
     apiCalls?: ApiCallMetric[];
-    apicalls?: ApiCallMetric[]; // Support lowercase from database
     routePerformance?: RoutePerformanceMetric;
   };
   navigationType?: string;
