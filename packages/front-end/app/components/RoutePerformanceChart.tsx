@@ -18,11 +18,11 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       chart = echarts.init(chartRef.current);
     }
 
-    // Extract route performance data
+    // Extract route performance data with FCP and LCP
     const routeData: Array<{
       route: string;
-      loadTime: number;
-      domContentLoaded: number;
+      fcp: number | null;
+      lcp: number | null;
     }> = [];
 
     data.forEach((item) => {
@@ -31,8 +31,8 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       if (routePerformance) {
         routeData.push({
           route: routePerformance.route,
-          loadTime: routePerformance.loadTime,
-          domContentLoaded: routePerformance.domContentLoaded,
+          fcp: routePerformance.fcp ?? null,
+          lcp: routePerformance.lcp ?? null,
         });
       }
     });
@@ -40,16 +40,18 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
     // Group by route
     const routeStats: Record<
       string,
-      { loadTimes: number[]; domContentLoadedTimes: number[] }
+      { fcpValues: number[]; lcpValues: number[] }
     > = {};
     routeData.forEach((route) => {
       if (!routeStats[route.route]) {
-        routeStats[route.route] = { loadTimes: [], domContentLoadedTimes: [] };
+        routeStats[route.route] = { fcpValues: [], lcpValues: [] };
       }
-      routeStats[route.route].loadTimes.push(route.loadTime);
-      routeStats[route.route].domContentLoadedTimes.push(
-        route.domContentLoaded,
-      );
+      if (route.fcp !== null) {
+        routeStats[route.route].fcpValues.push(route.fcp);
+      }
+      if (route.lcp !== null) {
+        routeStats[route.route].lcpValues.push(route.lcp);
+      }
     });
 
     const routes = Object.keys(routeStats);
@@ -77,20 +79,19 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       return;
     }
 
-    const avgLoadTimes = routes.map((route) => {
+    const avgFcp = routes.map((route) => {
       const stats = routeStats[route];
-      return (
-        (stats.loadTimes.reduce((sum, t) => sum + t, 0) /
-          stats.loadTimes.length) |
-        0
+      if (stats.fcpValues.length === 0) return 0;
+      return Math.round(
+        stats.fcpValues.reduce((sum, t) => sum + t, 0) / stats.fcpValues.length,
       );
     });
-    const avgDomContentLoaded = routes.map((route) => {
+
+    const avgLcp = routes.map((route) => {
       const stats = routeStats[route];
-      return (
-        (stats.domContentLoadedTimes.reduce((sum, t) => sum + t, 0) /
-          stats.domContentLoadedTimes.length) |
-        0
+      if (stats.lcpValues.length === 0) return 0;
+      return Math.round(
+        stats.lcpValues.reduce((sum, t) => sum + t, 0) / stats.lcpValues.length,
       );
     });
 
@@ -103,10 +104,22 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
+        formatter: (params: any) => {
+          if (Array.isArray(params)) {
+            const route = params[0]?.axisValue || "";
+            let result = `<strong>${route}</strong><br/>`;
+            params.forEach((param: any) => {
+              const value = param.value !== undefined ? param.value : "N/A";
+              result += `${param.marker} ${param.seriesName}: ${value}ms<br/>`;
+            });
+            return result;
+          }
+          return "";
+        },
       },
       legend: {
-        data: ["Load Time", "DOM Content Loaded"],
-        textStyle: { color: "#999" },
+        data: ["FCP", "LCP"],
+        textStyle: { color: "#ede9e9" },
         top: 30,
       },
       grid: {
@@ -119,7 +132,10 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       xAxis: {
         type: "category",
         data: routes,
-        axisLabel: { color: "#999" },
+        axisLabel: {
+          color: "#999",
+          rotate: 30,
+        },
       },
       yAxis: {
         type: "value",
@@ -129,16 +145,16 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       },
       series: [
         {
-          name: "Load Time",
+          name: "FCP",
           type: "bar",
-          data: avgLoadTimes,
-          itemStyle: { color: "#722ed1" },
+          data: avgFcp,
+          itemStyle: { color: "#52c41a" },
         },
         {
-          name: "DOM Content Loaded",
+          name: "LCP",
           type: "bar",
-          data: avgDomContentLoaded,
-          itemStyle: { color: "#13c2c2" },
+          data: avgLcp,
+          itemStyle: { color: "#fa8c16" },
         },
       ],
     };

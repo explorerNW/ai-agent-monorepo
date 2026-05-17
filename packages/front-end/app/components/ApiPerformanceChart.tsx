@@ -39,7 +39,7 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
     }> = [];
 
     data.forEach((item) => {
-      const apiCalls = item.metrics.apiCalls || item.metrics.apicalls;
+      const apiCalls = item.metrics.apiCalls;
 
       if (apiCalls && Array.isArray(apiCalls)) {
         apiCalls.forEach((apiCall) => {

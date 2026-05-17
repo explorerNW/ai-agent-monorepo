@@ -37,9 +37,9 @@ export class WebVitalsEvent {
     }>;
     routePerformance?: {
       route: string;
-      loadTime: number;
-      domContentLoaded: number;
-      firstPaint: number;
+      fcp?: number | null;
+      lcp?: number | null;
+      duration?: number;
       navigationType: string;
     };
   };

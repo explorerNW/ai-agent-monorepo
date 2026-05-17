@@ -25,9 +25,9 @@ interface ApiCallMetric {
 
 interface RoutePerformanceMetric {
   route: string;
-  loadTime: number;
-  domContentLoaded: number;
-  firstPaint: number;
+  fcp: number | null;
+  lcp: number | null;
+  duration: number;
   timestamp: number;
   navigationType: string;
 }
@@ -395,7 +395,7 @@ export class AnalyticsSDK {
 
     // Add API call metrics if available
     if (this.apiCallMetrics.length > 0) {
-      metricsData.apicalls = [...this.apiCallMetrics];
+      metricsData.apiCalls = [...this.apiCallMetrics];
     }
 
     // Add route performance metrics if available
@@ -505,180 +505,6 @@ export class AnalyticsSDK {
   // Track route change start time for SPA navigation
   private routeChangeStartTime: number | null = null;
 
-  // 跟踪路由页面性能
-  public trackRoutePerformance(route: string, customStartTime?: number) {
-    // Only track in browser environment
-    if (typeof window === "undefined" || typeof performance === "undefined") {
-      return;
-    }
-
-    // Check if this is initial page load vs SPA route change
-    const navigationEntries = performance.getEntriesByType("navigation");
-
-    if (
-      navigationEntries.length > 0 &&
-      !this.routeChangeStartTime &&
-      !customStartTime
-    ) {
-      // Initial page load - use Navigation Timing API
-      const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
-
-      const loadTime = navEntry.loadEventEnd - navEntry.startTime;
-      const domContentLoaded =
-        navEntry.domContentLoadedEventEnd - navEntry.startTime;
-      const firstPaint = this.getFirstPaintTime();
-      const navigationType = navEntry.type || "navigate";
-
-      const metrics = {
-        route,
-        loadTime,
-        domContentLoaded,
-        firstPaint,
-        navigationType,
-        timestamp: new Date().toISOString(),
-      };
-
-      // Send immediate event for initial load
-      this.track("web_vitals_summary", {
-        metrics: {
-          routePerformance: metrics,
-          apicalls: [...this.apiCallMetrics],
-        },
-      });
-
-      // Clear sent API calls
-      this.apiCallMetrics = [];
-      this.routePerformanceMetrics = [];
-
-      console.log(`[AnalyticsSDK] Initial page load: ${route}`, metrics);
-    } else {
-      // SPA route change - measure actual rendering performance
-      const now = performance.now();
-
-      // Use custom start time if provided, otherwise fall back to instance variable
-      const startTime =
-        customStartTime !== undefined
-          ? customStartTime
-          : this.routeChangeStartTime || now;
-
-      // Measure actual time from route change start to now
-      const actualLoadTime = now - startTime;
-
-      // For SPA, we need to measure actual rendering events
-      // Use requestAnimationFrame to wait for a frame to be painted
-      requestAnimationFrame(() => {
-        // Wait for the next microtask to allow DOM to update
-        Promise.resolve().then(() => {
-          // Get DOM ready time after changes have been applied
-          const domReadyTime = performance.now() - startTime;
-
-          // Measure actual paint time if possible
-          if ("measure" in performance) {
-            // Create a custom measure for route change
-            try {
-              performance.measure(
-                `route-change-${route}`,
-                undefined,
-                `route-change-start-${route}`,
-              );
-            } catch (e) {
-              // Ignore if mark doesn't exist
-            }
-
-            // Get the actual measure
-            const measures = performance.getEntriesByName(
-              `route-change-${route}`,
-            );
-            if (measures.length > 0) {
-              const actualMeasure = measures[0];
-
-              const metrics = {
-                route,
-                loadTime: actualMeasure.duration,
-                domContentLoaded: domReadyTime,
-                firstPaint: this.getFirstPaintTime(), // This still gets FP since FP is global
-                navigationType: "spa_navigate",
-                timestamp: new Date().toISOString(),
-              };
-
-              this.track("web_vitals_summary", {
-                metrics: {
-                  routePerformance: metrics,
-                  apicalls: [...this.apiCallMetrics],
-                },
-              });
-
-              // Clear sent API calls
-              this.apiCallMetrics = [];
-              this.routePerformanceMetrics = [];
-
-              console.log(`[AnalyticsSDK] SPA route change: ${route}`, metrics);
-            } else {
-              // Fallback if measure is not available or failed
-              const metrics = {
-                route,
-                loadTime: actualLoadTime,
-                domContentLoaded: domReadyTime,
-                firstPaint: this.getFirstPaintTime(),
-                navigationType: "spa_navigate",
-                timestamp: new Date().toISOString(),
-              };
-
-              this.track("web_vitals_summary", {
-                metrics: {
-                  routePerformance: metrics,
-                  apicalls: [...this.apiCallMetrics],
-                },
-              });
-
-              // Clear sent API calls
-              this.apiCallMetrics = [];
-              this.routePerformanceMetrics = [];
-
-              console.log(
-                `[AnalyticsSDK] SPA route change (fallback): ${route}`,
-                metrics,
-              );
-            }
-
-            // Clear the measure mark
-            performance.clearMeasures(`route-change-${route}`);
-            performance.clearMarks(`route-change-start-${route}`);
-          } else {
-            // Fallback if performance.measure is not supported
-            const metrics = {
-              route,
-              loadTime: actualLoadTime,
-              domContentLoaded: domReadyTime,
-              firstPaint: this.getFirstPaintTime(),
-              navigationType: "spa_navigate",
-              timestamp: new Date().toISOString(),
-            };
-
-            this.track("web_vitals_summary", {
-              metrics: {
-                routePerformance: metrics,
-                apicalls: [...this.apiCallMetrics],
-              },
-            });
-
-            // Clear sent API calls
-            this.apiCallMetrics = [];
-            this.routePerformanceMetrics = [];
-
-            console.log(
-              `[AnalyticsSDK] SPA route change (no measure): ${route}`,
-              metrics,
-            );
-          }
-        });
-      });
-
-      // Reset for next navigation
-      this.routeChangeStartTime = null;
-    }
-  }
-
   // Mark the start of a route change (call before navigation)
   public markRouteChangeStart(routeName?: string) {
     if (typeof performance !== "undefined") {
@@ -707,6 +533,59 @@ export class AnalyticsSDK {
         }
       }
     }
+  }
+
+  // Track route performance with FCP and LCP metrics
+  public trackRoutePerformanceWithMetrics(
+    route: string,
+    metrics: {
+      fcp: number | null;
+      lcp: number | null;
+      startTime: number;
+      endTime: number;
+    },
+  ) {
+    // Only track in browser environment
+    if (typeof window === "undefined" || typeof performance === "undefined") {
+      return;
+    }
+
+    // Check if this is initial page load vs SPA route change
+    const navigationEntries = performance.getEntriesByType("navigation");
+    const isInitialLoad =
+      navigationEntries.length > 0 &&
+      !this.routeChangeStartTime &&
+      metrics.startTime === 0;
+
+    const navigationType = isInitialLoad
+      ? (navigationEntries[0] as PerformanceNavigationTiming).type || "navigate"
+      : "spa_navigate";
+
+    const routeMetrics = {
+      route,
+      fcp: metrics.fcp,
+      lcp: metrics.lcp,
+      duration: metrics.endTime - metrics.startTime,
+      navigationType,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Send immediate event with FCP and LCP metrics
+    this.track("web_vitals_summary", {
+      metrics: {
+        routePerformance: routeMetrics,
+        apiCalls: [...this.apiCallMetrics],
+      },
+    });
+
+    // Clear sent API calls
+    this.apiCallMetrics = [];
+    this.routePerformanceMetrics = [];
+
+    console.log(
+      `[AnalyticsSDK] Route performance (${isInitialLoad ? "initial" : "SPA"}): ${route}`,
+      routeMetrics,
+    );
   }
 
   // 获取首次绘制时间
@@ -763,35 +642,42 @@ export class AnalyticsSDK {
   // 获取路由性能统计
   public getRoutePerformanceStats(): Array<{
     route: string;
-    avgLoadTime: number;
-    avgDomContentLoaded: number;
+    avgFcp: number;
+    avgLcp: number;
     visitCount: number;
   }> {
     if (this.routePerformanceMetrics.length === 0) return [];
 
     const routeStats: Record<
       string,
-      { loadTimes: number[]; domContentLoadedTimes: number[] }
+      { fcpValues: number[]; lcpValues: number[] }
     > = {};
 
     this.routePerformanceMetrics.forEach((metric) => {
       if (!routeStats[metric.route]) {
-        routeStats[metric.route] = { loadTimes: [], domContentLoadedTimes: [] };
+        routeStats[metric.route] = { fcpValues: [], lcpValues: [] };
       }
-      routeStats[metric.route].loadTimes.push(metric.loadTime);
-      routeStats[metric.route].domContentLoadedTimes.push(
-        metric.domContentLoaded,
-      );
+      if (metric.fcp !== null) {
+        routeStats[metric.route].fcpValues.push(metric.fcp);
+      }
+      if (metric.lcp !== null) {
+        routeStats[metric.route].lcpValues.push(metric.lcp);
+      }
     });
 
     return Object.entries(routeStats).map(([route, stats]) => ({
       route,
-      avgLoadTime:
-        stats.loadTimes.reduce((sum, t) => sum + t, 0) / stats.loadTimes.length,
-      avgDomContentLoaded:
-        stats.domContentLoadedTimes.reduce((sum, t) => sum + t, 0) /
-        stats.domContentLoadedTimes.length,
-      visitCount: stats.loadTimes.length,
+      avgFcp:
+        stats.fcpValues.length > 0
+          ? stats.fcpValues.reduce((sum, t) => sum + t, 0) /
+            stats.fcpValues.length
+          : 0,
+      avgLcp:
+        stats.lcpValues.length > 0
+          ? stats.lcpValues.reduce((sum, t) => sum + t, 0) /
+            stats.lcpValues.length
+          : 0,
+      visitCount: Math.max(stats.fcpValues.length, stats.lcpValues.length),
     }));
   }
 }
