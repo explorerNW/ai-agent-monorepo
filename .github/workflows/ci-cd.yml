@@ -277,20 +277,33 @@ jobs:
             EOF
 
             # Restore SSL certificates from backup if they exist
-            if [ -d "backups" ] && [ "$(ls -A backups/ 2>/dev/null)" ]; then
-              LATEST_BACKUP=$(ls -t backups/ | head -1)
-              if [ -n "$LATEST_BACKUP" ] && [ -d "backups/$LATEST_BACKUP/ssl" ]; then
-                echo "🔐 Restoring SSL certificates from backup..."
-                mkdir -p ssl
-                cp "backups/$LATEST_BACKUP/ssl/server.crt" ssl/ 2>/dev/null || true
-                cp "backups/$LATEST_BACKUP/ssl/server.key" ssl/ 2>/dev/null || true
-                cp "backups/$LATEST_BACKUP/ssl/openssl.cnf" ssl/ 2>/dev/null || true
-                echo "✅ SSL certificates restored from backup: $LATEST_BACKUP"
+            echo "🔍 Checking for SSL certificate backups..."
+            LATEST_BACKUP=""
+            if [ -d "backups" ]; then
+              # Get the latest backup directory (sorted by time, newest first)
+              LATEST_BACKUP=$(ls -t backups/ 2>/dev/null | head -1 || echo "")
+            fi
+
+            if [ -n "$LATEST_BACKUP" ] && [ -d "backups/$LATEST_BACKUP/ssl" ]; then
+              echo "🔐 Restoring SSL certificates from backup: $LATEST_BACKUP"
+              mkdir -p ssl
+              if cp "backups/$LATEST_BACKUP/ssl/server.crt" ssl/ 2>/dev/null; then
+                echo "  ✓ Restored server.crt"
               else
-                echo "ℹ️  No SSL certificate backup found in latest backup, will generate new ones if needed"
+                echo "  ⚠ Failed to restore server.crt"
               fi
+              if cp "backups/$LATEST_BACKUP/ssl/server.key" ssl/ 2>/dev/null; then
+                echo "  ✓ Restored server.key"
+              else
+                echo "  ⚠ Failed to restore server.key"
+              fi
+              if [ -f "backups/$LATEST_BACKUP/ssl/openssl.cnf" ]; then
+                cp "backups/$LATEST_BACKUP/ssl/openssl.cnf" ssl/ 2>/dev/null || true
+                echo "  ✓ Restored openssl.cnf"
+              fi
+              echo "✅ SSL certificates restoration completed"
             else
-              echo "ℹ️  No backups directory or empty, will generate new certificates if needed"
+              echo "ℹ️  No SSL certificate backup found, will generate new ones if needed during deployment"
             fi
 
             # 显示当前提交信息
