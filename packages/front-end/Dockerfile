@@ -74,21 +74,27 @@ LABEL maintainer="ai-agent-team"
 LABEL description="AI Agent Frontend Service"
 LABEL version="1.0.0"
 
+# Install OpenSSL for SSL certificate support (if needed for testing)
+RUN apk add --no-cache openssl
+
 # Remove default nginx configuration
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy custom nginx configuration
 COPY packages/front-end/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Create SSL directory
+RUN mkdir -p /etc/nginx/ssl
+
 # Copy built static files from builder
 COPY --from=builder /app/packages/front-end/build/client /usr/share/nginx/html
 
-# Expose port
-EXPOSE 3001
+# Expose ports (HTTP and HTTPS)
+EXPOSE 80 443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 0
+  CMD wget --no-verbose --tries=1 --spider https://localhost:443/ --no-check-certificate || exit 0
 
 # Start nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]

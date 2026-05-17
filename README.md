@@ -22,6 +22,7 @@ A production-ready monorepo combining **AI-powered services** with **real-time p
 
 - **[Architecture Guide](./ARCHITECTURE.md)** - Comprehensive system architecture, data flows, and deployment strategies
 - **[Docker Setup](./DOCKER.md)** - Container deployment instructions and configuration
+- **[HTTPS Setup](./HTTPS_SETUP.md)** - Self-signed SSL certificates and HTTPS configuration
 - **[Git Workflow](./GIT_WORKFLOW.md)** - Commit conventions and development workflow
 - **[Backend Docs](./packages/back-end/README.md)** - API endpoints and service documentation
 - **[Frontend Docs](./packages/front-end/README.md)** - UI components and routing guide
@@ -92,6 +93,8 @@ docker-compose -f docker-compose.dev.yml up -d --build
 
 ### Production Deployment
 
+**Standard HTTP Deployment:**
+
 ```bash
 # Build and start all services
 docker-compose up -d --build
@@ -105,6 +108,33 @@ docker-compose up -d --build
 # Stop all services
 ./docker.sh stop
 ```
+
+**HTTPS Deployment (Recommended for Production):**
+
+For secure HTTPS access with SSL certificates:
+
+```bash
+# Quick setup (automated)
+./setup-https.sh
+
+# Or manual setup:
+# 1. Generate self-signed certificates
+./generate-ssl-cert.sh
+
+# 2. Build and start with HTTPS
+docker-compose up -d --build
+
+# Access via HTTPS
+# Frontend: https://localhost
+# Backend API: https://localhost/api/
+```
+
+📖 See **[HTTPS Setup Guide](./HTTPS_SETUP.md)** for detailed instructions on:
+
+- Generating and trusting self-signed certificates
+- Configuring nginx for SSL termination
+- Setting up reverse proxy to backend
+- Troubleshooting common issues
 
 ## 📦 Project Structure
 
