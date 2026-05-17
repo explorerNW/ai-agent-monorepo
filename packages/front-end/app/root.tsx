@@ -86,45 +86,89 @@ export default function App() {
       return;
     }
 
-    window.addEventListener("load", () => {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((registration) => {
-          console.log(
-            "[SW] ✅ Registered successfully with scope:",
-            registration.scope,
-          );
-          console.log("[SW] Active worker:", registration.active?.scriptURL);
+    // Attempt registration with retry logic for self-signed cert issues
+    const registerServiceWorker = async (retryCount = 0) => {
+      const maxRetries = 2;
 
-          // Check for updates
-          registration.addEventListener("updatefound", () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              console.log("[SW] 🔄 New version installing...");
-              newWorker.addEventListener("statechange", () => {
-                console.log("[SW] State changed:", newWorker.state);
-                if (
-                  newWorker.state === "installed" &&
-                  navigator.serviceWorker.controller
-                ) {
-                  console.log("[SW] ✨ New content available, please refresh.");
-                }
-              });
-            }
-          });
-        })
-        .catch((error) => {
-          console.error("[SW] ❌ Registration failed:", error.message);
-          console.error("[SW] Common causes:");
-          console.error(
-            "[SW]   1. Self-signed certificate not trusted in browser",
-          );
-          console.error("[SW]   2. Not running on HTTPS or localhost");
-          console.error("[SW]   3. Browser security settings blocking SW");
-          console.error(
-            "[SW] Solution: Visit https://localhost and accept the security warning first",
-          );
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
         });
+
+        console.log(
+          "[SW] ✅ Registered successfully with scope:",
+          registration.scope,
+        );
+        console.log("[SW] Active worker:", registration.active?.scriptURL);
+
+        // Mark as visited for future diagnostics
+        localStorage.setItem("sw_visited", "true");
+
+        // Check for updates
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            console.log("[SW] 🔄 New version installing...");
+            newWorker.addEventListener("statechange", () => {
+              console.log("[SW] State changed:", newWorker.state);
+              if (
+                newWorker.state === "installed" &&
+                navigator.serviceWorker.controller
+              ) {
+                console.log("[SW] ✨ New content available, please refresh.");
+              }
+            });
+          }
+        });
+      } catch (error: any) {
+        console.error("[SW] ❌ Registration failed:", error.message);
+
+        // Check if it's a security/certificate issue
+        if (
+          error.name === "SecurityError" ||
+          error.message.includes("secure origin")
+        ) {
+          console.error("[SW] 🔒 Security Error - Certificate not trusted");
+
+          const isLocalhost =
+            window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1";
+          // Don't retry on security errors - user must manually trust cert first
+          return;
+        }
+
+        // Retry on network errors (might be transient)
+        if (retryCount < maxRetries && !error.message.includes("security")) {
+          console.log(
+            `[SW] 🔄 Retrying registration (${retryCount + 1}/${maxRetries})...`,
+          );
+          setTimeout(
+            () => registerServiceWorker(retryCount + 1),
+            2000 * (retryCount + 1),
+          );
+        } else {
+          console.error("[SW] Common causes:");
+          console.error("[SW]   1. Network connectivity issues");
+          console.error("[SW]   2. Browser security settings blocking SW");
+          console.error("[SW]   3. Service Worker script not found (404)");
+          console.error("[SW]   4. MIME type mismatch");
+          console.error("[SW]");
+          console.error("[SW] 💡 Troubleshooting:");
+          console.error("[SW]   - Check Network tab for sw.js request status");
+          console.error("[SW]   - Verify sw.js is accessible at /sw.js");
+          console.error(
+            "[SW]   - Try hard refresh (Ctrl+Shift+R / Cmd+Shift+R)",
+          );
+        }
+      }
+    };
+
+    // Start registration after page load
+    window.addEventListener("load", () => {
+      // Small delay to ensure page is fully loaded
+      setTimeout(() => {
+        registerServiceWorker();
+      }, 500);
     });
   }, []);
 
