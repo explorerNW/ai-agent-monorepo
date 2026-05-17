@@ -62,36 +62,70 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   useRoutePerformance();
 
-  // Register Service Worker
+  // Register Service Worker - Only in production
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((registration) => {
-            console.log("[SW] Registered with scope:", registration.scope);
+    // Only register service worker in production builds
+    const isProduction = import.meta.env.PROD === true;
 
-            // Check for updates
-            registration.addEventListener("updatefound", () => {
-              const newWorker = registration.installing;
-              if (newWorker) {
-                newWorker.addEventListener("statechange", () => {
-                  if (
-                    newWorker.state === "installed" &&
-                    navigator.serviceWorker.controller
-                  ) {
-                    console.log("[SW] New content available, please refresh.");
-                    // Optionally show update notification to user
-                  }
-                });
-              }
-            });
-          })
-          .catch((error) => {
-            console.error("[SW] Registration failed:", error);
-          });
-      });
+    if (!isProduction) {
+      console.log("[SW] Skipping registration in development mode");
+      return;
     }
+
+    if (!("serviceWorker" in navigator)) {
+      console.warn("[SW] Service Workers not supported in this browser");
+      return;
+    }
+
+    // Check protocol - Service Workers require secure context
+    const isSecureContext =
+      window.location.protocol === "https:" ||
+      window.location.hostname === "localhost";
+    if (!isSecureContext) {
+      console.warn("[SW] Service Workers require HTTPS or localhost");
+      return;
+    }
+
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          console.log(
+            "[SW] ✅ Registered successfully with scope:",
+            registration.scope,
+          );
+          console.log("[SW] Active worker:", registration.active?.scriptURL);
+
+          // Check for updates
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              console.log("[SW] 🔄 New version installing...");
+              newWorker.addEventListener("statechange", () => {
+                console.log("[SW] State changed:", newWorker.state);
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  console.log("[SW] ✨ New content available, please refresh.");
+                }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("[SW] ❌ Registration failed:", error.message);
+          console.error("[SW] Common causes:");
+          console.error(
+            "[SW]   1. Self-signed certificate not trusted in browser",
+          );
+          console.error("[SW]   2. Not running on HTTPS or localhost");
+          console.error("[SW]   3. Browser security settings blocking SW");
+          console.error(
+            "[SW] Solution: Visit https://localhost and accept the security warning first",
+          );
+        });
+    });
   }, []);
 
   return <Outlet />;

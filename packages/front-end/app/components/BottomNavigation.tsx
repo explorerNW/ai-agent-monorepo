@@ -118,7 +118,27 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
         ),
         link: "/analytics",
       },
-
+      {
+        id: "service_worker",
+        label: "SW Manager",
+        isActive: activeTab === "service_worker",
+        icon: (
+          <svg width="22" height="29" viewBox="0 0 22 29" fill="none">
+            <path
+              d="M3 5C3 3.89543 3.89543 3 5 3H17C18.1046 3 19 3.89543 19 5V23C19 24.1046 18.1046 25 17 25H5C3.89543 25 3 24.1046 3 23V5Z"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M3 9L11 15L19 9"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        ),
+        link: "/service-worker",
+      },
       {
         id: "notifications",
         label: "Notifications",
@@ -134,26 +154,6 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
               d="M9 19C9 20.1046 9.89543 21 11 21C12.1046 21 13 20.1046 13 19"
               stroke="currentColor"
               strokeWidth="2"
-            />
-          </svg>
-        ),
-      },
-      {
-        id: "inbox",
-        label: "Inbox",
-        isActive: activeTab === "inbox",
-        icon: (
-          <svg width="22" height="29" viewBox="0 0 22 29" fill="none">
-            <path
-              d="M3 5C3 3.89543 3.89543 3 5 3H17C18.1046 3 19 3.89543 19 5V23C19 24.1046 18.1046 25 17 25H5C3.89543 25 3 24.1046 3 23V5Z"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="M3 9L11 15L19 9"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
             />
           </svg>
         ),

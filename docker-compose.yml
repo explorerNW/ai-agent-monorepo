@@ -176,7 +176,7 @@ services:
     container_name: ai-agent-frontend
     ports:
       - "443:443"
-      - "80:80"
+      # - "80:80"  # Commented out to avoid port conflict - use HTTPS only
     environment:
       - NODE_ENV=production
       - PORT=443

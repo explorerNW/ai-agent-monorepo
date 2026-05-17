@@ -14,6 +14,7 @@ export interface ServiceWorkerStatus {
  */
 export async function checkServiceWorkerStatus(): Promise<ServiceWorkerStatus> {
   if (!("serviceWorker" in navigator)) {
+    console.warn("[SW] Service Workers not supported");
     return {
       isSupported: false,
       isRegistered: false,
@@ -24,12 +25,34 @@ export async function checkServiceWorkerStatus(): Promise<ServiceWorkerStatus> {
 
   const registration = await navigator.serviceWorker.getRegistration();
 
-  return {
+  const status = {
     isSupported: true,
     isRegistered: !!registration,
     isActive: !!navigator.serviceWorker.controller,
     waitingUpdate: !!registration?.waiting,
   };
+
+  // Log diagnostic information
+  if (status.isRegistered) {
+    console.log("[SW] Registration found:", {
+      scope: registration?.scope,
+      active: registration?.active?.scriptURL,
+      installing: registration?.installing?.scriptURL,
+      waiting: registration?.waiting?.scriptURL,
+    });
+  } else {
+    console.warn("[SW] No registration found - SW may not be installed yet");
+  }
+
+  if (!status.isActive) {
+    console.warn("[SW] Service Worker is not active (no controller)");
+    console.warn("[SW] This can happen when:");
+    console.warn("[SW]   - First page load after registration");
+    console.warn("[SW]   - Self-signed certificate not trusted");
+    console.warn("[SW]   - Browser blocked the registration");
+  }
+
+  return status;
 }
 
 /**
