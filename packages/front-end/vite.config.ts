@@ -10,7 +10,7 @@ export default defineConfig({
     reactRouter(),
     tsconfigPaths(),
     serviceWorkerPlugin({
-      swSrc: "./app/sw.ts",
+      swSrc: "./app/sw.js", // Changed from sw.ts to sw.js - must use pure JavaScript
       swDest: "./build/client/sw.js",
       injectRegister: true,
     }),
