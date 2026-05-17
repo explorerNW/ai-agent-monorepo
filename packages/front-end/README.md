@@ -13,6 +13,7 @@ A modern, production-ready template for building full-stack React applications u
 - 🔒 TypeScript by default
 - 🎉 TailwindCSS for styling
 - 🌍 Environment variable support
+- 📱 **Service Worker & PWA Support** - Offline-first with intelligent caching
 - 📖 [React Router docs](https://reactrouter.com/)
 
 ## Getting Started
@@ -57,6 +58,47 @@ Create a production build:
 npm run build
 ```
 
+The build process includes:
+
+- ✅ Optimized asset bundling
+- ✅ Service Worker generation with precaching
+- ✅ Automatic cache manifest injection
+- ✅ Production-ready output
+
+## Service Worker & PWA
+
+This project includes a comprehensive Service Worker implementation with:
+
+- **Intelligent Caching**: Different strategies for different resource types
+- **Offline Support**: Graceful degradation when network is unavailable
+- **Auto Updates**: Seamless Service Worker lifecycle management
+- **Build Optimization**: Custom Vite plugin for optimal caching
+
+### Quick Start
+
+```bash
+# Build with Service Worker
+npm run build
+
+# Start production server
+npm start
+```
+
+Check browser DevTools → Application tab to verify Service Worker registration.
+
+**Documentation:**
+
+- 📘 [Full Guide](./SERVICE_WORKER.md)
+- ⚡ [Quick Start](./SERVICE_WORKER_QUICK_START.md)
+
+### Key Features
+
+- ✨ Automatic precaching of critical assets
+- 🔄 Network-first strategy for API calls
+- 💾 Cache-first for static resources
+- 📊 Real-time update notifications
+- 🛠️ Developer tools for cache management
+
 ## Deployment
 
 ### Docker Deployment
@@ -89,7 +131,7 @@ Make sure to deploy the output of `npm run build`
 ├── package.json
 ├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
 ├── build/
-│   ├── client/    # Static assets
+│   ├── client/    # Static assets + Service Worker
 │   └── server/    # Server-side code
 ```
 

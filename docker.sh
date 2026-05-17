@@ -88,11 +88,11 @@ start_dev() {
 
 stop_services() {
     echo -e "${YELLOW}Stopping all services...${NC}"
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-backend'; then
+    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-monorepo-rabbit-mq-service'; then
         $DOCKER_COMPOSE down
     fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-backend-dev'; then
-        $DOCKER_COMPOSE -f docker-compose.dev.yml down
+    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-monorepo-front-end'; then
+        $DOCKER_COMPOSE down
     fi
     echo -e "${GREEN}✓ All services stopped${NC}"
 }
