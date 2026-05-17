@@ -263,6 +263,7 @@ jobs:
             FRONT_END_URL=${{ secrets.FRONT_END_URL }}
             FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
             VITE_API_BASE_URL=
+            DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}
             EOF
 
             # 显示当前提交信息
