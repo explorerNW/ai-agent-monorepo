@@ -276,19 +276,6 @@ jobs:
             DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}
             EOF
 
-            # Restore SSL certificates from backup if they exist
-            LATEST_BACKUP=$(ls -t backups/ | head -1)
-            if [ -n "$LATEST_BACKUP" ] && [ -d "backups/$LATEST_BACKUP/ssl" ]; then
-              echo "🔐 Restoring SSL certificates from backup..."
-              mkdir -p ssl
-              cp "backups/$LATEST_BACKUP/ssl/server.crt" ssl/ 2>/dev/null || true
-              cp "backups/$LATEST_BACKUP/ssl/server.key" ssl/ 2>/dev/null || true
-              cp "backups/$LATEST_BACKUP/ssl/openssl.cnf" ssl/ 2>/dev/null || true
-              echo "✅ SSL certificates restored from backup: $LATEST_BACKUP"
-            else
-              echo "ℹ️  No SSL certificate backup found, will generate new ones if needed"
-            fi
-
             # 显示当前提交信息
             echo "📝 Current commit:"
             git log -1 --format="%h - %s (%an, %ar)" || true
