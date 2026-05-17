@@ -178,11 +178,10 @@ deploy_rolling() {
     if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
         echo -e "${YELLOW}SSL certificates not found. Generating self-signed certificates...${NC}"
         
-        # Extract domain from VITE_API_BASE_URL or use default
+        # Extract domain from DEPLOY_DOMAIN or use default
         local deploy_domain=""
-        if [ -n "$VITE_API_BASE_URL" ]; then
-            # Extract hostname from URL (remove protocol and port)
-            deploy_domain=$(echo "$VITE_API_BASE_URL" | sed -E 's|https?://([^:/]+).*|\1|')
+        if [ -n "$DEPLOY_DOMAIN" ]; then
+            deploy_domain="$DEPLOY_DOMAIN"
             echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
         fi
         
