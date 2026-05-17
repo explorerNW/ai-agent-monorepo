@@ -173,7 +173,7 @@ deploy_rolling() {
     echo -e "${YELLOW}This will perform zero-downtime updates with health checks${NC}"
     echo ""
     
-    // Pre-deployment: Check and generate SSL certificates if needed
+    # Pre-deployment: Check and generate SSL certificates if needed
     echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
     if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
         echo -e "${YELLOW}SSL certificates not found. Generating self-signed certificates...${NC}"
@@ -191,21 +191,21 @@ deploy_rolling() {
     fi
     echo ""
     
-    // Pre-deployment health check
+    # Pre-deployment health check
     echo -e "${BLUE}Step 1: Checking current service health...${NC}"
     if ! $DOCKER_COMPOSE ps | grep -q "Up"; then
         echo -e "${RED}Error: No running services detected. Please start services first.${NC}"
         exit 1
     fi
     
-    // Backup current state
+    # Backup current state
     echo -e "${BLUE}Step 2: Creating backup of current configuration...${NC}"
     local backup_dir="backups/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
     cp docker-compose.yml "$backup_dir/docker-compose.yml.bak"
     echo -e "${GREEN}✓ Backup created at ${backup_dir}${NC}"
     
-    // Build new images
+    # Build new images
     echo -e "${BLUE}Step 3: Building new images...${NC}"
     if [ "$force_mode" = "true" ]; then
         $DOCKER_COMPOSE build --no-cache
@@ -214,7 +214,7 @@ deploy_rolling() {
     fi
     echo -e "${GREEN}✓ New images built successfully${NC}"
     
-    // Perform rolling update
+    # Perform rolling update
     echo -e "${BLUE}Step 4: Performing rolling update...${NC}"
     echo -e "${YELLOW}Update strategy:${NC}"
     echo "  - Order: Start new container before stopping old one"
@@ -225,10 +225,10 @@ deploy_rolling() {
     echo "  - Auto-rollback on failure: Enabled"
     echo ""
     
-    // Update services in dependency order
+    # Update services in dependency order
     echo -e "${BLUE}Updating rabbit-mq-service...${NC}"
     $DOCKER_COMPOSE up -d --no-deps rabbit-mq-service
-    // rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
+    # rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
     echo -e "${YELLOW}Waiting for rabbit-mq-service to stabilize...${NC}"
     sleep 8
     local container_status=$(docker inspect --format='{{.State.Running}}' "ai-agent-rabbitmq-service" 2>/dev/null || echo "false")
@@ -243,7 +243,7 @@ deploy_rolling() {
     
     echo -e "${BLUE}Updating back-end...${NC}"
     $DOCKER_COMPOSE up -d --no-deps back-end
-    // Wait longer for backend to initialize (includes start_period)
+    # Wait longer for backend to initialize (includes start_period)
     sleep 15
     wait_for_healthcheck "back-end" 90 || handle_update_failure "back-end"
     
@@ -251,7 +251,7 @@ deploy_rolling() {
     
     echo -e "${BLUE}Updating front-end...${NC}"
     $DOCKER_COMPOSE up -d --no-deps front-end
-    // Wait for frontend to initialize
+    # Wait for frontend to initialize
     sleep 10
     wait_for_healthcheck "front-end" 60 || handle_update_failure "front-end"
     
@@ -259,7 +259,7 @@ deploy_rolling() {
     echo -e "${GREEN}✓ Rolling update completed successfully!${NC}"
     echo -e "${BLUE}All services are running with new version${NC}"
     
-    // Post-deployment verification
+    # Post-deployment verification
     verify_deployment
 }
 
@@ -296,11 +296,11 @@ wait_for_healthcheck() {
         health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>&1)
         local exit_code=$?
         
-        // If docker inspect fails, treat as not ready yet
+        # If docker inspect fails, treat as not ready yet
         if [ $exit_code -ne 0 ]; then
             health_status="error"
         else
-            // Trim whitespace and newlines
+            # Trim whitespace and newlines
             health_status=$(echo "$health_status" | tr -d '[:space:]')
         fi
         
@@ -333,7 +333,7 @@ wait_for_container_running() {
     
     echo -e "${YELLOW}Waiting for ${service_name} container to be running...${NC}"
     
-    // Give container a moment to start/restart after up -d command
+    # Give container a moment to start/restart after up -d command
     sleep 5
     
     while [ $elapsed -lt $timeout ]; do
@@ -357,7 +357,7 @@ wait_for_container_running() {
     done
     
     echo -e "${RED}✗ ${service_name} container start timeout after ${timeout}s${NC}"
-    // Show final status for debugging
+    # Show final status for debugging
     docker inspect "$container_name" --format='Status: {{.State.Status}}, Running: {{.State.Running}}, ExitCode: {{.State.ExitCode}}' 2>/dev/null || true
     return 1
 }
@@ -367,7 +367,7 @@ handle_update_failure() {
     echo -e "${RED}Update failed for ${service_name}${NC}"
     echo -e "${YELLOW}Initiating rollback...${NC}"
     
-    // Rollback to previous version
+    # Rollback to previous version
     $DOCKER_COMPOSE up -d --no-deps "$service_name"
     
     echo -e "${RED}Rollback completed. Please check logs and fix issues before retrying.${NC}"
@@ -380,7 +380,7 @@ verify_deployment() {
     
     local all_healthy=true
     
-    // Check back-end and front-end with health checks
+    # Check back-end and front-end with health checks
     for service in "back-end" "front-end"; do
         local container_name
         container_name=$(get_container_name "$service")
@@ -394,7 +394,7 @@ verify_deployment() {
         fi
     done
     
-    // Check rabbit-mq-service (microservice without health check)
+    # Check rabbit-mq-service (microservice without health check)
     local container_name
     container_name=$(get_container_name "rabbit-mq-service")
     local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
