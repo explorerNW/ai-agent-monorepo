@@ -34,22 +34,68 @@ export async function checkServiceWorkerStatus(): Promise<ServiceWorkerStatus> {
 
   // Log diagnostic information
   if (status.isRegistered) {
-    console.log("[SW] Registration found:", {
+    console.log("[SW] ✅ Registration found:", {
       scope: registration?.scope,
       active: registration?.active?.scriptURL,
       installing: registration?.installing?.scriptURL,
       waiting: registration?.waiting?.scriptURL,
     });
+
+    // If registered but not active yet, it's likely still installing
+    if (!status.isActive && registration?.installing) {
+      console.log(
+        "[SW] ⏳ Service Worker is installing... Please wait or refresh the page.",
+      );
+    }
   } else {
-    console.warn("[SW] No registration found - SW may not be installed yet");
+    // Only warn if we're confident it should have been registered
+    const hasVisitedBefore = localStorage.getItem("sw_visited");
+
+    if (hasVisitedBefore) {
+      console.warn(
+        "[SW] ⚠️ No registration found on repeat visit - SW may have failed to install",
+      );
+    } else {
+      console.log(
+        "[SW] ℹ️ No registration found - this is normal on first visit",
+      );
+      console.log("[SW] Service Worker will be registered shortly...");
+      // Mark that user has visited
+      localStorage.setItem("sw_visited", "true");
+    }
   }
 
   if (!status.isActive) {
-    console.warn("[SW] Service Worker is not active (no controller)");
-    console.warn("[SW] This can happen when:");
-    console.warn("[SW]   - First page load after registration");
-    console.warn("[SW]   - Self-signed certificate not trusted");
-    console.warn("[SW]   - Browser blocked the registration");
+    // Provide helpful context based on environment
+    const isHTTPS = window.location.protocol === "https:";
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    if (!isHTTPS && !isLocalhost) {
+      console.warn("[SW] ⚠️ Warning: Service Workers require HTTPS");
+      console.warn("[SW] Current protocol:", window.location.protocol);
+    } else if (isHTTPS && !isLocalhost) {
+      // For custom domains with HTTPS, provide specific guidance
+      if (!status.isRegistered) {
+        console.warn("[SW] Running on HTTPS with custom domain");
+        console.warn(
+          "[SW] If Service Worker fails to register, you may need to:",
+        );
+        console.warn("[SW]   1. Visit the site URL directly in a new tab");
+        console.warn("[SW]   2. Accept any security warnings");
+        console.warn("[SW]   3. Refresh this page");
+        console.warn(
+          "[SW] Note: Some browsers restrict SW on self-signed certs for non-localhost domains",
+        );
+      }
+    } else {
+      // Localhost - usually just needs a moment to install
+      console.log(
+        "[SW] ℹ️ Service Worker may still be activating (normal on first load)",
+      );
+      console.log("[SW] Try refreshing the page if features don't work");
+    }
   }
 
   return status;
