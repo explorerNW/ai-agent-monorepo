@@ -12,12 +12,16 @@ export function ServiceWorkerManager() {
   } = useServiceWorker();
 
   if (!status.isSupported) {
-    return null; // Don't show anything if SW is not supported
+    return (
+      <div className="fixed bottom-24 right-4 bg-gray-500 text-white px-4 py-2 rounded-lg shadow-lg">
+        Service Worker is not supported
+      </div>
+    ); // Don't show anything if SW is not supported
   }
 
   if (isLoading) {
     return (
-      <div className="fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
+      <div className="fixed bottom-24 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg">
         Initializing Service Worker...
       </div>
     );
@@ -25,14 +29,14 @@ export function ServiceWorkerManager() {
 
   if (error) {
     return (
-      <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
+      <div className="fixed bottom-24 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
         SW Error: {error.message}
       </div>
     );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 flex flex-col gap-2">
+    <div className="fixed bottom-24 right-4 flex flex-col gap-2">
       {/* Update notification */}
       {hasUpdate && (
         <div className="bg-yellow-500 text-white px-4 py-3 rounded-lg shadow-lg animate-pulse">
