@@ -17,8 +17,22 @@ fi
 
 # Step 1: Generate SSL certificates
 echo "📝 Step 1: Generating SSL certificates..."
+
+# Extract domain from VITE_API_BASE_URL if available
+deploy_domain=""
+if [ -n "$VITE_API_BASE_URL" ]; then
+    deploy_domain=$(echo "$VITE_API_BASE_URL" | sed -E 's|https?://([^:/]+).*|\1|')
+    echo "🌐 Detected deployment domain: ${deploy_domain}"
+fi
+
 if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
-    ./generate-ssl-cert.sh
+    if [ -n "$deploy_domain" ]; then
+        echo "🔐 Generating certificate for domain: ${deploy_domain}"
+        SSL_DOMAIN="$deploy_domain" ./generate-ssl-cert.sh
+    else
+        echo "🔐 Generating certificate for localhost (default)"
+        ./generate-ssl-cert.sh
+    fi
 else
     echo "✅ SSL certificates already exist. Skipping generation."
     echo "   To regenerate, remove the ssl/ directory first:"
