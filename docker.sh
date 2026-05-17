@@ -175,15 +175,40 @@ deploy_rolling() {
     
     # Pre-deployment: Check and generate SSL certificates if needed
     echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
+    
+    # Extract domain from DEPLOY_DOMAIN or use default
+    local deploy_domain=""
+    if [ -n "$DEPLOY_DOMAIN" ]; then
+        deploy_domain="$DEPLOY_DOMAIN"
+        echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
+    fi
+    
+    # Check if certificates need to be generated or regenerated
+    local need_generate=false
+    local reason=""
+    
     if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
-        echo -e "${YELLOW}SSL certificates not found. Generating self-signed certificates...${NC}"
-        
-        # Extract domain from DEPLOY_DOMAIN or use default
-        local deploy_domain=""
-        if [ -n "$DEPLOY_DOMAIN" ]; then
-            deploy_domain="$DEPLOY_DOMAIN"
-            echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
+        need_generate=true
+        reason="SSL certificates not found"
+    elif [ -n "$deploy_domain" ]; then
+        # Check if existing certificate includes the custom domain
+        if command -v openssl &> /dev/null; then
+            # Extract domains from existing certificate
+            existing_domains=$(openssl x509 -in ssl/server.crt -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
+            
+            # Check if current domain is in the certificate
+            hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
+            if ! echo "$existing_domains" | grep -q "$hostname"; then
+                need_generate=true
+                reason="Certificate doesn't include domain: $hostname"
+            fi
+        else
+            echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
         fi
+    fi
+    
+    if [ "$need_generate" = true ]; then
+        echo -e "${YELLOW}${reason}. Generating self-signed certificates...${NC}"
         
         if [ -f "./generate-ssl-cert.sh" ]; then
             chmod +x ./generate-ssl-cert.sh
@@ -202,7 +227,7 @@ deploy_rolling() {
             exit 1
         fi
     else
-        echo -e "${GREEN}✓ SSL certificates already exist (skipping generation)${NC}"
+        echo -e "${GREEN}✓ SSL certificates already exist and are valid (skipping generation)${NC}"
     fi
     echo ""
     
