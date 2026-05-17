@@ -277,6 +277,9 @@ jobs:
             export NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
             export PNPM_REGISTRY=https://registry.npmmirror.com
 
+            # Export DEPLOY_DOMAIN for docker.sh script
+            export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
+
             echo "🔄 Executing docker.sh deploy..."
             ./docker.sh deploy
 
