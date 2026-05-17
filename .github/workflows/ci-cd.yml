@@ -168,21 +168,25 @@ jobs:
             BACKUP_SSL_DIR="backups/ssl_pre_deploy_$(date +%Y%m%d_%H%M%S)"
 
             if [ -d "ssl" ] && [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
-              # Create backup directory with error handling
-              if mkdir -p "$BACKUP_SSL_DIR" 2>/dev/null; then
-                # Copy certificates with individual error handling
-                cp ssl/server.crt "$BACKUP_SSL_DIR/" 2>/dev/null || echo "⚠️  Failed to backup server.crt"
-                cp ssl/server.key "$BACKUP_SSL_DIR/" 2>/dev/null || echo "⚠️  Failed to backup server.key"
-                cp ssl/openssl.cnf "$BACKUP_SSL_DIR/" 2>/dev/null || echo "ℹ️  openssl.cnf not found (optional)"
+              # Create backup directory (ignore errors)
+              mkdir -p "$BACKUP_SSL_DIR" || {
+                echo "⚠️  Failed to create backup directory, skipping SSL backup"
+                BACKUP_SSL_DIR=""
+              }
+              
+              # Only proceed if directory was created
+              if [ -n "$BACKUP_SSL_DIR" ] && [ -d "$BACKUP_SSL_DIR" ]; then
+                # Copy certificates (each command independent)
+                cp ssl/server.crt "$BACKUP_SSL_DIR/" || true
+                cp ssl/server.key "$BACKUP_SSL_DIR/" || true
+                cp ssl/openssl.cnf "$BACKUP_SSL_DIR/" || true
                 
-                # Verify backup was successful
+                # Verify backup
                 if [ -f "$BACKUP_SSL_DIR/server.crt" ] && [ -f "$BACKUP_SSL_DIR/server.key" ]; then
                   echo "✅ SSL certificates backed up to: $BACKUP_SSL_DIR"
                 else
-                  echo "⚠️  SSL backup incomplete, will regenerate if needed"
+                  echo "⚠️  SSL backup incomplete"
                 fi
-              else
-                echo "⚠️  Failed to create backup directory, skipping SSL backup"
               fi
             else
               echo "ℹ️  No existing SSL certificates found (will generate new ones if needed)"
@@ -229,18 +233,15 @@ jobs:
 
             # 5. 💾 Restore SSL certificates after git operations
             echo "💾 Restoring SSL certificates after code update..."
-            if [ -d "$BACKUP_SSL_DIR" ] && [ -f "$BACKUP_SSL_DIR/server.crt" ]; then
-              if mkdir -p ssl 2>/dev/null; then
-                cp "$BACKUP_SSL_DIR/"* ssl/ 2>/dev/null || echo "⚠️  Failed to restore some SSL files"
-                
-                # Verify restoration
-                if [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
-                  echo "✅ SSL certificates restored from pre-deploy backup"
-                else
-                  echo "⚠️  SSL restoration incomplete, docker.sh will regenerate if needed"
-                fi
+            if [ -n "$BACKUP_SSL_DIR" ] && [ -d "$BACKUP_SSL_DIR" ] && [ -f "$BACKUP_SSL_DIR/server.crt" ]; then
+              mkdir -p ssl || true
+              cp "$BACKUP_SSL_DIR/"* ssl/ || true
+              
+              # Verify restoration
+              if [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
+                echo "✅ SSL certificates restored from pre-deploy backup"
               else
-                echo "⚠️  Failed to create ssl directory, docker.sh will handle this"
+                echo "⚠️  SSL restoration incomplete, docker.sh will regenerate if needed"
               fi
             else
               echo "ℹ️  No pre-deploy SSL backup found, docker.sh will handle certificate generation"
@@ -250,31 +251,29 @@ jobs:
             echo "💾 Creating full backup..."
             BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
 
-            if mkdir -p "$BACKUP_DIR" 2>/dev/null; then
-              # Backup configuration files with error handling
-              if [ -f docker-compose.yml ]; then
-                cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || echo "⚠️  Failed to backup docker-compose.yml"
-              fi
-              if [ -f .env ]; then
-                cp .env "$BACKUP_DIR/" 2>/dev/null || echo "⚠️  Failed to backup .env"
-              fi
+            mkdir -p "$BACKUP_DIR" || {
+              echo "⚠️  Failed to create backup directory, continuing without backup"
+              BACKUP_DIR=""
+            }
+
+            if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
+              # Backup configuration files
+              [ -f docker-compose.yml ] && cp docker-compose.yml "$BACKUP_DIR/" || true
+              [ -f .env ] && cp .env "$BACKUP_DIR/" || true
 
               # Also backup current SSL in the full backup for historical records
               if [ -d "ssl" ] && [ -f "ssl/server.crt" ]; then
-                mkdir -p "$BACKUP_DIR/ssl" 2>/dev/null || true
-                cp ssl/* "$BACKUP_DIR/ssl/" 2>/dev/null || echo "ℹ️  SSL backup to full backup skipped (optional)"
+                mkdir -p "$BACKUP_DIR/ssl" || true
+                cp ssl/* "$BACKUP_DIR/ssl/" || true
               fi
               
               echo "✅ Full backup created: $BACKUP_DIR"
-            else
-              echo "⚠️  Failed to create backup directory, continuing without backup"
             fi
 
             # 保留最近5个备份
             if [ -d backups ]; then
-              cd backups
-              ls -t | tail -n +6 | xargs -r rm -rf 2>/dev/null || echo "ℹ️  Backup cleanup skipped"
-              cd ..
+              cd backups && ls -t | tail -n +6 | xargs -r rm -rf || true
+              cd .. || true
             fi
 
             # 7. 准备环境与配置
