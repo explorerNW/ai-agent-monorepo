@@ -177,9 +177,25 @@ deploy_rolling() {
     echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
     if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
         echo -e "${YELLOW}SSL certificates not found. Generating self-signed certificates...${NC}"
+        
+        # Extract domain from VITE_API_BASE_URL or use default
+        local deploy_domain=""
+        if [ -n "$VITE_API_BASE_URL" ]; then
+            # Extract hostname from URL (remove protocol and port)
+            deploy_domain=$(echo "$VITE_API_BASE_URL" | sed -E 's|https?://([^:/]+).*|\1|')
+            echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
+        fi
+        
         if [ -f "./generate-ssl-cert.sh" ]; then
             chmod +x ./generate-ssl-cert.sh
-            ./generate-ssl-cert.sh
+            # Pass custom domain if detected
+            if [ -n "$deploy_domain" ]; then
+                echo -e "${YELLOW}Generating certificate for domain: ${deploy_domain}${NC}"
+                SSL_DOMAIN="$deploy_domain" ./generate-ssl-cert.sh
+            else
+                echo -e "${YELLOW}No custom domain detected, generating for localhost only${NC}"
+                ./generate-ssl-cert.sh
+            fi
             echo -e "${GREEN}✓ SSL certificates generated successfully${NC}"
         else
             echo -e "${RED}Error: generate-ssl-cert.sh not found!${NC}"
