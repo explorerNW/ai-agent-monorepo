@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { useRoutePerformance } from "./hooks/useRoutePerformance";
+import { useEffect } from "react";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -60,6 +61,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   useRoutePerformance();
+
+  // Register Service Worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((registration) => {
+            console.log("[SW] Registered with scope:", registration.scope);
+
+            // Check for updates
+            registration.addEventListener("updatefound", () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener("statechange", () => {
+                  if (
+                    newWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    console.log("[SW] New content available, please refresh.");
+                    // Optionally show update notification to user
+                  }
+                });
+              }
+            });
+          })
+          .catch((error) => {
+            console.error("[SW] Registration failed:", error);
+          });
+      });
+    }
+  }, []);
+
   return <Outlet />;
 }
 
