@@ -12,6 +12,12 @@ build/
 .env.local
 .env.*.local
 
+# SSL Certificates (generated locally, should not be committed)
+ssl/
+*.pem
+*.crt
+*.key
+
 # IDE
 .vscode/
 .idea/
@@ -44,3 +50,4 @@ temp_ocr/
 
 # Husky internal files (optional, can be committed)
 # .husky/_/
+
