@@ -212,11 +212,13 @@ jobs:
             # Backup SSL certificates if they exist (preserve across deployments)
             echo "🔐 Checking for SSL certificates..."
 
+            # Temporarily disable set -e for SSL certificate checks to avoid premature exit
+            set +e
+
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
             LETSENCRYPT_CERT=false
 
             # Safe check for Let's Encrypt directory existence
-            # Use variable assignment to avoid set -e issues with test commands
             letsencrypt_dir_exists=false
             if [ -d "/etc/letsencrypt" ]; then
               letsencrypt_dir_exists=true
@@ -243,6 +245,9 @@ jobs:
             else
               echo "ℹ️ Let's Encrypt directory not found (/etc/letsencrypt)"
             fi
+
+            # Re-enable set -e after SSL checks
+            set -e
 
             # Only backup self-signed certificates if not using Let's Encrypt
             if [ "$LETSENCRYPT_CERT" = false ]; then
