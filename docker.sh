@@ -176,9 +176,6 @@ deploy_rolling() {
     # Pre-deployment: Check and generate SSL certificates if needed
     echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
     
-    # Temporarily disable set -e for SSL certificate checks to avoid premature exit
-    set +e
-    
     # Extract domain from DEPLOY_DOMAIN or use default
     local deploy_domain=""
     if [ -n "$DEPLOY_DOMAIN" ]; then
@@ -190,26 +187,12 @@ deploy_rolling() {
     local letsencrypt_cert=false
     
     # Safe check for Let's Encrypt directory existence
-    local letsencrypt_dir_exists=false
-    if [ -d "/etc/letsencrypt" ]; then
-      letsencrypt_dir_exists=true
-    fi
-    
-    if [ "$letsencrypt_dir_exists" = true ]; then
+    if [ -d "/etc/letsencrypt" ] 2>/dev/null; then
       if [ -n "$deploy_domain" ]; then
         local le_cert_path="/etc/letsencrypt/live/$deploy_domain/fullchain.pem"
         local le_key_path="/etc/letsencrypt/live/$deploy_domain/privkey.pem"
         
-        local cert_exists=false
-        local key_exists=false
-        if [ -f "$le_cert_path" ]; then
-          cert_exists=true
-        fi
-        if [ -f "$le_key_path" ]; then
-          key_exists=true
-        fi
-        
-        if [ "$cert_exists" = true ] && [ "$key_exists" = true ]; then
+        if [ -f "$le_cert_path" ] 2>/dev/null && [ -f "$le_key_path" ] 2>/dev/null; then
             letsencrypt_cert=true
             echo -e "${GREEN}✓ Using Let's Encrypt certificates (managed separately)${NC}"
             echo -e "${BLUE}  Certificate path: $le_cert_path${NC}"
@@ -232,7 +215,7 @@ deploy_rolling() {
         local reason=""
         
         # Safe check for SSL directory and files
-        if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
+        if [ ! -d "ssl" ] 2>/dev/null || [ ! -f "ssl/server.crt" ] 2>/dev/null || [ ! -f "ssl/server.key" ] 2>/dev/null; then
             need_generate=true
             reason="SSL certificates not found"
         elif [ -n "$deploy_domain" ]; then
@@ -255,7 +238,7 @@ deploy_rolling() {
         if [ "$need_generate" = true ]; then
             echo -e "${YELLOW}${reason}. Generating self-signed certificates...${NC}"
             
-            if [ -f "./generate-ssl-cert.sh" ]; then
+            if [ -f "./generate-ssl-cert.sh" ] 2>/dev/null; then
                 chmod +x ./generate-ssl-cert.sh
                 # Pass custom domain if detected
                 if [ -n "$deploy_domain" ]; then
@@ -284,9 +267,6 @@ deploy_rolling() {
             echo -e "${GREEN}✓ Self-signed certificates already exist and are valid (skipping generation)${NC}"
         fi
     fi
-    
-    # Re-enable set -e after SSL checks
-    set -e
     echo ""
     
     # Pre-deployment health check

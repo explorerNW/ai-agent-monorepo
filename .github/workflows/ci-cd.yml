@@ -212,28 +212,14 @@ jobs:
             # Backup SSL certificates if they exist (preserve across deployments)
             echo "🔐 Checking for SSL certificates..."
 
-            # Temporarily disable set -e for SSL certificate checks to avoid premature exit
-            set +e
-
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
             LETSENCRYPT_CERT=false
 
             # Safe check for Let's Encrypt directory existence
-            letsencrypt_dir_exists=false
-            if [ -d "/etc/letsencrypt" ]; then
-              letsencrypt_dir_exists=true
-            fi
-
-            if [ "$letsencrypt_dir_exists" = true ]; then
+            if [ -d "/etc/letsencrypt" ] 2>/dev/null; then
               if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
                 DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
-                
-                cert_exists=false
-                if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ]; then
-                  cert_exists=true
-                fi
-                
-                if [ "$cert_exists" = true ]; then
+                if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ] 2>/dev/null; then
                   LETSENCRYPT_CERT=true
                   echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
                 else
@@ -246,28 +232,25 @@ jobs:
               echo "ℹ️ Let's Encrypt directory not found (/etc/letsencrypt)"
             fi
 
-            # Re-enable set -e after SSL checks
-            set -e
-
             # Only backup self-signed certificates if not using Let's Encrypt
             if [ "$LETSENCRYPT_CERT" = false ]; then
               # Check for SSL directory first
-              if [ -d "ssl" ]; then
+              if [ -d "ssl" ] 2>/dev/null; then
                 # Then check if it contains any files
                 if [ "$(ls -A ssl/ 2>/dev/null || echo "")" ]; then
                   echo "🔐 Backing up self-signed SSL certificates..."
                   mkdir -p "$BACKUP_DIR/ssl"
                   
                   # Copy each certificate file with error isolation
-                  if [ -f "ssl/server.crt" ]; then
+                  if [ -f "ssl/server.crt" ] 2>/dev/null; then
                     cp ssl/server.crt "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.crt"
                   fi
                   
-                  if [ -f "ssl/server.key" ]; then
+                  if [ -f "ssl/server.key" ] 2>/dev/null; then
                     cp ssl/server.key "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.key"
                   fi
                   
-                  if [ -f "ssl/openssl.cnf" ]; then
+                  if [ -f "ssl/openssl.cnf" ] 2>/dev/null; then
                     cp ssl/openssl.cnf "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup openssl.cnf"
                   fi
                   
@@ -286,7 +269,7 @@ jobs:
             fi
 
             # 保留最近5个备份
-            if [ -d backups ]; then
+            if [ -d backups ] 2>/dev/null; then
               cd backups
               ls -t | tail -n +6 | xargs -r rm -rf
               cd ..
