@@ -215,7 +215,7 @@ deploy_rolling() {
         local reason=""
         
         # Define SSL certificate paths to check (in priority order)
-        local custom_ssl_dir="/home/explorernw/github-cicd/actions-runner-new/_work/nginx/ssl"
+        local custom_ssl_dir="/etc/nginx/ssl"
         local local_ssl_dir="ssl"
         local ssl_cert_path=""
         local ssl_key_path=""
