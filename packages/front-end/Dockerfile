@@ -48,18 +48,6 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 # Build the application - run from workspace root where binaries are accessible
 WORKDIR /app/packages/front-end
 
-# Debug: Verify @react-router/dev installation
-RUN echo "=== Checking @react-router installation ===" && \
-    if [ -d "/app/node_modules/@react-router" ]; then \
-      echo "✓ @react-router directory exists"; \
-      ls -la /app/node_modules/@react-router/; \
-    else \
-      echo "✗ @react-router NOT found in /app/node_modules"; \
-      echo "Checking pnpm store..."; \
-      find /app/node_modules/.pnpm -name "*@react-router*" -type d 2>/dev/null | head -5 || echo "No pnpm entries"; \
-    fi && \
-    echo "=== End check ==="
-
 # Build using pnpm (preferred method for monorepo)
 RUN pnpm run build
 
