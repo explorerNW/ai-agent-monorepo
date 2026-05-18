@@ -274,8 +274,18 @@ jobs:
               if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
                 echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
                 mkdir -p ssl
-                cp "$LATEST_BACKUP/ssl/"* ssl/ 2>/dev/null || echo "ℹ️  SSL restore skipped or failed"
-                echo "✅ SSL certificates restored"
+                
+                # Copy certificate files with proper permission handling
+                # Use -f to force overwrite and handle permission issues
+                if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
+                   cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
+                  # Set correct permissions after restore
+                  chmod 644 ssl/server.crt 2>/dev/null || true
+                  chmod 600 ssl/server.key 2>/dev/null || true
+                  echo "✅ SSL certificates restored successfully"
+                else
+                  echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
+                fi
               fi
             fi
 
