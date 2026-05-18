@@ -214,12 +214,14 @@ jobs:
 
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
             LETSENCRYPT_CERT=false
-            if [ -d "/etc/letsencrypt" ] && [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
+            if [ -d "/etc/letsencrypt" ] 2>/dev/null && [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
               DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
-              if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ]; then
+              if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ] 2>/dev/null; then
                 LETSENCRYPT_CERT=true
                 echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
               fi
+            else
+              echo "ℹ️ Let's Encrypt directory not found or domain not configured"
             fi
 
             # Only backup self-signed certificates if not using Let's Encrypt
