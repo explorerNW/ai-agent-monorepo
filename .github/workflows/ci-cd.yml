@@ -212,6 +212,9 @@ jobs:
             # Backup SSL certificates if they exist (preserve across deployments)
             echo "🔐 Checking for SSL certificates..."
 
+            # Debug: Enable error tracing temporarily
+            set +e  # Temporarily disable exit-on-error for debugging
+
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
             LETSENCRYPT_CERT="false"
 
@@ -219,12 +222,19 @@ jobs:
             letsencrypt_dir_exists="false"
             if [ -d "/etc/letsencrypt" ] 2>/dev/null; then
               letsencrypt_dir_exists="true"
+              echo "DEBUG: /etc/letsencrypt directory exists"
+            else
+              echo "DEBUG: /etc/letsencrypt directory does NOT exist"
             fi
 
             if [ "$letsencrypt_dir_exists" = "true" ]; then
-              if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
-                DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||' 2>/dev/null || echo "${{ secrets.DEPLOY_DOMAIN }}")
+              deploy_domain_secret="${{ secrets.DEPLOY_DOMAIN }}"
+              echo "DEBUG: DEPLOY_DOMAIN secret length: ${#deploy_domain_secret}"
+              if [ -n "$deploy_domain_secret" ]; then
+                DEPLOY_HOSTNAME=$(echo "$deploy_domain_secret" | sed 's|:[0-9]*$||' 2>/dev/null || echo "$deploy_domain_secret")
+                echo "DEBUG: DEPLOY_HOSTNAME=$DEPLOY_HOSTNAME"
                 le_cert_path="/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem"
+                echo "DEBUG: Checking cert path: $le_cert_path"
                 if [ -f "$le_cert_path" ] 2>/dev/null; then
                   LETSENCRYPT_CERT="true"
                   echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
@@ -238,12 +248,26 @@ jobs:
               echo "ℹ️ Let's Encrypt directory not found (/etc/letsencrypt)"
             fi
 
+            set -e  # Re-enable exit-on-error
+
             # Only backup self-signed certificates if not using Let's Encrypt
-            if [ "$LETSENCRYPT_CERT" = false ]; then
+            echo "DEBUG: LETSENCRYPT_CERT=$LETSENCRYPT_CERT"
+            if [ "$LETSENCRYPT_CERT" = "false" ]; then
+              echo "DEBUG: Checking for self-signed SSL certificates..."
               # Check for SSL directory first
+              ssl_dir_exists="false"
               if [ -d "ssl" ] 2>/dev/null; then
+                ssl_dir_exists="true"
+                echo "DEBUG: ssl/ directory exists"
+              else
+                echo "DEBUG: ssl/ directory does NOT exist"
+              fi
+              
+              if [ "$ssl_dir_exists" = "true" ]; then
                 # Then check if it contains any files
-                if [ "$(ls -A ssl/ 2>/dev/null || echo "")" ]; then
+                ssl_files=$(ls -A ssl/ 2>/dev/null || echo "")
+                echo "DEBUG: SSL directory contents: '$ssl_files'"
+                if [ -n "$ssl_files" ]; then
                   echo "🔐 Backing up self-signed SSL certificates..."
                   mkdir -p "$BACKUP_DIR/ssl"
                   
