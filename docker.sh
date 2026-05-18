@@ -71,9 +71,33 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
+    
+    # Check and generate SSL certificates if needed
+    echo -e "${BLUE}Checking SSL certificates...${NC}"
+    local deploy_domain=""
+    if [ -n "$DEPLOY_DOMAIN" ]; then
+        deploy_domain="$DEPLOY_DOMAIN"
+    fi
+    
+    if [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
+        echo -e "${YELLOW}SSL certificates not found. Generating...${NC}"
+        if [ -n "$deploy_domain" ]; then
+            DEPLOY_DOMAIN="$deploy_domain" bash generate-ssl-cert.sh
+        else
+            bash generate-ssl-cert.sh
+        fi
+    elif [ -n "$deploy_domain" ]; then
+        # Verify certificate includes the deployment domain
+        if ! openssl x509 -in ssl/server.crt -text -noout | grep -q "$deploy_domain"; then
+            echo -e "${YELLOW}Certificate doesn't include domain ${deploy_domain}. Regenerating...${NC}"
+            DEPLOY_DOMAIN="$deploy_domain" bash generate-ssl-cert.sh
+        fi
+    fi
+    echo ""
+    
     $DOCKER_COMPOSE up -d --build
     echo -e "${GREEN}✓ Services started successfully!${NC}"
-    echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
+    echo -e "${BLUE}Front-end: https://localhost:443${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
     echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
 }
@@ -182,6 +206,30 @@ deploy_rolling() {
         deploy_domain="$DEPLOY_DOMAIN"
         echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
     fi
+    
+    # Check if SSL certificates exist
+    if [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
+        echo -e "${YELLOW}SSL certificates not found. Generating new certificates...${NC}"
+        if [ -n "$deploy_domain" ]; then
+            DEPLOY_DOMAIN="$deploy_domain" bash generate-ssl-cert.sh
+        else
+            bash generate-ssl-cert.sh
+        fi
+        echo -e "${GREEN}✓ SSL certificates generated successfully${NC}"
+    else
+        echo -e "${GREEN}✓ SSL certificates already exist${NC}"
+        # Verify certificate includes the deployment domain
+        if [ -n "$deploy_domain" ]; then
+            if ! openssl x509 -in ssl/server.crt -text -noout | grep -q "$deploy_domain"; then
+                echo -e "${YELLOW}⚠ Certificate doesn't include domain ${deploy_domain}. Regenerating...${NC}"
+                DEPLOY_DOMAIN="$deploy_domain" bash generate-ssl-cert.sh
+                echo -e "${GREEN}✓ SSL certificates regenerated with correct domain${NC}"
+            else
+                echo -e "${GREEN}✓ Certificate includes domain ${deploy_domain}${NC}"
+            fi
+        fi
+    fi
+    echo ""
     
     # Pre-deployment health check
     echo -e "${BLUE}Step 1: Checking current service health...${NC}"
