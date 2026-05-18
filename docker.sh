@@ -183,51 +183,79 @@ deploy_rolling() {
         echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
     fi
     
-    # Check if certificates need to be generated or regenerated
-    local need_generate=false
-    local reason=""
-    
-    if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
-        need_generate=true
-        reason="SSL certificates not found"
-    elif [ -n "$deploy_domain" ]; then
-        # Check if existing certificate includes the custom domain
-        if command -v openssl &> /dev/null; then
-            # Extract domains from existing certificate
-            existing_domains=$(openssl x509 -in ssl/server.crt -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
-            
-            # Check if current domain is in the certificate
-            hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
-            if ! echo "$existing_domains" | grep -q "$hostname"; then
-                need_generate=true
-                reason="Certificate doesn't include domain: $hostname"
-            fi
-        else
-            echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
+    # Check if using Let's Encrypt certificates (should not regenerate)
+    local letsencrypt_cert=false
+    if [ -d "/etc/letsencrypt" ] && [ -n "$deploy_domain" ]; then
+        local le_cert_path="/etc/letsencrypt/live/$deploy_domain/fullchain.pem"
+        local le_key_path="/etc/letsencrypt/live/$deploy_domain/privkey.pem"
+        
+        if [ -f "$le_cert_path" ] && [ -f "$le_key_path" ]; then
+            letsencrypt_cert=true
+            echo -e "${GREEN}✓ Using Let's Encrypt certificates (managed separately)${NC}"
+            echo -e "${BLUE}  Certificate path: $le_cert_path${NC}"
+            echo -e "${BLUE}  Auto-renewal: Enabled via cron job${NC}"
+            echo -e "${YELLOW}  Note: Let's Encrypt certificates are managed by setup-letsencrypt.sh${NC}"
         fi
     fi
     
-    if [ "$need_generate" = true ]; then
-        echo -e "${YELLOW}${reason}. Generating self-signed certificates...${NC}"
+    # Only check self-signed certificates if not using Let's Encrypt
+    if [ "$letsencrypt_cert" = false ]; then
+        # Check if self-signed certificates need to be generated or regenerated
+        local need_generate=false
+        local reason=""
         
-        if [ -f "./generate-ssl-cert.sh" ]; then
-            chmod +x ./generate-ssl-cert.sh
-            # Pass custom domain if detected
-            if [ -n "$deploy_domain" ]; then
-                echo -e "${YELLOW}Generating certificate for domain: ${deploy_domain}${NC}"
-                SSL_DOMAIN="$deploy_domain" ./generate-ssl-cert.sh
+        # Safe check for SSL directory and files
+        if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
+            need_generate=true
+            reason="SSL certificates not found"
+        elif [ -n "$deploy_domain" ]; then
+            # Check if existing certificate includes the custom domain
+            if command -v openssl &> /dev/null; then
+                # Extract domains from existing certificate (with error isolation)
+                existing_domains=$(openssl x509 -in ssl/server.crt -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
+                
+                # Check if current domain is in the certificate
+                hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
+                if [ -n "$existing_domains" ] && ! echo "$existing_domains" | grep -q "$hostname"; then
+                    need_generate=true
+                    reason="Certificate doesn't include domain: $hostname"
+                fi
             else
-                echo -e "${YELLOW}No custom domain detected, generating for localhost only${NC}"
-                ./generate-ssl-cert.sh
+                echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
             fi
-            echo -e "${GREEN}✓ SSL certificates generated successfully${NC}"
-        else
-            echo -e "${RED}Error: generate-ssl-cert.sh not found!${NC}"
-            echo -e "${YELLOW}Please run setup-https.sh first or ensure ssl/ directory exists with valid certificates${NC}"
-            exit 1
         fi
-    else
-        echo -e "${GREEN}✓ SSL certificates already exist and are valid (skipping generation)${NC}"
+        
+        if [ "$need_generate" = true ]; then
+            echo -e "${YELLOW}${reason}. Generating self-signed certificates...${NC}"
+            
+            if [ -f "./generate-ssl-cert.sh" ]; then
+                chmod +x ./generate-ssl-cert.sh
+                # Pass custom domain if detected
+                if [ -n "$deploy_domain" ]; then
+                    echo -e "${YELLOW}Generating certificate for domain: ${deploy_domain}${NC}"
+                    if SSL_DOMAIN="$deploy_domain" ./generate-ssl-cert.sh; then
+                        echo -e "${GREEN}✓ SSL certificates generated successfully${NC}"
+                    else
+                        echo -e "${RED}✗ Failed to generate SSL certificates${NC}"
+                        echo -e "${YELLOW}Continuing deployment without SSL update (certificates may be invalid)${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}No custom domain detected, generating for localhost only${NC}"
+                    if ./generate-ssl-cert.sh; then
+                        echo -e "${GREEN}✓ SSL certificates generated successfully${NC}"
+                    else
+                        echo -e "${RED}✗ Failed to generate SSL certificates${NC}"
+                        echo -e "${YELLOW}Continuing deployment without SSL update (certificates may be invalid)${NC}"
+                    fi
+                fi
+            else
+                echo -e "${RED}Error: generate-ssl-cert.sh not found!${NC}"
+                echo -e "${YELLOW}Please run setup-https.sh first or ensure ssl/ directory exists with valid certificates${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${GREEN}✓ Self-signed certificates already exist and are valid (skipping generation)${NC}"
+        fi
     fi
     echo ""
     
