@@ -184,7 +184,7 @@ services:
     env_file:
       - ./packages/front-end/.env
     volumes:
-      - ./ssl:/etc/nginx/ssl:ro
+      - /etc/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       back-end:
         condition: service_healthy
