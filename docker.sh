@@ -190,38 +190,21 @@ deploy_rolling() {
     if [ ! -d "ssl" ] || [ ! -f "ssl/server.crt" ] || [ ! -f "ssl/server.key" ]; then
         need_generate=true
         reason="SSL certificates not found"
-        echo -e "${YELLOW}Reason: ${reason}${NC}"
     elif [ -n "$deploy_domain" ]; then
         # Check if existing certificate includes the custom domain
         if command -v openssl &> /dev/null; then
-            # Extract domains from existing certificate (more robust parsing)
+            # Extract domains from existing certificate
             existing_domains=$(openssl x509 -in ssl/server.crt -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
-            
-            # Debug: Show what we're checking
-            echo -e "${BLUE}Debug: Existing certificate SAN entries:${NC}"
-            echo -e "${BLUE}  ${existing_domains}${NC}"
             
             # Check if current domain is in the certificate
             hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
-            echo -e "${BLUE}Debug: Checking for hostname: ${hostname}${NC}"
-            
             if ! echo "$existing_domains" | grep -q "$hostname"; then
                 need_generate=true
                 reason="Certificate doesn't include domain: $hostname"
-                echo -e "${YELLOW}Reason: ${reason}${NC}"
-                
-                # Show what domains ARE in the certificate for debugging
-                echo -e "${YELLOW}Certificate currently contains these domains:${NC}"
-                echo "$existing_domains" | tr ',' '\n' | sed 's/^/  /'
-            else
-                echo -e "${GREEN}✓ Certificate already includes domain: ${hostname}${NC}"
             fi
         else
             echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
-            echo -e "${YELLOW}Assuming certificates are valid (skipping verification)${NC}"
         fi
-    else
-        echo -e "${BLUE}No custom domain specified, checking basic certificate existence only${NC}"
     fi
     
     if [ "$need_generate" = true ]; then

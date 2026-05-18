@@ -163,36 +163,7 @@ jobs:
               exit 1
             }
 
-            # 3. 🔐 Backup SSL certificates BEFORE git operations (CRITICAL!)
-            echo "🔐 Backing up SSL certificates before code update..."
-            BACKUP_SSL_DIR="backups/ssl_pre_deploy_$(date +%Y%m%d_%H%M%S)"
-
-            if [ -d "ssl" ] && [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
-              # Create backup directory (ignore errors)
-              mkdir -p "$BACKUP_SSL_DIR" || {
-                echo "⚠️  Failed to create backup directory, skipping SSL backup"
-                BACKUP_SSL_DIR=""
-              }
-              
-              # Only proceed if directory was created
-              if [ -n "$BACKUP_SSL_DIR" ] && [ -d "$BACKUP_SSL_DIR" ]; then
-                # Copy certificates (each command independent)
-                cp ssl/server.crt "$BACKUP_SSL_DIR/" || true
-                cp ssl/server.key "$BACKUP_SSL_DIR/" || true
-                cp ssl/openssl.cnf "$BACKUP_SSL_DIR/" || true
-                
-                # Verify backup
-                if [ -f "$BACKUP_SSL_DIR/server.crt" ] && [ -f "$BACKUP_SSL_DIR/server.key" ]; then
-                  echo "✅ SSL certificates backed up to: $BACKUP_SSL_DIR"
-                else
-                  echo "⚠️  SSL backup incomplete"
-                fi
-              fi
-            else
-              echo "ℹ️  No existing SSL certificates found (will generate new ones if needed)"
-            fi
-
-            # 4. 拉取最新代码
+            # 3. 拉取最新代码
             echo "📥 Pulling latest code from repository..."
 
             # 确保在正确的分支上
@@ -231,52 +202,51 @@ jobs:
             LATEST_COMMIT=$(git rev-parse HEAD)
             echo "   Deploying commit: $LATEST_COMMIT"
 
-            # 5. 💾 Restore SSL certificates after git operations
-            echo "💾 Restoring SSL certificates after code update..."
-            if [ -n "$BACKUP_SSL_DIR" ] && [ -d "$BACKUP_SSL_DIR" ] && [ -f "$BACKUP_SSL_DIR/server.crt" ]; then
-              mkdir -p ssl || true
-              cp "$BACKUP_SSL_DIR/"* ssl/ || true
+            # 5. 备份当前版本
+            echo "💾 Creating backup..."
+            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+            if [ -f docker-compose.yml ]; then cp docker-compose.yml "$BACKUP_DIR/"; fi
+            if [ -f .env ]; then cp .env "$BACKUP_DIR/"; fi
+
+            # Backup SSL certificates if they exist (preserve across deployments)
+            echo "🔐 Checking for SSL certificates..."
+            if [ -d "ssl" ] && [ "$(ls -A ssl/ 2>/dev/null)" ]; then
+              echo "🔐 Backing up SSL certificates..."
+              mkdir -p "$BACKUP_DIR/ssl"
               
-              # Verify restoration
-              if [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
-                echo "✅ SSL certificates restored from pre-deploy backup"
+              # Copy each certificate file with error isolation
+              if [ -f "ssl/server.crt" ]; then
+                cp ssl/server.crt "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.crt"
+              fi
+              
+              if [ -f "ssl/server.key" ]; then
+                cp ssl/server.key "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.key"
+              fi
+              
+              if [ -f "ssl/openssl.cnf" ]; then
+                cp ssl/openssl.cnf "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup openssl.cnf"
+              fi
+              
+              # Verify backup was created
+              if [ "$(ls -A "$BACKUP_DIR/ssl/" 2>/dev/null)" ]; then
+                echo "✅ SSL certificates backed up successfully"
               else
-                echo "⚠️  SSL restoration incomplete, docker.sh will regenerate if needed"
+                echo "ℹ️ No SSL files were found to backup"
               fi
             else
-              echo "ℹ️  No pre-deploy SSL backup found, docker.sh will handle certificate generation"
-            fi
-
-            # 6. 创建完整备份（包含配置文件）
-            echo "💾 Creating full backup..."
-            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-
-            mkdir -p "$BACKUP_DIR" || {
-              echo "⚠️  Failed to create backup directory, continuing without backup"
-              BACKUP_DIR=""
-            }
-
-            if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
-              # Backup configuration files
-              [ -f docker-compose.yml ] && cp docker-compose.yml "$BACKUP_DIR/" || true
-              [ -f .env ] && cp .env "$BACKUP_DIR/" || true
-
-              # Also backup current SSL in the full backup for historical records
-              if [ -d "ssl" ] && [ -f "ssl/server.crt" ]; then
-                mkdir -p "$BACKUP_DIR/ssl" || true
-                cp ssl/* "$BACKUP_DIR/ssl/" || true
-              fi
-              
-              echo "✅ Full backup created: $BACKUP_DIR"
+              echo "ℹ️ No SSL directory or certificates found - will generate new ones if needed"
             fi
 
             # 保留最近5个备份
             if [ -d backups ]; then
-              cd backups && ls -t | tail -n +6 | xargs -r rm -rf || true
-              cd .. || true
+              cd backups
+              ls -t | tail -n +6 | xargs -r rm -rf
+              cd ..
             fi
+            echo "✅ Backup created: $BACKUP_DIR"
 
-            # 7. 准备环境与配置
+            # 6. 准备环境与配置
             echo "📁 Ensuring directory structure..."
             mkdir -p packages/front-end
             mkdir -p packages/back-end
@@ -325,8 +295,18 @@ jobs:
             DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}
             EOF
 
-            # Note: SSL certificates were already restored after git pull (see step 5)
-            # The docker.sh deploy script will check existing certificates and only regenerate if needed
+            # Restore SSL certificates from latest backup (if available)
+            # Note: SSL certificates are managed by docker.sh deploy script
+            # The script will check existing certificates and only regenerate if needed
+            if [ -d "backups" ]; then
+              LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
+              if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
+                echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
+                mkdir -p ssl
+                cp "$LATEST_BACKUP/ssl/"* ssl/ 2>/dev/null || echo "ℹ️  SSL restore skipped or failed"
+                echo "✅ SSL certificates restored"
+              fi
+            fi
 
             # 显示当前提交信息
             echo "📝 Current commit:"
