@@ -43,7 +43,7 @@ export function useRoutePerformance() {
       }
 
       try {
-        // First, try to get existing FCP entries
+        // Get latest FCP from Performance API (SDK observers keep it updated)
         const paintEntries = performance.getEntriesByType("paint");
         const fcpEntry = paintEntries.find(
           (entry) => entry.name === "first-contentful-paint",
@@ -55,11 +55,11 @@ export function useRoutePerformance() {
         }
 
         // For SPA navigation, FCP might not be available yet
-        // Use a timeout to wait for FCP to be measured
+        // Use a short timeout to wait for FCP to be measured
         const timeoutId = setTimeout(() => {
           observer.disconnect();
           resolve(null);
-        }, 2000); // Wait up to 2 seconds for FCP
+        }, 1000); // Reduced timeout - SDK observers handle long-term tracking
 
         const observer = new PerformanceObserver((list) => {
           const entries = list.getEntries();
@@ -91,7 +91,7 @@ export function useRoutePerformance() {
       }
 
       try {
-        // First, try to get existing LCP entries
+        // Get latest LCP from Performance API (SDK observers keep it updated)
         const lcpEntries = performance.getEntriesByType(
           "largest-contentful-paint",
         );
@@ -101,11 +101,11 @@ export function useRoutePerformance() {
         }
 
         // For SPA navigation, LCP might not be available yet
-        // Use a timeout to wait for LCP to be measured
+        // Use a short timeout to wait for LCP to be measured
         const timeoutId = setTimeout(() => {
           observer.disconnect();
           resolve(null);
-        }, 3000); // Wait up to 3 seconds for LCP
+        }, 1500); // Reduced timeout - SDK observers handle long-term tracking
 
         const observer = new PerformanceObserver((list) => {
           const entries = list.getEntries();
