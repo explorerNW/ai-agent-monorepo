@@ -12,6 +12,7 @@ interface PerformanceMetric {
   value: number;
   rating: "good" | "needs-improvement" | "poor";
   navigationType?: string;
+  timestamp?: number; // Add timestamp to track when metric was captured
 }
 
 interface ApiCallMetric {
@@ -58,7 +59,12 @@ export class AnalyticsSDK {
     this.startTimer();
     this.initPerformanceMonitoring();
     // 页面关闭前强制发送剩余数据 (使用 sendBeacon 保证成功率)
-    window.addEventListener("beforeunload", () => this.flush(true));
+    window.addEventListener("beforeunload", () => {
+      console.debug("[AnalyticsSDK] beforeunload triggered - flushing metrics");
+      // Update metrics with fresh values before sending
+      this.updateMetricsWithFreshValues();
+      this.flush(true);
+    });
   }
 
   // 初始化性能监控
@@ -101,15 +107,19 @@ export class AnalyticsSDK {
           value: lastEntry.startTime,
           rating: this.getLCPRating(lastEntry.startTime),
           navigationType: this.getNavigationType(),
+          timestamp: Date.now(), // Track when this metric was captured
         };
 
         this.performanceMetrics.set("LCP", metric);
-        // 不立即上报，等待汇总
+        // Don't disconnect - keep observing for updates during SPA navigation
 
-        observer.disconnect();
+        console.debug("[AnalyticsSDK] LCP updated:", lastEntry.startTime);
       });
 
       observer.observe({ type: "largest-contentful-paint", buffered: true });
+
+      // Store observer reference for potential cleanup
+      (this as any).lcpObserver = observer;
     } catch (error) {
       console.warn("LCP observer not supported:", error);
     }
@@ -127,15 +137,19 @@ export class AnalyticsSDK {
           value: firstEntry.startTime,
           rating: this.getFCPRating(firstEntry.startTime),
           navigationType: this.getNavigationType(),
+          timestamp: Date.now(), // Track when this metric was captured
         };
 
         this.performanceMetrics.set("FCP", metric);
-        // 不立即上报，等待汇总
+        // Don't disconnect - keep observing for updates
 
-        observer.disconnect();
+        console.debug("[AnalyticsSDK] FCP updated:", firstEntry.startTime);
       });
 
       observer.observe({ type: "paint", buffered: true });
+
+      // Store observer reference for potential cleanup
+      (this as any).fcpObserver = observer;
     } catch (error) {
       console.warn("FCP observer not supported:", error);
     }
@@ -158,13 +172,17 @@ export class AnalyticsSDK {
           value: clsValue,
           rating: this.getCLSRating(clsValue),
           navigationType: this.getNavigationType(),
+          timestamp: Date.now(), // Track when this metric was captured
         };
 
         this.performanceMetrics.set("CLS", metric);
-        // 不立即上报，等待汇总
+        // Don't disconnect - keep accumulating CLS throughout page lifecycle
       });
 
       observer.observe({ type: "layout-shift", buffered: true });
+
+      // Store observer reference
+      (this as any).clsObserver = observer;
 
       // 页面隐藏时报告最终 CLS 值并触发汇总上报
       document.addEventListener("visibilitychange", () => {
@@ -174,10 +192,11 @@ export class AnalyticsSDK {
             value: clsValue,
             rating: this.getCLSRating(clsValue),
             navigationType: this.getNavigationType(),
+            timestamp: Date.now(),
           };
           this.performanceMetrics.set("CLS", finalMetric);
           this.flushPerformanceMetrics(); // 触发汇总上报
-          observer.disconnect();
+          // Don't disconnect - allow continued tracking if page becomes visible again
         }
       });
     } catch (error) {
@@ -198,15 +217,19 @@ export class AnalyticsSDK {
           value: fidValue,
           rating: this.getFIDRating(fidValue),
           navigationType: this.getNavigationType(),
+          timestamp: Date.now(), // Track when this metric was captured
         };
 
         this.performanceMetrics.set("FID", metric);
-        // 不立即上报，等待汇总
+        // Don't disconnect - keep observing for multiple interactions
 
-        observer.disconnect();
+        console.debug("[AnalyticsSDK] FID captured:", fidValue);
       });
 
       observer.observe({ type: "first-input", buffered: true });
+
+      // Store observer reference
+      (this as any).fidObserver = observer;
     } catch (error) {
       console.warn("FID observer not supported:", error);
     }
@@ -228,7 +251,7 @@ export class AnalyticsSDK {
         };
 
         this.performanceMetrics.set("TTFB", metric);
-        // 不立即上报，等待汇总
+        // Don't disconnect - keep observing for updates
 
         // TTFB 是最早可获取的指标，延迟一段时间后检查是否可以汇总上报
         setTimeout(() => this.checkAndFlushPerformanceMetrics(), 3000);
@@ -281,6 +304,78 @@ export class AnalyticsSDK {
       return navEntry.type || "navigate";
     }
     return "unknown";
+  }
+
+  // Get fresh FCP value from Performance API
+  private getFreshFCPValue(): number | null {
+    try {
+      const paintEntries = performance.getEntriesByType("paint");
+      const fcpEntry = paintEntries.find(
+        (entry) => entry.name === "first-contentful-paint",
+      );
+      return fcpEntry ? fcpEntry.startTime : null;
+    } catch (error) {
+      console.warn("[AnalyticsSDK] Failed to get fresh FCP:", error);
+      return null;
+    }
+  }
+
+  // Get fresh LCP value from Performance API
+  private getFreshLCPValue(): number | null {
+    try {
+      const lcpEntries = performance.getEntriesByType(
+        "largest-contentful-paint",
+      );
+      return lcpEntries.length > 0
+        ? lcpEntries[lcpEntries.length - 1].startTime
+        : null;
+    } catch (error) {
+      console.warn("[AnalyticsSDK] Failed to get fresh LCP:", error);
+      return null;
+    }
+  }
+
+  // Update performance metrics with fresh values before reporting
+  private updateMetricsWithFreshValues() {
+    // Get fresh FCP
+    const freshFCP = this.getFreshFCPValue();
+    if (freshFCP !== null) {
+      const existingMetric = this.performanceMetrics.get("FCP");
+      this.performanceMetrics.set("FCP", {
+        name: "FCP",
+        value: freshFCP,
+        rating: this.getFCPRating(freshFCP),
+        navigationType: this.getNavigationType(),
+        timestamp: Date.now(),
+      });
+
+      // Log if value changed significantly
+      if (existingMetric && Math.abs(existingMetric.value - freshFCP) > 100) {
+        console.debug(
+          `[AnalyticsSDK] FCP updated from ${existingMetric.value.toFixed(2)}ms to ${freshFCP.toFixed(2)}ms`,
+        );
+      }
+    }
+
+    // Get fresh LCP
+    const freshLCP = this.getFreshLCPValue();
+    if (freshLCP !== null) {
+      const existingMetric = this.performanceMetrics.get("LCP");
+      this.performanceMetrics.set("LCP", {
+        name: "LCP",
+        value: freshLCP,
+        rating: this.getLCPRating(freshLCP),
+        navigationType: this.getNavigationType(),
+        timestamp: Date.now(),
+      });
+
+      // Log if value changed significantly
+      if (existingMetric && Math.abs(existingMetric.value - freshLCP) > 100) {
+        console.debug(
+          `[AnalyticsSDK] LCP updated from ${existingMetric.value.toFixed(2)}ms to ${freshLCP.toFixed(2)}ms`,
+        );
+      }
+    }
   }
 
   // 核心上报方法
@@ -384,12 +479,17 @@ export class AnalyticsSDK {
   private flushPerformanceMetrics() {
     if (this.performanceMetrics.size === 0) return;
 
+    // CRITICAL: Update metrics with fresh values before reporting
+    // This ensures we report current FCP/LCP values, not stale ones from page load
+    this.updateMetricsWithFreshValues();
+
     const metricsData: Record<string, any> = {};
     this.performanceMetrics.forEach((metric, name) => {
       metricsData[name.toLowerCase()] = {
         value: metric.value,
         rating: metric.rating,
         navigationType: metric.navigationType,
+        timestamp: metric.timestamp, // Include when metric was captured
       };
     });
 
@@ -405,6 +505,16 @@ export class AnalyticsSDK {
         this.routePerformanceMetrics[this.routePerformanceMetrics.length - 1];
       metricsData.routePerformance = latestRoute;
     }
+
+    // Log what we're about to send for debugging
+    console.debug("[AnalyticsSDK] Flushing performance metrics:", {
+      fcp: metricsData.fcp?.value,
+      lcp: metricsData.lcp?.value,
+      cls: metricsData.cls?.value,
+      fid: metricsData.fid?.value,
+      ttfb: metricsData.ttfb?.value,
+      apiCalls: metricsData.apiCalls?.length || 0,
+    });
 
     // 将所有性能指标合并为一条事件上报
     this.track("web_vitals_summary", {
@@ -679,5 +789,30 @@ export class AnalyticsSDK {
           : 0,
       visitCount: Math.max(stats.fcpValues.length, stats.lcpValues.length),
     }));
+  }
+
+  // Cleanup method to disconnect all observers (useful for SPA navigation or component unmount)
+  public cleanup() {
+    console.debug("[AnalyticsSDK] Cleaning up performance observers");
+
+    try {
+      (this as any).lcpObserver?.disconnect();
+      (this as any).fcpObserver?.disconnect();
+      (this as any).clsObserver?.disconnect();
+      (this as any).fidObserver?.disconnect();
+    } catch (error) {
+      console.warn("[AnalyticsSDK] Error during cleanup:", error);
+    }
+
+    // Clear the timer
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+
+    // Flush any remaining metrics before cleanup
+    if (this.performanceMetrics.size > 0 || this.apiCallMetrics.length > 0) {
+      this.flushPerformanceMetrics();
+    }
   }
 }
