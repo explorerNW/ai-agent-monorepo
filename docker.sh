@@ -185,7 +185,10 @@ deploy_rolling() {
     
     # Check if using Let's Encrypt certificates (should not regenerate)
     local letsencrypt_cert=false
-    if [ -d "/etc/letsencrypt" ] && [ -n "$deploy_domain" ]; then
+    
+    # Safe check for Let's Encrypt directory existence
+    if [ -d "/etc/letsencrypt" ]; then
+      if [ -n "$deploy_domain" ]; then
         local le_cert_path="/etc/letsencrypt/live/$deploy_domain/fullchain.pem"
         local le_key_path="/etc/letsencrypt/live/$deploy_domain/privkey.pem"
         
@@ -195,7 +198,14 @@ deploy_rolling() {
             echo -e "${BLUE}  Certificate path: $le_cert_path${NC}"
             echo -e "${BLUE}  Auto-renewal: Enabled via cron job${NC}"
             echo -e "${YELLOW}  Note: Let's Encrypt certificates are managed by setup-letsencrypt.sh${NC}"
+        else
+            echo -e "${YELLOW}ℹ️ Let's Encrypt directory exists but certificate not found for domain: $deploy_domain${NC}"
         fi
+      else
+        echo -e "${YELLOW}ℹ️ Let's Encrypt directory exists but DEPLOY_DOMAIN not configured${NC}"
+      fi
+    else
+      echo -e "${YELLOW}ℹ️ Let's Encrypt directory not found (/etc/letsencrypt)${NC}"
     fi
     
     # Only check self-signed certificates if not using Let's Encrypt
