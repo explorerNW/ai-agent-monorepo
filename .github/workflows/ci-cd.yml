@@ -234,31 +234,37 @@ jobs:
 
             # Only backup self-signed certificates if not using Let's Encrypt
             if [ "$LETSENCRYPT_CERT" = false ]; then
-              if [ -d "ssl" ] && [ "$(ls -A ssl/ 2>/dev/null || echo "")" ]; then
-                echo "🔐 Backing up self-signed SSL certificates..."
-                mkdir -p "$BACKUP_DIR/ssl"
-                
-                # Copy each certificate file with error isolation
-                if [ -f "ssl/server.crt" ]; then
-                  cp ssl/server.crt "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.crt"
-                fi
-                
-                if [ -f "ssl/server.key" ]; then
-                  cp ssl/server.key "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.key"
-                fi
-                
-                if [ -f "ssl/openssl.cnf" ]; then
-                  cp ssl/openssl.cnf "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup openssl.cnf"
-                fi
-                
-                # Verify backup was created
-                if [ "$(ls -A "$BACKUP_DIR/ssl/" 2>/dev/null || echo "")" ]; then
-                  echo "✅ Self-signed SSL certificates backed up successfully"
+              # Check for SSL directory first
+              if [ -d "ssl" ]; then
+                # Then check if it contains any files
+                if [ "$(ls -A ssl/ 2>/dev/null || echo "")" ]; then
+                  echo "🔐 Backing up self-signed SSL certificates..."
+                  mkdir -p "$BACKUP_DIR/ssl"
+                  
+                  # Copy each certificate file with error isolation
+                  if [ -f "ssl/server.crt" ]; then
+                    cp ssl/server.crt "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.crt"
+                  fi
+                  
+                  if [ -f "ssl/server.key" ]; then
+                    cp ssl/server.key "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup server.key"
+                  fi
+                  
+                  if [ -f "ssl/openssl.cnf" ]; then
+                    cp ssl/openssl.cnf "$BACKUP_DIR/ssl/" || echo "⚠️ Failed to backup openssl.cnf"
+                  fi
+                  
+                  # Verify backup was created
+                  if [ "$(ls -A "$BACKUP_DIR/ssl/" 2>/dev/null || echo "")" ]; then
+                    echo "✅ Self-signed SSL certificates backed up successfully"
+                  else
+                    echo "ℹ️ No SSL files were found to backup"
+                  fi
                 else
-                  echo "ℹ️ No SSL files were found to backup"
+                  echo "ℹ️ SSL directory exists but is empty"
                 fi
               else
-                echo "ℹ️ No SSL directory or certificates found - will generate new ones if needed"
+                echo "ℹ️ No SSL directory found - will generate new certificates if needed"
               fi
             fi
 
