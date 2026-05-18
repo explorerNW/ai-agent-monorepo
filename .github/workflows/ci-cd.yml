@@ -214,19 +214,27 @@ jobs:
 
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
             LETSENCRYPT_CERT=false
-            if [ -d "/etc/letsencrypt" ] 2>/dev/null && [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
-              DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
-              if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ] 2>/dev/null; then
-                LETSENCRYPT_CERT=true
-                echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
+
+            # Safe check for Let's Encrypt directory existence
+            if [ -d "/etc/letsencrypt" ]; then
+              if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
+                DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
+                if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ]; then
+                  LETSENCRYPT_CERT=true
+                  echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
+                else
+                  echo "ℹ️ Let's Encrypt directory exists but certificate not found for domain: $DEPLOY_HOSTNAME"
+                fi
+              else
+                echo "ℹ️ Let's Encrypt directory exists but DEPLOY_DOMAIN not configured"
               fi
             else
-              echo "ℹ️ Let's Encrypt directory not found or domain not configured"
+              echo "ℹ️ Let's Encrypt directory not found (/etc/letsencrypt)"
             fi
 
             # Only backup self-signed certificates if not using Let's Encrypt
             if [ "$LETSENCRYPT_CERT" = false ]; then
-              if [ -d "ssl" ] && [ "$(ls -A ssl/ 2>/dev/null)" ]; then
+              if [ -d "ssl" ] && [ "$(ls -A ssl/ 2>/dev/null || echo "")" ]; then
                 echo "🔐 Backing up self-signed SSL certificates..."
                 mkdir -p "$BACKUP_DIR/ssl"
                 
@@ -244,7 +252,7 @@ jobs:
                 fi
                 
                 # Verify backup was created
-                if [ "$(ls -A "$BACKUP_DIR/ssl/" 2>/dev/null)" ]; then
+                if [ "$(ls -A "$BACKUP_DIR/ssl/" 2>/dev/null || echo "")" ]; then
                   echo "✅ Self-signed SSL certificates backed up successfully"
                 else
                   echo "ℹ️ No SSL files were found to backup"
