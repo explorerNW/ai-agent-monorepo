@@ -216,10 +216,22 @@ jobs:
             LETSENCRYPT_CERT=false
 
             # Safe check for Let's Encrypt directory existence
+            # Use variable assignment to avoid set -e issues with test commands
+            letsencrypt_dir_exists=false
             if [ -d "/etc/letsencrypt" ]; then
+              letsencrypt_dir_exists=true
+            fi
+
+            if [ "$letsencrypt_dir_exists" = true ]; then
               if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
                 DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
+                
+                cert_exists=false
                 if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ]; then
+                  cert_exists=true
+                fi
+                
+                if [ "$cert_exists" = true ]; then
                   LETSENCRYPT_CERT=true
                   echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
                 else

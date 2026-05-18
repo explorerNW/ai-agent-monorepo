@@ -187,12 +187,27 @@ deploy_rolling() {
     local letsencrypt_cert=false
     
     # Safe check for Let's Encrypt directory existence
+    # Use variable assignment to avoid set -e issues with test commands
+    local letsencrypt_dir_exists=false
     if [ -d "/etc/letsencrypt" ]; then
+      letsencrypt_dir_exists=true
+    fi
+    
+    if [ "$letsencrypt_dir_exists" = true ]; then
       if [ -n "$deploy_domain" ]; then
         local le_cert_path="/etc/letsencrypt/live/$deploy_domain/fullchain.pem"
         local le_key_path="/etc/letsencrypt/live/$deploy_domain/privkey.pem"
         
-        if [ -f "$le_cert_path" ] && [ -f "$le_key_path" ]; then
+        local cert_exists=false
+        local key_exists=false
+        if [ -f "$le_cert_path" ]; then
+          cert_exists=true
+        fi
+        if [ -f "$le_key_path" ]; then
+          key_exists=true
+        fi
+        
+        if [ "$cert_exists" = true ] && [ "$key_exists" = true ]; then
             letsencrypt_cert=true
             echo -e "${GREEN}✓ Using Let's Encrypt certificates (managed separately)${NC}"
             echo -e "${BLUE}  Certificate path: $le_cert_path${NC}"
