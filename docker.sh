@@ -214,60 +214,25 @@ deploy_rolling() {
         local need_generate=false
         local reason=""
         
-        # Define SSL certificate paths to check (in priority order)
-        local custom_ssl_dir="/etc/nginx/ssl"
-        local local_ssl_dir="ssl"
-        local ssl_cert_path=""
-        local ssl_key_path=""
-        
-        # Check custom CI/CD path first
-        if [ -d "$custom_ssl_dir" ] 2>/dev/null && [ -f "$custom_ssl_dir/server.crt" ] 2>/dev/null && [ -f "$custom_ssl_dir/server.key" ] 2>/dev/null; then
-            echo -e "${GREEN}✓ Found existing SSL certificates at: ${custom_ssl_dir}${NC}"
-            echo -e "${BLUE}  Certificate: ${custom_ssl_dir}/server.crt${NC}"
-            echo -e "${BLUE}  Key: ${custom_ssl_dir}/server.key${NC}"
-            echo -e "${YELLOW}  Skipping certificate generation (using existing certificates)${NC}"
-            need_generate=false
-            
-            # Copy certificates to local ssl directory for Docker build context
-            if [ ! -d "$local_ssl_dir" ]; then
-                mkdir -p "$local_ssl_dir"
-            fi
-            cp "$custom_ssl_dir/server.crt" "$local_ssl_dir/server.crt"
-            cp "$custom_ssl_dir/server.key" "$local_ssl_dir/server.key"
-            echo -e "${GREEN}✓ Certificates copied to local ssl/ directory for Docker build${NC}"
-            
-        elif [ -d "$local_ssl_dir" ] 2>/dev/null && [ -f "$local_ssl_dir/server.crt" ] 2>/dev/null && [ -f "$local_ssl_dir/server.key" ] 2>/dev/null; then
-            # Check local ssl directory
-            ssl_cert_path="$local_ssl_dir/server.crt"
-            ssl_key_path="$local_ssl_dir/server.key"
-            
-            if [ -n "$deploy_domain" ]; then
-                # Check if existing certificate includes the custom domain
-                if command -v openssl &> /dev/null; then
-                    # Extract domains from existing certificate (with error isolation)
-                    existing_domains=$(openssl x509 -in "$ssl_cert_path" -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
-                    
-                    # Check if current domain is in the certificate
-                    hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
-                    if [ -n "$existing_domains" ] && ! echo "$existing_domains" | grep -q "$hostname"; then
-                        need_generate=true
-                        reason="Certificate doesn't include domain: $hostname"
-                    else
-                        echo -e "${GREEN}✓ Local SSL certificates exist and are valid (skipping generation)${NC}"
-                        need_generate=false
-                    fi
-                else
-                    echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
-                    echo -e "${GREEN}✓ Using existing local SSL certificates${NC}"
-                    need_generate=false
-                fi
-            else
-                echo -e "${GREEN}✓ Local SSL certificates exist (skipping generation)${NC}"
-                need_generate=false
-            fi
-        else
+        # Safe check for SSL directory and files
+        if [ ! -d "ssl" ] 2>/dev/null || [ ! -f "ssl/server.crt" ] 2>/dev/null || [ ! -f "ssl/server.key" ] 2>/dev/null; then
             need_generate=true
             reason="SSL certificates not found"
+        elif [ -n "$deploy_domain" ]; then
+            # Check if existing certificate includes the custom domain
+            if command -v openssl &> /dev/null; then
+                # Extract domains from existing certificate (with error isolation)
+                existing_domains=$(openssl x509 -in ssl/server.crt -noout -text 2>/dev/null | grep -A1 "Subject Alternative Name" | tail -1 || echo "")
+                
+                # Check if current domain is in the certificate
+                hostname=$(echo "$deploy_domain" | sed 's|:[0-9]*$||')
+                if [ -n "$existing_domains" ] && ! echo "$existing_domains" | grep -q "$hostname"; then
+                    need_generate=true
+                    reason="Certificate doesn't include domain: $hostname"
+                fi
+            else
+                echo -e "${YELLOW}Warning: openssl not available, cannot verify certificate domains${NC}"
+            fi
         fi
         
         if [ "$need_generate" = true ]; then
@@ -300,6 +265,13 @@ deploy_rolling() {
             fi
         else
             echo -e "${GREEN}✓ Self-signed certificates already exist and are valid (skipping generation)${NC}"
+            
+            # Ensure correct permissions on existing certificates
+            if [ -f "ssl/server.crt" ] && [ -f "ssl/server.key" ]; then
+                chmod 644 ssl/server.crt 2>/dev/null || true
+                chmod 600 ssl/server.key 2>/dev/null || true
+                echo -e "${BLUE}  Certificate permissions verified${NC}"
+            fi
         fi
     fi
     echo ""
