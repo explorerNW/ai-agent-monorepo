@@ -4,6 +4,7 @@ import { HumanMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
 
 @Injectable()
 export class AiService {
+  constructor() {}
   // 初始化大模型，这里可以使用 OpenAI、通义千问等兼容 OpenAI 协议的模型
   private chatModel = new ChatOpenAI({
     modelName: process.env.AI_MODEL_NAME, // 从环境变量读取模型名称
