@@ -176,6 +176,9 @@ deploy_rolling() {
     # Pre-deployment: Check and generate SSL certificates if needed
     echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
     
+    # Temporarily disable set -e for SSL certificate checks to avoid premature exit
+    set +e
+    
     # Extract domain from DEPLOY_DOMAIN or use default
     local deploy_domain=""
     if [ -n "$DEPLOY_DOMAIN" ]; then
@@ -187,7 +190,6 @@ deploy_rolling() {
     local letsencrypt_cert=false
     
     # Safe check for Let's Encrypt directory existence
-    # Use variable assignment to avoid set -e issues with test commands
     local letsencrypt_dir_exists=false
     if [ -d "/etc/letsencrypt" ]; then
       letsencrypt_dir_exists=true
@@ -282,6 +284,9 @@ deploy_rolling() {
             echo -e "${GREEN}✓ Self-signed certificates already exist and are valid (skipping generation)${NC}"
         fi
     fi
+    
+    # Re-enable set -e after SSL checks
+    set -e
     echo ""
     
     # Pre-deployment health check
