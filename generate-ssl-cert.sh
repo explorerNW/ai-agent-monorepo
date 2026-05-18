@@ -16,8 +16,8 @@ echo "🔐 Generating self-signed SSL certificates..."
 mkdir -p "$CERT_DIR"
 
 # Support custom domain from environment variable or use defaults
-CUSTOM_DOMAIN="${SSL_DOMAIN:-}"
-CUSTOM_PORT="${SSL_PORT:-443}"
+CUSTOM_DOMAIN="${DEPLOY_DOMAIN:-}"
+CUSTOM_PORT="${DEPLOY_PORT:-443}"
 
 # Build SAN (Subject Alternative Name) entries
 SAN_ENTRIES=""
