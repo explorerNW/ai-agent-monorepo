@@ -206,21 +206,27 @@ jobs:
             echo "💾 Creating backup..."
             BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$BACKUP_DIR"
-            if [ -f docker-compose.yml ]; then cp docker-compose.yml "$BACKUP_DIR/"; fi
-            if [ -f .env ]; then cp .env "$BACKUP_DIR/"; fi
+            if [ -f docker-compose.yml ] 2>/dev/null; then cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true; fi
+            if [ -f .env ] 2>/dev/null; then cp .env "$BACKUP_DIR/" 2>/dev/null || true; fi
 
             # Backup SSL certificates if they exist (preserve across deployments)
             echo "🔐 Checking for SSL certificates..."
 
             # Check if using Let's Encrypt certificates (should not backup from local ssl/ dir)
-            LETSENCRYPT_CERT=false
+            LETSENCRYPT_CERT="false"
 
             # Safe check for Let's Encrypt directory existence
+            letsencrypt_dir_exists="false"
             if [ -d "/etc/letsencrypt" ] 2>/dev/null; then
+              letsencrypt_dir_exists="true"
+            fi
+
+            if [ "$letsencrypt_dir_exists" = "true" ]; then
               if [ -n "${{ secrets.DEPLOY_DOMAIN }}" ]; then
-                DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||')
-                if [ -f "/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem" ] 2>/dev/null; then
-                  LETSENCRYPT_CERT=true
+                DEPLOY_HOSTNAME=$(echo "${{ secrets.DEPLOY_DOMAIN }}" | sed 's|:[0-9]*$||' 2>/dev/null || echo "${{ secrets.DEPLOY_DOMAIN }}")
+                le_cert_path="/etc/letsencrypt/live/$DEPLOY_HOSTNAME/fullchain.pem"
+                if [ -f "$le_cert_path" ] 2>/dev/null; then
+                  LETSENCRYPT_CERT="true"
                   echo "✅ Using Let's Encrypt certificates (managed separately, no backup needed)"
                 else
                   echo "ℹ️ Let's Encrypt directory exists but certificate not found for domain: $DEPLOY_HOSTNAME"
