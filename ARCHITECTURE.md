@@ -740,7 +740,7 @@ sendToQueue(events: any[]) {
 **Docker Compose Service**:
 
 ```yaml
-rabbit-mq-service:
+mcp-server:
   build:
     context: ./packages/back-end/micro-service/rabbit-mq
     dockerfile: Dockerfile
@@ -1075,9 +1075,9 @@ postgres (healthy)
   ↓
 rabbitmq (healthy)
   ↓
-rabbit-mq-service (started)
+mcp-server (started)
   ↓
-back-end (depends on postgres + rabbit-mq-service)
+back-end (depends on postgres + mcp-server)
   ↓
 front-end (depends on back-end)
 ```

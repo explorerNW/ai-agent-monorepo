@@ -27,7 +27,7 @@ export const env: EnvConfig = {
   // API Configuration
   // Use relative path to avoid mixed content issues
   // All API requests will go through Nginx HTTPS proxy
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "",
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000",
 
   // Application Info
   appName: import.meta.env.VITE_APP_NAME || "AI Assistant",

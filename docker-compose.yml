@@ -58,14 +58,13 @@ services:
           cpus: "0.5"
           memory: 512M
 
-  rabbit-mq-service:
+  mcp-server:
     build:
-      context: ./packages/back-end/micro-service/rabbit-mq
+      context: ./packages/back-end/micro-service/mcp-server
       dockerfile: Dockerfile
-    container_name: ai-agent-rabbitmq-service
+    container_name: ai-agent-mcp-service
     environment:
       - NODE_ENV=production
-      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:5672
     env_file:
       - ./packages/back-end/.env
     depends_on:
@@ -138,7 +137,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      rabbit-mq-service:
+      mcp-server:
         condition: service_started
     deploy:
       replicas: 1

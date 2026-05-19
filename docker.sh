@@ -47,7 +47,7 @@ print_help() {
     echo "  logs:backend  View backend logs"
     echo "  logs:frontend View frontend logs"
     echo "  logs:rabbitmq View RabbitMQ server logs"
-    echo "  logs:rabbitmq-service View RabbitMQ microservice logs"
+    echo "  logs:mcp-service View MCP microservice logs"
     echo "  logs:postgres View PostgreSQL logs"
     echo "  build         Build all services"
     echo "  build:service Build specific service (usage: build:service back-end)"
@@ -88,7 +88,7 @@ start_dev() {
 
 stop_services() {
     echo -e "${YELLOW}Stopping all services...${NC}"
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-monorepo-rabbit-mq-service'; then
+    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-monorepo-mcp-mq-service'; then
         $DOCKER_COMPOSE down
     fi
     if docker ps --format '{{.Names}}' | grep -q 'ai-agent-monorepo-front-end'; then
@@ -128,10 +128,10 @@ view_rabbitmq_logs() {
     $DOCKER_COMPOSE logs -f rabbitmq
 }
 
-view_rabbitmq_service_logs() {
-    echo -e "${BLUE}Viewing RabbitMQ microservice logs...${NC}"
+view_mcp_service_logs() {
+    echo -e "${BLUE}Viewing MCP microservice logs...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
-    $DOCKER_COMPOSE logs -f rabbit-mq-service
+    $DOCKER_COMPOSE logs -f mcp-server
 }
 
 view_postgres_logs() {
@@ -218,17 +218,19 @@ deploy_rolling() {
     echo ""
     
     # Update services in dependency order
-    echo -e "${BLUE}Updating rabbit-mq-service...${NC}"
-    $DOCKER_COMPOSE up -d --no-deps rabbit-mq-service
-    # rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
-    echo -e "${YELLOW}Waiting for rabbit-mq-service to stabilize...${NC}"
+    echo -e "${BLUE}Updating mcp-server...${NC}"
+    $DOCKER_COMPOSE up -d --no-deps mcp-server
+    # mcp-server is a NestJS microservice without HTTP endpoint, use simple wait
+    echo -e "${YELLOW}Waiting for mcp-server to stabilize...${NC}"
     sleep 8
-    local container_status=$(docker inspect --format='{{.State.Running}}' "ai-agent-rabbitmq-service" 2>/dev/null || echo "false")
+    local container_name
+    container_name=$(get_container_name "mcp-server")
+    local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
     if [ "$container_status" = "true" ]; then
-        echo -e "${GREEN}✓ rabbit-mq-service is running${NC}"
+        echo -e "${GREEN}✓ mcp-server is running${NC}"
     else
-        echo -e "${RED}✗ rabbit-mq-service failed to start${NC}"
-        handle_update_failure "rabbit-mq-service"
+        echo -e "${RED}✗ mcp-server failed to start${NC}"
+        handle_update_failure "mcp-server"
     fi
     
     sleep 5
@@ -265,8 +267,8 @@ get_container_name() {
         "front-end")
             echo "ai-agent-frontend"
             ;;
-        "rabbit-mq-service")
-            echo "ai-agent-rabbitmq-service"
+        "mcp-server")
+            echo "ai-agent-mcp-service"
             ;;
         *)
             echo "ai-agent-${service_name}"
@@ -386,16 +388,16 @@ verify_deployment() {
         fi
     done
     
-    # Check rabbit-mq-service (microservice without health check)
+    # Check mcp-server (microservice without health check)
     local container_name
-    container_name=$(get_container_name "rabbit-mq-service")
+    container_name=$(get_container_name "mcp-server")
     local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
     local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "-1")
     
     if [ "$container_status" = "true" ] && [ "$exit_code" = "0" ]; then
-        echo -e "${GREEN}✓ rabbit-mq-service: running${NC}"
+        echo -e "${GREEN}✓ mcp-server: running${NC}"
     else
-        echo -e "${RED}✗ rabbit-mq-service: not running (exit code: ${exit_code})${NC}"
+        echo -e "${RED}✗ mcp-server: not running (exit code: ${exit_code})${NC}"
         all_healthy=false
     fi
     
@@ -498,8 +500,8 @@ case "${1:-help}" in
     logs:rabbitmq)
         view_rabbitmq_logs
         ;;
-    logs:rabbitmq-service)
-        view_rabbitmq_service_logs
+    logs:-service)
+        view_mcp_service_logs
         ;;
     logs:postgres)
         view_postgres_logs

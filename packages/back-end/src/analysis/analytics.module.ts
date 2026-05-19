@@ -14,7 +14,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
         name: 'RMQ_SERVICE',
         transport: Transport.RMQ,
         options: {
-          urls: ['amqp://explorernw:admin@me@192.168.1.118:5672'],
+          urls: ['amqp://localhost:5672'],
           queue: 'chat.general',
           queueOptions: {
             durable: true,

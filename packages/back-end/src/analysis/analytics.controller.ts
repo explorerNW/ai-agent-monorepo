@@ -21,7 +21,7 @@ export class AnalyticsController {
 
   @Post()
   @HttpCode(200) // 直接返回200，减少握手时间
-  async track(@Body() wrapper: CreateAnalyticsArrayDto) {
+  track(@Body() wrapper: CreateAnalyticsArrayDto) {
     const events = wrapper.events;
 
     if (!events || events.length === 0) {
@@ -64,7 +64,16 @@ export class AnalyticsController {
             },
           };
 
-          await this.analyticsService.saveWebVitals(webVitalsData);
+          // await this.analyticsService.saveWebVitals(webVitalsData);
+          return this.analyticsService.sendToQueue([webVitalsData]).pipe(
+            map(() => {
+              this.logger.log('✅ 常规事件已发送到 RabbitMQ');
+            }),
+            catchError((error) => {
+              this.logger.error('❌ 常规事件发送失败:', error);
+              throw error;
+            }),
+          );
         }
       }
 
