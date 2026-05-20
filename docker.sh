@@ -219,7 +219,7 @@ deploy_rolling() {
     
     # Update services in dependency order
     echo -e "${BLUE}Updating rabbit-mq-service...${NC}"
-    $DOCKER_COMPOSE up -d --no-deps rabbit-mq-service
+    $DOCKER_COMPOSE up -d --build --no-deps rabbit-mq-service
     # rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
     echo -e "${YELLOW}Waiting for rabbit-mq-service to stabilize...${NC}"
     sleep 8
@@ -234,7 +234,7 @@ deploy_rolling() {
     sleep 5
     
     echo -e "${BLUE}Updating back-end...${NC}"
-    $DOCKER_COMPOSE up -d --no-deps back-end
+    $DOCKER_COMPOSE up -d --build --no-deps back-end
     # Wait longer for backend to initialize (includes start_period)
     sleep 15
     wait_for_healthcheck "back-end" 90 || handle_update_failure "back-end"
@@ -242,7 +242,7 @@ deploy_rolling() {
     sleep 5
     
     echo -e "${BLUE}Updating front-end...${NC}"
-    $DOCKER_COMPOSE up -d --no-deps front-end
+    $DOCKER_COMPOSE up -d --build --no-deps front-end
     # Wait for frontend to initialize
     sleep 10
     wait_for_healthcheck "front-end" 60 || handle_update_failure "front-end"
