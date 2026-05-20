@@ -203,19 +203,19 @@ jobs:
             echo "   Deploying commit: $LATEST_COMMIT"
 
             # 5. 备份当前版本
-            echo "💾 Creating backup..."
-            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-            mkdir -p "$BACKUP_DIR"
-            if [ -f docker-compose.yml ] 2>/dev/null; then cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true; fi
-            if [ -f .env ] 2>/dev/null; then cp .env "$BACKUP_DIR/" 2>/dev/null || true; fi
+            #echo "💾 Creating backup..."
+            #BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            #mkdir -p "$BACKUP_DIR"
+            #if [ -f docker-compose.yml ] 2>/dev/null; then cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true; fi
+            #if [ -f .env ] 2>/dev/null; then cp .env "$BACKUP_DIR/" 2>/dev/null || true; fi
 
             # 保留最近5个备份
-            if [ -d backups ] 2>/dev/null; then
-              cd backups
-              ls -t | tail -n +6 | xargs -r rm -rf
-              cd ..
-            fi
-            echo "✅ Backup created: $BACKUP_DIR"
+            #if [ -d backups ] 2>/dev/null; then
+            #  cd backups
+            #  ls -t | tail -n +6 | xargs -r rm -rf
+            #  cd ..
+            #fi
+            #echo "✅ Backup created: $BACKUP_DIR"
 
             # 6. 准备环境与配置
             echo "📁 Ensuring directory structure..."
