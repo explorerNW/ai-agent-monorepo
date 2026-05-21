@@ -12,7 +12,7 @@ import {
 
 import { AnalyticsService } from './analytics.service';
 import { CreateAnalyticsArrayDto } from './dto/create-analytics-array.dto';
-import { catchError, map } from 'rxjs';
+import { catchError, lastValueFrom, map } from 'rxjs';
 
 @Controller('api/v1/track')
 export class AnalyticsController {
@@ -71,14 +71,16 @@ export class AnalyticsController {
       // 2. 其他事件投递到 RabbitMQ
       if (otherEvents.length > 0) {
         this.logger.log(`📤 发送 ${otherEvents.length} 条常规事件到 RabbitMQ`);
-        this.analyticsService.sendToQueue(otherEvents).pipe(
-          map(() => {
-            this.logger.log('✅ 常规事件已发送到 RabbitMQ');
-          }),
-          catchError((error) => {
-            this.logger.error('❌ 常规事件发送失败:', error);
-            throw error;
-          }),
+        await lastValueFrom(
+          this.analyticsService.sendToQueue(otherEvents).pipe(
+            map(() => {
+              this.logger.log('✅ 常规事件已发送到 RabbitMQ');
+            }),
+            catchError((error) => {
+              this.logger.error('❌ 常规事件发送失败:', error);
+              throw error;
+            }),
+          ),
         );
       }
 
