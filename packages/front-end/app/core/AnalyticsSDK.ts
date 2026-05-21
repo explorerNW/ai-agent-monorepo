@@ -677,7 +677,7 @@ export class AnalyticsSDK {
       lcp: metrics.lcp,
       duration: metrics.endTime - metrics.startTime,
       navigationType,
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     };
 
     // Send immediate event with FCP and LCP metrics
