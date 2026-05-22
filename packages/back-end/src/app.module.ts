@@ -11,6 +11,7 @@ import { PDFProcessModule } from './pdf-process/pdf-process.module';
 import { AnalyticsModule } from './analysis/analytics.module';
 import { RedisModule } from './redis/redis.module';
 import { TimeLocationMcpModule } from './mcp/time-location/time-location.module';
+import { PerformanceModule } from './performance/performance.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TimeLocationMcpModule } from './mcp/time-location/time-location.module'
     PDFProcessModule,
     AnalyticsModule,
     TimeLocationMcpModule,
+    PerformanceModule,
   ],
   controllers: [AppController, CodeReviewController],
   providers: [AppService, ReviewService],
