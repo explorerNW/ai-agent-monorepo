@@ -103,6 +103,65 @@ services:
           cpus: "0.25"
           memory: 256M
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse-server
+    ports:
+      - "8123:8123" # HTTP interface
+      - "9000:9000" # Native interface
+    volumes:
+      - ./clickhouse-data:/var/lib/clickhouse
+      - ./packages/back-end/clickhouse-config.xml:/etc/clickhouse-server/config.xml # 修改路径
+      # 添加 users.xml 配置
+      - ./packages/back-end/users.xml:/etc/clickhouse-server/users.xml
+    env_file:
+      - ./packages/back-end/.env
+    environment:
+      CLICKHOUSE_DB: performance_db
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "" # 或设置密码
+    restart: always
+    networks:
+      - ai-agent-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 0",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s # 增加启动时间
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          cpus: "1.0"
+          memory: 2G
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    ports:
+      - "3002:3002"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=vertamedia-clickhouse-datasource
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+    depends_on:
+      - clickhouse
+    restart: always
+    networks:
+      - ai-agent-network
+
   back-end:
     build:
       context: .
@@ -120,6 +179,10 @@ services:
       - DB_USER=${DB_USER:-admin}
       - DB_PASSWORD=${DB_PASSWORD:-admin123}
       - DB_NAME=${DB_NAME:-analytics}
+      - CLICKHOUSE_HOST=http://clickhouse:8123
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_DB=performance_db
     env_file:
       - ./packages/back-end/.env
     volumes:
@@ -142,6 +205,8 @@ services:
         condition: service_healthy
       rabbit-mq-service:
         condition: service_started
+      clickhouse:
+        condition: service_healthy
     deploy:
       replicas: 1
       update_config:

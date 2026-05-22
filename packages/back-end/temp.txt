@@ -5,10 +5,10 @@ FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
-# Enable pnpm with Chinese mirror (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
+# Enable pnpm with Chinese mirror
+RUN corepack enable && \
+    corepack prepare pnpm@latest --activate && \
+    npm config set registry https://registry.npmmirror.com
 
 # Copy workspace configuration files
 COPY .npmrc ./
@@ -32,10 +32,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy workspace configuration
 COPY .npmrc ./
@@ -72,20 +70,18 @@ WORKDIR /app/packages/back-end
 RUN addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
 
-# Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
+# Enable pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy workspace configuration
 COPY .npmrc ../../
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ../../
-COPY packages/back-end/package.json ../../packages/back-end/
+COPY package.json ../../
+COPY packages/back-end/package.json ../../
 COPY clickhouse-config.xml ../../
-COPY packages/back-end/users.xml ../../packages/back-end/
+COPY packages/back-end/users.xml ../../
 
 # Install production dependencies only
-RUN cd ../.. && pnpm install --prod --frozen-lockfile --ignore-scripts --filter=llm
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # Copy built application from builder
 COPY --from=builder /app/packages/back-end/dist ./dist

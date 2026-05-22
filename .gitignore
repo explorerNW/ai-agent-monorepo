@@ -51,3 +51,5 @@ temp_ocr/
 # Husky internal files (optional, can be committed)
 # .husky/_/
 
+clickhouse-data/
+grafana-data/
