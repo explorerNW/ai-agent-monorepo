@@ -1,105 +1,141 @@
 {
   "dashboard": {
     "id": null,
+    "uid": "frontend-performance",
     "title": "前端性能监控",
     "tags": ["performance", "frontend"],
     "style": "dark",
     "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 0,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "refresh": "30s",
     "panels": [
       {
         "id": 1,
         "title": "FCP (首次内容绘制)",
-        "type": "graph",
+        "type": "timeseries",
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "datasource": {
+          "type": "vertamedia-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
+        },
         "targets": [
           {
-            "expr": "SELECT timestamp, fcp FROM performance_db.performance_metrics WHERE $timeFilter AND fcp IS NOT NULL ORDER BY timestamp",
+            "queryType": "sql",
+            "rawSql": "SELECT timestamp as time, fcp FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND fcp IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
         ],
-        "yAxes": [
-          {
-            "label": "毫秒",
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
             "min": 0
           }
-        ]
+        }
       },
       {
         "id": 2,
         "title": "LCP (最大内容绘制)",
-        "type": "graph",
+        "type": "timeseries",
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "datasource": {
+          "type": "vertamedia-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
+        },
         "targets": [
           {
-            "expr": "SELECT timestamp, lcp FROM performance_db.performance_metrics WHERE $timeFilter AND lcp IS NOT NULL ORDER BY timestamp",
+            "queryType": "sql",
+            "rawSql": "SELECT timestamp as time, lcp FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND lcp IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
         ],
-        "yAxes": [
-          {
-            "label": "毫秒",
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
             "min": 0
           }
-        ]
+        }
       },
       {
         "id": 3,
         "title": "CLS (累积布局偏移)",
-        "type": "graph",
+        "type": "timeseries",
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "datasource": {
+          "type": "vertamedia-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
+        },
         "targets": [
           {
-            "expr": "SELECT timestamp, cls FROM performance_db.performance_metrics WHERE $timeFilter AND cls IS NOT NULL ORDER BY timestamp",
+            "queryType": "sql",
+            "rawSql": "SELECT timestamp as time, cls FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND cls IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
         ],
-        "yAxes": [
-          {
-            "label": "",
-            "min": 0
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "min": 0,
+            "decimals": 4
           }
-        ]
+        }
       },
       {
         "id": 4,
         "title": "API 响应时间分布",
-        "type": "graph",
+        "type": "timeseries",
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "datasource": {
+          "type": "vertamedia-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
+        },
         "targets": [
           {
-            "expr": "SELECT timestamp, duration FROM performance_db.api_metrics WHERE $timeFilter ORDER BY timestamp",
+            "queryType": "sql",
+            "rawSql": "SELECT timestamp as time, duration FROM performance_db.api_metrics WHERE $__timeFilter(timestamp) ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
         ],
-        "yAxes": [
-          {
-            "label": "毫秒",
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
             "min": 0
           }
-        ]
+        }
       },
       {
         "id": 5,
         "title": "页面性能汇总",
         "type": "table",
         "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+        "datasource": {
+          "type": "vertamedia-clickhouse-datasource",
+          "uid": "${DS_CLICKHOUSE}"
+        },
         "targets": [
           {
-            "expr": "SELECT pageUrl, avg(fcp) as avg_fcp, avg(lcp) as avg_lcp, avg(cls) as avg_cls, count(*) as total_records FROM performance_db.performance_metrics WHERE $timeFilter AND fcp IS NOT NULL AND lcp IS NOT NULL GROUP BY pageUrl ORDER BY avg_lcp DESC LIMIT 20",
+            "queryType": "sql",
+            "rawSql": "SELECT pageUrl, avg(fcp) as avg_fcp, avg(lcp) as avg_lcp, avg(cls) as avg_cls, count(*) as total_records FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND fcp IS NOT NULL AND lcp IS NOT NULL GROUP BY pageUrl ORDER BY avg_lcp DESC LIMIT 20",
             "format": "table",
             "refId": "A"
           }
         ]
       }
     ],
-    "time": {
-      "from": "now-6h",
-      "to": "now"
+    "templating": {
+      "list": []
     },
-    "refresh": "30s"
-  }
+    "annotations": {
+      "list": []
+    }
+  },
+  "overwrite": true
 }
