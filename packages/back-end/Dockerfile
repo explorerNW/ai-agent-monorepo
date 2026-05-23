@@ -14,7 +14,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml ./
 COPY pnpm-workspace.yaml ./
-COPY clickhouse-config.xml ./
+COPY packages/back-end/clickhouse-config.xml ./
 COPY users.xml ./
 
 # Copy all package.json files for dependency installation
@@ -41,8 +41,9 @@ RUN npm config set registry https://registry.npmmirror.com && \
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/back-end/package.json ./packages/back-end/package.json
-COPY clickhouse-config.xml ./
+COPY packages/back-end/clickhouse-config.xml ./
 COPY packages/back-end/users.xml ./
+COPY packages/back-end/default-user.xml ./
 
 # Install all dependencies (including devDependencies for build)
 # Use --force to ensure optional dependencies are installed on Alpine

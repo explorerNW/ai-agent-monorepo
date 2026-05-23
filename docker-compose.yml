@@ -111,15 +111,14 @@ services:
       - "9000:9000" # Native interface
     volumes:
       - ./clickhouse-data:/var/lib/clickhouse
-      - ./packages/back-end/clickhouse-config.xml:/etc/clickhouse-server/config.xml # 修改路径
-      # 添加 users.xml 配置
-      - ./packages/back-end/users.xml:/etc/clickhouse-server/users.xml
+      - ./packages/back-end/clickhouse-config.xml:/etc/clickhouse-server/config.xml
+      - ./packages/back-end/default-user.xml:/etc/clickhouse-server/users.d/default-user.xml
     env_file:
       - ./packages/back-end/.env
     environment:
       CLICKHOUSE_DB: performance_db
       CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: "" # 或设置密码
+      CLICKHOUSE_PASSWORD: "admin@me"
     restart: always
     networks:
       - ai-agent-network
@@ -150,12 +149,13 @@ services:
     image: grafana/grafana-enterprise
     container_name: grafana
     ports:
-      - "3002:3002"
+      - "3002:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_INSTALL_PLUGINS=vertamedia-clickhouse-datasource
     volumes:
       - ./grafana-data:/var/lib/grafana
+      - ./grafana-config/grafana.ini:/etc/grafana/grafana.ini:ro
     depends_on:
       - clickhouse
     restart: always
@@ -179,9 +179,9 @@ services:
       - DB_USER=${DB_USER:-admin}
       - DB_PASSWORD=${DB_PASSWORD:-admin123}
       - DB_NAME=${DB_NAME:-analytics}
-      - CLICKHOUSE_HOST=http://clickhouse:8123
+      - CLICKHOUSE_HOST=http://clickhouse-server:8123
       - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=
+      - CLICKHOUSE_PASSWORD=admin@me
       - CLICKHOUSE_DB=performance_db
     env_file:
       - ./packages/back-end/.env
