@@ -21,12 +21,12 @@
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
         "datasource": {
           "type": "vertamedia-clickhouse-datasource",
-          "uid": "${DS_CLICKHOUSE}"
+          "uid": "clickhouse-datasource"
         },
         "targets": [
           {
             "queryType": "sql",
-            "rawSql": "SELECT timestamp as time, fcp FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND fcp IS NOT NULL ORDER BY timestamp",
+            "rawSql": "SELECT toUnixTimestamp(timestamp) as time, fcp FROM performance_db.performance_metrics WHERE timestamp >= now() - INTERVAL 6 HOUR AND fcp IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
@@ -45,12 +45,12 @@
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
         "datasource": {
           "type": "vertamedia-clickhouse-datasource",
-          "uid": "${DS_CLICKHOUSE}"
+          "uid": "clickhouse-datasource"
         },
         "targets": [
           {
             "queryType": "sql",
-            "rawSql": "SELECT timestamp as time, lcp FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND lcp IS NOT NULL ORDER BY timestamp",
+            "rawSql": "SELECT toUnixTimestamp(timestamp) as time, lcp FROM performance_db.performance_metrics WHERE timestamp >= now() - INTERVAL 6 HOUR AND lcp IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
@@ -69,12 +69,12 @@
         "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
         "datasource": {
           "type": "vertamedia-clickhouse-datasource",
-          "uid": "${DS_CLICKHOUSE}"
+          "uid": "clickhouse-datasource"
         },
         "targets": [
           {
             "queryType": "sql",
-            "rawSql": "SELECT timestamp as time, cls FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND cls IS NOT NULL ORDER BY timestamp",
+            "rawSql": "SELECT toUnixTimestamp(timestamp) as time, cls FROM performance_db.performance_metrics WHERE timestamp >= now() - INTERVAL 6 HOUR AND cls IS NOT NULL ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
@@ -94,12 +94,12 @@
         "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
         "datasource": {
           "type": "vertamedia-clickhouse-datasource",
-          "uid": "${DS_CLICKHOUSE}"
+          "uid": "clickhouse-datasource"
         },
         "targets": [
           {
             "queryType": "sql",
-            "rawSql": "SELECT timestamp as time, duration FROM performance_db.api_metrics WHERE $__timeFilter(timestamp) ORDER BY timestamp",
+            "rawSql": "SELECT toUnixTimestamp(timestamp) as time, duration FROM performance_db.api_metrics WHERE timestamp >= now() - INTERVAL 6 HOUR ORDER BY timestamp",
             "format": "time_series",
             "refId": "A"
           }
@@ -118,12 +118,12 @@
         "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
         "datasource": {
           "type": "vertamedia-clickhouse-datasource",
-          "uid": "${DS_CLICKHOUSE}"
+          "uid": "clickhouse-datasource"
         },
         "targets": [
           {
             "queryType": "sql",
-            "rawSql": "SELECT pageUrl, avg(fcp) as avg_fcp, avg(lcp) as avg_lcp, avg(cls) as avg_cls, count(*) as total_records FROM performance_db.performance_metrics WHERE $__timeFilter(timestamp) AND fcp IS NOT NULL AND lcp IS NOT NULL GROUP BY pageUrl ORDER BY avg_lcp DESC LIMIT 20",
+            "rawSql": "SELECT pageUrl, avg(fcp) as avg_fcp, avg(lcp) as avg_lcp, avg(cls) as avg_cls, count(*) as total_records FROM performance_db.performance_metrics WHERE timestamp >= now() - INTERVAL 6 HOUR AND fcp IS NOT NULL AND lcp IS NOT NULL GROUP BY pageUrl ORDER BY avg_lcp DESC LIMIT 20",
             "format": "table",
             "refId": "A"
           }
