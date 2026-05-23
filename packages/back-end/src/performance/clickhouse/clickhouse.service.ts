@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createClient } from '@clickhouse/client';
 
 // Type definitions for API metrics data
@@ -16,62 +16,120 @@ interface APIMetricData {
 
 @Injectable()
 export class ClickHouseService {
-  private client = createClient({
-    host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-    username: process.env.CLICKHOUSE_USER || 'default',
-    password: process.env.CLICKHOUSE_PASSWORD || '',
-    database: process.env.CLICKHOUSE_DB || 'performance_db',
-  });
+  private readonly logger = new Logger(ClickHouseService.name);
+  private client: any;
+  private isInitialized = false;
+
+  constructor() {
+    this.initializeClient();
+  }
+
+  private initializeClient() {
+    const host = process.env.CLICKHOUSE_HOST || 'http://localhost:8123';
+    this.logger.log(`Initializing ClickHouse client with host: ${host}`);
+
+    this.client = createClient({
+      host: host,
+      username: process.env.CLICKHOUSE_USER || 'default',
+      password: process.env.CLICKHOUSE_PASSWORD || '',
+      database: process.env.CLICKHOUSE_DB || 'performance_db',
+      // Add connection timeout
+      request_timeout: 10000, // 10 seconds
+    });
+  }
 
   async onModuleInit() {
-    // 创建数据库
-    await this.client.command({
-      query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}`,
-    });
+    this.logger.log('ClickHouse module initializing...');
 
-    // 创建性能数据表
-    await this.client.command({
-      query: `
-        CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics (
-          id UInt64,
-          pageUrl String,
-          userAgent String,
-          timestamp DateTime,
-          fcp Nullable(Float64),
-          lcp Nullable(Float64),
-          cls Nullable(Float64),
-          fid Nullable(Float64),
-          ttfb Nullable(Float64),
-          inp Nullable(Float64),
-          navigationType String,
-          connectionInfo String,
-          received_at DateTime DEFAULT now()
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(timestamp)
-        ORDER BY (timestamp, pageUrl)
-      `,
-    });
+    // Retry logic for initial connection
+    const maxRetries = 5;
+    const retryDelay = 3000; // 3 seconds
 
-    // 创建 API 性能数据表
-    await this.client.command({
-      query: `
-        CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics (
-          id UInt64,
-          url String,
-          method String,
-          startTime DateTime,
-          duration Float64,
-          status UInt16,
-          size Nullable(UInt64),
-          pageUrl String,
-          userAgent String,
-          timestamp DateTime,
-          received_at DateTime DEFAULT now()
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(timestamp)
-        ORDER BY (timestamp, url)
-      `,
-    });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.log(
+          `Attempting to connect to ClickHouse (attempt ${attempt}/${maxRetries})...`,
+        );
+
+        // Test connection with ping
+        await this.client.ping();
+        this.logger.log('ClickHouse connection established successfully');
+
+        // Create database
+        await this.client.command({
+          query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}`,
+        });
+        this.logger.log('Database verified/created');
+
+        // Create performance metrics table
+        await this.client.command({
+          query: `
+            CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics (
+              id UInt64,
+              pageUrl String,
+              userAgent String,
+              timestamp DateTime,
+              fcp Nullable(Float64),
+              lcp Nullable(Float64),
+              cls Nullable(Float64),
+              fid Nullable(Float64),
+              ttfb Nullable(Float64),
+              inp Nullable(Float64),
+              navigationType String,
+              connectionInfo String,
+              received_at DateTime DEFAULT now()
+            ) ENGINE = MergeTree()
+            PARTITION BY toYYYYMM(timestamp)
+            ORDER BY (timestamp, pageUrl)
+          `,
+        });
+        this.logger.log('Performance metrics table verified/created');
+
+        // Create API metrics table
+        await this.client.command({
+          query: `
+            CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics (
+              id UInt64,
+              url String,
+              method String,
+              startTime DateTime,
+              duration Float64,
+              status UInt16,
+              size Nullable(UInt64),
+              pageUrl String,
+              userAgent String,
+              timestamp DateTime,
+              received_at DateTime DEFAULT now()
+            ) ENGINE = MergeTree()
+            PARTITION BY toYYYYMM(timestamp)
+            ORDER BY (timestamp, url)
+          `,
+        });
+        this.logger.log('API metrics table verified/created');
+
+        this.isInitialized = true;
+        this.logger.log('ClickHouse initialization completed successfully');
+        return;
+      } catch (error) {
+        this.logger.error(
+          `ClickHouse connection attempt ${attempt} failed:`,
+          error instanceof Error ? error.message : String(error),
+        );
+
+        if (attempt < maxRetries) {
+          this.logger.log(`Retrying in ${retryDelay / 1000} seconds...`);
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        } else {
+          this.logger.error(
+            'All ClickHouse connection attempts failed. Service will continue but ClickHouse operations may fail.',
+          );
+          this.logger.error(
+            'Please ensure ClickHouse container is running and accessible.',
+          );
+          // Don't throw - allow service to start, individual operations will handle errors
+        }
+      }
+    }
   }
 
   /**

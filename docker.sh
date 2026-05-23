@@ -239,6 +239,13 @@ deploy_rolling() {
     sleep 15
     wait_for_healthcheck "back-end" 90 || handle_update_failure "back-end"
     
+    # Verify ClickHouse connectivity from backend
+    echo -e "${BLUE}Verifying ClickHouse connectivity from backend...${NC}"
+    verify_clickhouse_connectivity || {
+        echo -e "${YELLOW}⚠️ ClickHouse connectivity issue detected, attempting recovery...${NC}"
+        recover_clickhouse_connection || handle_update_failure "back-end"
+    }
+    
     sleep 5
     
     echo -e "${BLUE}Updating front-end...${NC}"
@@ -410,6 +417,94 @@ verify_deployment() {
         echo -e "${RED}⚠ Some services may not be healthy. Check logs for details.${NC}"
         return 1
     fi
+}
+
+# Verify ClickHouse connectivity from backend container
+verify_clickhouse_connectivity() {
+    echo -e "${BLUE}Testing ClickHouse DNS resolution from backend...${NC}"
+    
+    local max_retries=5
+    local retry_count=0
+    local wait_time=3
+    
+    while [ $retry_count -lt $max_retries ]; do
+        retry_count=$((retry_count + 1))
+        
+        # Test DNS resolution
+        local dns_result=$(docker exec ai-agent-backend sh -c "nslookup clickhouse-server 2>&1 | grep -i 'address' | head -1" 2>/dev/null || echo "DNS_FAILED")
+        
+        if echo "$dns_result" | grep -q "address"; then
+            echo -e "${GREEN}✓ ClickHouse DNS resolved: ${dns_result}${NC}"
+            
+            # Test HTTP connectivity
+            local http_result=$(docker exec ai-agent-backend sh -c "wget --spider --timeout=3 http://clickhouse-server:8123/ping 2>&1" 2>/dev/null || echo "HTTP_FAILED")
+            
+            if echo "$http_result" | grep -q "200 OK\|saving to"; then
+                echo -e "${GREEN}✓ ClickHouse HTTP endpoint is accessible${NC}"
+                return 0
+            else
+                echo -e "${YELLOW}⚠ HTTP test failed, retrying... (${retry_count}/${max_retries})${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠ DNS resolution failed, retrying... (${retry_count}/${max_retries})${NC}"
+            echo "  DNS result: ${dns_result}"
+        fi
+        
+        sleep $wait_time
+    done
+    
+    echo -e "${RED}✗ ClickHouse connectivity verification failed after ${max_retries} retries${NC}"
+    return 1
+}
+
+# Attempt to recover ClickHouse connection
+recover_clickhouse_connection() {
+    echo -e "${YELLOW}Attempting to recover ClickHouse connection...${NC}"
+    
+    # Option 1: Restart backend container
+    echo -e "${BLUE}Step 1: Restarting backend container...${NC}"
+    docker restart ai-agent-backend
+    echo -e "${YELLOW}Waiting 20 seconds for backend to reconnect...${NC}"
+    sleep 20
+    
+    # Check if recovery worked
+    if verify_clickhouse_connectivity; then
+        echo -e "${GREEN}✓ Recovery successful - backend reconnected to ClickHouse${NC}"
+        return 0
+    fi
+    
+    # Option 2: Restart ClickHouse container
+    echo -e "${BLUE}Step 2: Restarting ClickHouse container...${NC}"
+    docker restart clickhouse-server
+    echo -e "${YELLOW}Waiting 30 seconds for ClickHouse to fully start...${NC}"
+    sleep 30
+    
+    # Wait for ClickHouse health check
+    wait_for_healthcheck "clickhouse" 60 || {
+        echo -e "${RED}✗ ClickHouse failed to become healthy${NC}"
+        return 1
+    }
+    
+    # Restart backend again
+    echo -e "${BLUE}Step 3: Restarting backend after ClickHouse recovery...${NC}"
+    docker restart ai-agent-backend
+    echo -e "${YELLOW}Waiting 20 seconds for backend to reconnect...${NC}"
+    sleep 20
+    
+    # Final check
+    if verify_clickhouse_connectivity; then
+        echo -e "${GREEN}✓ Recovery successful after ClickHouse restart${NC}"
+        return 0
+    fi
+    
+    echo -e "${RED}✗ All recovery attempts failed${NC}"
+    echo -e "${BLUE}Showing recent logs:${NC}"
+    echo "--- Backend logs ---"
+    docker logs --tail 30 ai-agent-backend 2>&1 || true
+    echo "--- ClickHouse logs ---"
+    docker logs --tail 30 clickhouse-server 2>&1 || true
+    
+    return 1
 }
 
 clean_all() {
