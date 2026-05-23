@@ -252,6 +252,7 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             EOF
 
             # 生成根目录 .env (用于 docker-compose)
@@ -265,6 +266,10 @@ jobs:
             VITE_API_BASE_URL=
             DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}
             DEPLOY_PORT=${{ secrets.DEPLOY_PORT }}
+            CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
+            CLICKHOUSE_USER=${{ secrets.CLICKHOUSE_USER }}
+            CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
+            CLICKHOUSE_DB=${{ secrets.CLICKHOUSE_DB }}
             EOF
 
             # Restore SSL certificates from latest backup (if available)
