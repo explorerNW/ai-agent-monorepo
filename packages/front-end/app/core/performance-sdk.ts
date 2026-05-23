@@ -109,33 +109,27 @@ class PerformanceMonitor {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
-        // 排除性能上报接口，避免死循环
-        if (!url.includes("/api/performance")) {
-          this.reportAPIMetric({
-            url,
-            method,
-            startTime,
-            duration,
-            status: response.status,
-            size: Number(response.headers.get("content-length")) || undefined,
-          });
-        }
+        this.reportAPIMetric({
+          url,
+          method,
+          startTime,
+          duration,
+          status: response.status,
+          size: Number(response.headers.get("content-length")) || undefined,
+        });
 
         return response;
       } catch (error) {
         const endTime = Date.now();
         const duration = endTime - startTime;
 
-        // 排除性能上报接口，避免死循环
-        if (!url.includes("/api/performance")) {
-          this.reportAPIMetric({
-            url,
-            method,
-            startTime,
-            duration,
-            status: 0, // 网络错误
-          });
-        }
+        this.reportAPIMetric({
+          url,
+          method,
+          startTime,
+          duration,
+          status: 0, // 网络错误
+        });
 
         throw error;
       }
@@ -178,16 +172,13 @@ class PerformanceMonitor {
             const endTime = Date.now();
             const duration = endTime - startTime;
 
-            // 排除性能上报接口，避免死循环
-            if (!url.includes("/api/performance")) {
-              self.reportAPIMetric({
-                url,
-                method,
-                startTime,
-                duration,
-                status: this.status,
-              });
-            }
+            self.reportAPIMetric({
+              url,
+              method,
+              startTime,
+              duration,
+              status: this.status,
+            });
           }
 
           if (originalOnReadyStateChange) {

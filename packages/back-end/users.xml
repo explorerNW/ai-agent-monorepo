@@ -11,7 +11,7 @@
 
     <users>
         <default>
-            <password></password>
+            <password>admin@me</password>
             <networks incl="networks" replace="replace">
                 <ip>::/0</ip>
                 <ip>0.0.0.0/0</ip>
