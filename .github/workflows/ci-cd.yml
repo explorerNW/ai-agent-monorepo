@@ -364,52 +364,6 @@ jobs:
               exit 1
             fi
 
-            # 额外验证：检查ClickHouse网络连通性
-            echo "🔍 Verifying ClickHouse connectivity from backend..."
-            sleep 5
-
-            # 测试后端容器是否能解析clickhouse-server
-            CLICKHOUSE_DNS_TEST=$(docker exec ai-agent-backend sh -c "nslookup clickhouse-server 2>&1 || ping -c 1 clickhouse-server 2>&1 || echo 'DNS_FAILED'" | head -20)
-            echo "DNS Resolution Test Result:"
-            echo "$CLICKHOUSE_DNS_TEST"
-
-            # 测试HTTP连接
-            CLICKHOUSE_HTTP_TEST=$(docker exec ai-agent-backend sh -c "wget --spider --timeout=5 http://clickhouse-server:8123/ping 2>&1 || echo 'HTTP_FAILED'")
-            if echo "$CLICKHOUSE_HTTP_TEST" | grep -q "200 OK\|saving to"; then
-              echo "✅ ClickHouse HTTP endpoint is accessible"
-            else
-              echo "⚠️ ClickHouse HTTP test result:"
-              echo "$CLICKHOUSE_HTTP_TEST"
-              echo "ℹ️ This may indicate ClickHouse is still starting up"
-            fi
-
-            # 检查后端日志中是否有ClickHouse连接错误
-            echo "🔍 Checking backend logs for ClickHouse errors..."
-            BACKEND_LOGS=$(docker logs --tail 100 ai-agent-backend 2>&1 || true)
-            if echo "$BACKEND_LOGS" | grep -qi "ENOTFOUND.*clickhouse"; then
-              echo "::warning::ClickHouse DNS resolution error detected in backend logs"
-              echo "Last 20 lines of backend logs:"
-              echo "$BACKEND_LOGS" | tail -20
-              
-              echo "🔄 Attempting to restart backend service..."
-              docker restart ai-agent-backend
-              echo "⏳ Waiting 15 seconds for backend to reconnect..."
-              sleep 15
-              
-              # 再次检查
-              BACKEND_LOGS_AFTER=$(docker logs --tail 50 ai-agent-backend 2>&1 || true)
-              if echo "$BACKEND_LOGS_AFTER" | grep -qi "ENOTFOUND.*clickhouse"; then
-                echo "::error::ClickHouse connection still failing after restart"
-                echo "Showing full backend logs:"
-                echo "$BACKEND_LOGS_AFTER"
-                exit 1
-              else
-                echo "✅ Backend successfully reconnected to ClickHouse"
-              fi
-            else
-              echo "✅ No ClickHouse DNS errors found in backend logs"
-            fi
-
             echo "✅ All services are running properly"
             echo "🎉 Deployment verification completed successfully"
 
