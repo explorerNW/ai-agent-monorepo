@@ -115,33 +115,8 @@ export class ClickHouseService {
   }
 
   async insertPerformanceData(data: any) {
-    // Ensure timestamp is properly formatted as ISO 8601 string
-    let timestamp: string;
-    if (data.timestamp instanceof Date) {
-      timestamp = data.timestamp.toISOString();
-    } else if (typeof data.timestamp === 'number') {
-      // Numeric timestamp - convert to Date then to ISO string
-      const dateObj = new Date(data.timestamp);
-      if (isNaN(dateObj.getTime())) {
-        timestamp = new Date().toISOString();
-      } else {
-        timestamp = dateObj.toISOString();
-      }
-    } else if (typeof data.timestamp === 'string') {
-      // Already a string - validate it's a valid date
-      const dateObj = new Date(data.timestamp);
-      if (isNaN(dateObj.getTime())) {
-        console.warn(
-          `[ClickHouse] Invalid string timestamp: ${data.timestamp}, using current time`,
-        );
-        timestamp = new Date().toISOString();
-      } else {
-        timestamp = dateObj.toISOString();
-      }
-    } else {
-      console.warn('[ClickHouse] Missing timestamp, using current time');
-      timestamp = new Date().toISOString();
-    }
+    // Convert timestamp to Unix timestamp (seconds) - recommended for ClickHouse DateTime
+    const timestamp = this.toUnixTimestamp(data.timestamp);
 
     // Sanitize string fields to prevent JSON parsing issues
     const sanitizeString = (str: any) =>
@@ -161,7 +136,7 @@ export class ClickHouseService {
       id: Math.floor(Date.now() / 1000),
       pageUrl: sanitizedPageUrl,
       userAgent: sanitizedUserAgent,
-      timestamp: timestamp,
+      timestamp: timestamp, // Use Unix timestamp (integer) instead of ISO string
       fcp: data.fcp != null ? Number(data.fcp) : null,
       lcp: data.lcp != null ? Number(data.lcp) : null,
       cls: data.cls != null ? Number(data.cls) : null,

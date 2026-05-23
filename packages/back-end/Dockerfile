@@ -82,7 +82,7 @@ RUN npm config set registry https://registry.npmmirror.com && \
 COPY .npmrc ../../
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ../../
 COPY packages/back-end/package.json ../../packages/back-end/
-COPY clickhouse-config.xml ../../
+COPY packages/back-end/clickhouse-config.xml ../../
 COPY packages/back-end/users.xml ../../packages/back-end/
 
 # Install production dependencies only
