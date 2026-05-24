@@ -34,6 +34,7 @@ class PerformanceMonitor {
   };
 
   private hasReportedPerformance = false;
+  private isReportingScheduled = false;
   private reportTimeout: NodeJS.Timeout | null = null;
   private apiMetricsBuffer: APIMetrics[] = [];
   private apiReportTimeout: NodeJS.Timeout | null = null;
@@ -203,10 +204,13 @@ class PerformanceMonitor {
     }
 
     // 如果已经有待执行的定时器，不再创建新的
-    if (this.reportTimeout) {
+    if (this.isReportingScheduled) {
       console.log("[PerformanceSDK] Report already scheduled, waiting...");
       return;
     }
+
+    // 标记为已调度
+    this.isReportingScheduled = true;
 
     // 延迟上报，等待所有指标收集完成（最多等待5秒）
     console.log(
@@ -232,11 +236,14 @@ class PerformanceMonitor {
       this.metrics.ttfb;
     if (!hasAnyMetric) {
       console.log("[PerformanceSDK] No metrics collected yet, waiting...");
+      // 重置调度标志，允许重新调度
+      this.isReportingScheduled = false;
       return;
     }
 
     // 标记为已上报
     this.hasReportedPerformance = true;
+    this.isReportingScheduled = false;
 
     // 清除定时器引用
     if (this.reportTimeout) {
@@ -330,25 +337,9 @@ class PerformanceMonitor {
         body: JSON.stringify(message),
       });
 
-      // 只有性能指标上报成功后才标记为已上报
-      if (
-        data.type === "performance" ||
-        (!data.type && data.fcp !== undefined)
-      ) {
-        this.hasReportedPerformance = true;
-        console.log(
-          "[PerformanceSDK] Performance metrics reported successfully",
-        );
-      }
+      console.log("[PerformanceSDK] Performance metrics reported successfully");
     } catch (error) {
       console.error("Failed to send performance data:", error);
-      // 即使失败也标记为已上报，避免无限重试
-      if (
-        data.type === "performance" ||
-        (!data.type && data.fcp !== undefined)
-      ) {
-        this.hasReportedPerformance = true;
-      }
     }
   }
 }
