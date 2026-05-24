@@ -1,3 +1,6 @@
+import { onFCP, onLCP, onCLS, onTTFB, onINP } from "web-vitals";
+import { API_CONFIG } from "~/config/env";
+
 interface EventData {
   eventName: string;
   properties: Record<string, any>;
@@ -33,6 +36,29 @@ interface RoutePerformanceMetric {
   navigationType: string;
 }
 
+export interface PerformanceMetrics {
+  pageUrl: string;
+  userAgent: string;
+  timestamp: number;
+  fcp?: number;
+  lcp?: number;
+  cls?: number;
+  fid?: number;
+  ttfb?: number;
+  inp?: number;
+  navigationType?: string;
+  connectionInfo?: any;
+}
+
+export interface APIMetrics {
+  url: string;
+  method: string;
+  startTime: number;
+  duration: number;
+  status: number;
+  size?: number;
+}
+
 export class AnalyticsSDK {
   private queue: EventData[] = [];
   private maxQueueSize = 10; // 达到10条触发一次上报
@@ -45,6 +71,12 @@ export class AnalyticsSDK {
   private apiCallMetrics: ApiCallMetric[] = [];
   private routePerformanceMetrics: RoutePerformanceMetric[] = [];
   private apiMetricsBatchSize = 5; // API指标批量上报阈值
+  private metrics: PerformanceMetrics = {
+    pageUrl: "",
+    userAgent: "",
+    timestamp: Date.now(),
+    navigationType: "",
+  };
 
   constructor(serverUrl: string) {
     this.serverUrl = serverUrl;
@@ -65,6 +97,13 @@ export class AnalyticsSDK {
       this.updateMetricsWithFreshValues();
       this.flush(true);
     });
+    // page性能指标
+    this.metrics = {
+      pageUrl: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: Date.now(),
+      navigationType: this.getNavigationType(),
+    };
   }
 
   // 初始化性能监控
@@ -75,6 +114,7 @@ export class AnalyticsSDK {
     } else {
       window.addEventListener("load", () => this.setupWebVitals());
     }
+    this.collectMetrics();
   }
 
   // 设置 Web Vitals 监控
@@ -93,6 +133,31 @@ export class AnalyticsSDK {
 
     // TTFB - Time to First Byte
     this.observeTTFB();
+  }
+
+  private collectMetrics() {
+    // 收集 FCP
+    onFCP((metric) => {
+      this.metrics.fcp = metric.value;
+    });
+    // 收集 LCP
+    onLCP((metric) => {
+      this.metrics.lcp = metric.value;
+    });
+    // 收集 CLS
+    onCLS((metric) => {
+      this.metrics.cls = metric.value;
+    });
+    // 收集 TTFB
+    onTTFB((metric) => {
+      this.metrics.ttfb = metric.value;
+    });
+    // 收集 INP (如果浏览器支持)
+    if ("PerformanceEventTiming" in window) {
+      onINP((metric) => {
+        this.metrics.inp = metric.value;
+      });
+    }
   }
 
   // 观察 LCP
@@ -523,6 +588,7 @@ export class AnalyticsSDK {
       timestamp: Date.now(),
       url: window.location.href,
     });
+    this.sendToBackend({ type: "performance", ...this.metrics });
 
     // Clear the tracked metrics after reporting
     this.apiCallMetrics = [];
@@ -603,6 +669,25 @@ export class AnalyticsSDK {
           response.status,
           response.ok,
         );
+
+        // 发送到后端，但不计入批量上报
+        this.sendToBackend({
+          type: "api-batch",
+          metrics: [
+            {
+              url,
+              method,
+              startTime,
+              duration,
+              status: response.status,
+              size: Number(response.headers.get("content-length")) || undefined,
+              ...this.metrics,
+            },
+          ],
+          pageUrl: window.location.href,
+          userAgent: navigator.userAgent,
+          timestamp: Date.now(), // Use number timestamp instead of ISO string
+        });
         return response;
       })
       .catch((error) => {
@@ -789,6 +874,33 @@ export class AnalyticsSDK {
           : 0,
       visitCount: Math.max(stats.fcpValues.length, stats.lcpValues.length),
     }));
+  }
+
+  // 发送数据给后端
+  private async sendToBackend(data: any) {
+    try {
+      // 发送到 RabbitMQ 的消息格式
+      const message = {
+        type: data.type || "performance",
+        data,
+        sentAt: Date.now(),
+      };
+
+      console.log("[PerformanceSDK] Sending data to backend:", message.type);
+
+      // 使用 fetch 发送数据到后端服务
+      await fetch(`${API_CONFIG.BASE_URL}/api/performance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      });
+
+      console.log("[PerformanceSDK] Performance metrics reported successfully");
+    } catch (error) {
+      console.error("Failed to send performance data:", error);
+    }
   }
 
   // Cleanup method to disconnect all observers (useful for SPA navigation or component unmount)
