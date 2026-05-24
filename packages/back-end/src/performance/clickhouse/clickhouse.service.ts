@@ -24,14 +24,15 @@ export class ClickHouseService {
   });
 
   async onModuleInit() {
-    // 创建数据库
-    await this.client.command({
-      query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}`,
-    });
+    try {
+      // 创建数据库
+      await this.client.command({
+        query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}`,
+      });
 
-    // 创建性能数据表
-    await this.client.command({
-      query: `
+      // 创建性能数据表
+      await this.client.command({
+        query: `
         CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics (
           id UInt64,
           pageUrl String,
@@ -50,11 +51,11 @@ export class ClickHouseService {
         PARTITION BY toYYYYMM(timestamp)
         ORDER BY (timestamp, pageUrl)
       `,
-    });
+      });
 
-    // 创建 API 性能数据表
-    await this.client.command({
-      query: `
+      // 创建 API 性能数据表
+      await this.client.command({
+        query: `
         CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics (
           id UInt64,
           url String,
@@ -71,7 +72,18 @@ export class ClickHouseService {
         PARTITION BY toYYYYMM(timestamp)
         ORDER BY (timestamp, url)
       `,
-    });
+      });
+
+      console.log(
+        '[ClickHouse] ✅ Database and tables initialized successfully',
+      );
+    } catch (error) {
+      console.error(
+        '[ClickHouse] ❌ Failed to initialize database/tables:',
+        error instanceof Error ? error.message : String(error),
+      );
+      // Don't throw - allow application to start even if ClickHouse is unavailable
+    }
   }
 
   /**
@@ -115,39 +127,15 @@ export class ClickHouseService {
   }
 
   async insertPerformanceData(data: any) {
-    // Ensure timestamp is properly formatted as ISO 8601 string
-    let timestamp: string;
-    if (data.timestamp instanceof Date) {
-      timestamp = data.timestamp.toISOString();
-    } else if (typeof data.timestamp === 'number') {
-      // Numeric timestamp - convert to Date then to ISO string
-      const dateObj = new Date(data.timestamp);
-      if (isNaN(dateObj.getTime())) {
-        timestamp = new Date().toISOString();
-      } else {
-        timestamp = dateObj.toISOString();
-      }
-    } else if (typeof data.timestamp === 'string') {
-      // Already a string - validate it's a valid date
-      const dateObj = new Date(data.timestamp);
-      if (isNaN(dateObj.getTime())) {
-        console.warn(
-          `[ClickHouse] Invalid string timestamp: ${data.timestamp}, using current time`,
-        );
-        timestamp = new Date().toISOString();
-      } else {
-        timestamp = dateObj.toISOString();
-      }
-    } else {
-      console.warn('[ClickHouse] Missing timestamp, using current time');
-      timestamp = new Date().toISOString();
-    }
+    // Convert timestamp to Unix timestamp (seconds) - recommended for ClickHouse DateTime
+    const timestamp = this.toUnixTimestamp(data.timestamp);
 
     // Sanitize string fields to prevent JSON parsing issues
     const sanitizeString = (str: any) =>
       str
         ? String(str)
-            .replace(/[\r\n\t]/g, ' ')
+            .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, ' ') // Remove non-printable chars
+            .replace(/[\r\n\t]/g, ' ') // Remove newlines and tabs
             .trim()
         : '';
 
@@ -161,7 +149,7 @@ export class ClickHouseService {
       id: Math.floor(Date.now() / 1000),
       pageUrl: sanitizedPageUrl,
       userAgent: sanitizedUserAgent,
-      timestamp: timestamp,
+      timestamp: timestamp, // Use Unix timestamp (integer) instead of ISO string
       fcp: data.fcp != null ? Number(data.fcp) : null,
       lcp: data.lcp != null ? Number(data.lcp) : null,
       cls: data.cls != null ? Number(data.cls) : null,
