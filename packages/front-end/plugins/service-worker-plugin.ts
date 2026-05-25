@@ -1,6 +1,7 @@
 import type { Plugin } from "vite";
 import * as fs from "fs";
 import * as path from "path";
+import { createHash as createCryptoHash } from "crypto";
 
 interface ServiceWorkerPluginOptions {
   swSrc: string;
@@ -100,14 +101,10 @@ export function serviceWorkerPlugin(
 }
 
 function createHash(content: string): string {
-  // Simple hash function for cache busting
-  let hash = 0;
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash).toString(36);
+  return createCryptoHash("sha256")
+    .update(content)
+    .digest("hex")
+    .substring(0, 8);
 }
 
 function injectRegistrationScript(outputDir: string) {
