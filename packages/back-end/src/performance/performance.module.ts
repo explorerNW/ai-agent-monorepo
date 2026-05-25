@@ -8,10 +8,6 @@ import { RabbitMQConsumer } from './consumers/rabbitmq.consumer';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true, // 使配置模块全局可用
-      envFilePath: '.env', // 指定 .env 文件路径
-    }),
     ClientsModule.registerAsync([
       {
         name: 'PERFORMANCE_SERVICE',
@@ -22,6 +18,12 @@ import { RabbitMQConsumer } from './consumers/rabbitmq.consumer';
           const host =
             configService.get<string>('RABBITMQ_HOST') || 'localhost';
           const port = configService.get<string>('RABBITMQ_PORT') || '5672';
+
+          if (!user || !pass || !host) {
+            throw new Error(
+              'Missing required RabbitMQ configuration: RABBITMQ_USER, RABBITMQ_PASS, or RABBITMQ_HOST',
+            );
+          }
 
           return {
             transport: Transport.RMQ,
