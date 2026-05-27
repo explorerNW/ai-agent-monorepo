@@ -261,6 +261,9 @@ importers:
       "@rollup/plugin-node-resolve":
         specifier: ^16.0.3
         version: 16.0.3(rollup@4.60.4)
+      web-vitals:
+        specifier: ^5.2.0
+        version: 5.2.0
     devDependencies:
       "@rollup/plugin-terser":
         specifier: ^0.4.0
