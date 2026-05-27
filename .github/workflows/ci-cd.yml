@@ -303,8 +303,8 @@ jobs:
             chmod +x docker.sh
 
             # 配置国内镜像源以加速可能的 npm/pnpm 操作
-            export NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
-            export PNPM_REGISTRY=https://registry.npmmirror.com
+            export NPM_CONFIG_REGISTRY=http://192.168.1.118:4873
+            export PNPM_REGISTRY=http://192.168.1.118:4873
 
             # Export DEPLOY_DOMAIN for docker.sh script
             export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
