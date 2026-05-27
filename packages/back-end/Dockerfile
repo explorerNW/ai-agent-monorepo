@@ -6,7 +6,7 @@ FROM node:22-alpine AS dependencies
 WORKDIR /app
 
 # Enable pnpm with Chinese mirror (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
+RUN npm config set registry http://192.168.1.118:4873 && \
     corepack enable && \
     corepack prepare pnpm@11.1.2 --activate
 
@@ -33,7 +33,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
+RUN npm config set registry http://192.168.1.118:4873 && \
     corepack enable && \
     corepack prepare pnpm@11.1.2 --activate
 
@@ -74,7 +74,7 @@ RUN addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
 
 # Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry https://registry.npmmirror.com && \
+RUN npm config set registry http://192.168.1.118:4873 && \
     corepack enable && \
     corepack prepare pnpm@11.1.2 --activate
 

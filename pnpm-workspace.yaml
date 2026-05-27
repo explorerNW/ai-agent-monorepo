@@ -1,7 +1,5 @@
 packages:
   - "packages/*"
-  - "packages/back-end/micro-service/*"
-  - "packages/front-end"
 allowBuilds:
   "@nestjs/core": true
   esbuild: true

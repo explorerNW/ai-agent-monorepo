@@ -11,6 +11,8 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { useRoutePerformance } from "./hooks/useRoutePerformance";
 import { useEffect } from "react";
+import { EnterpriseMonitorSDK } from "@explorernw/monitor-sdk";
+import { API_CONFIG } from "./config/env";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -35,6 +37,13 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const monitor = new EnterpriseMonitorSDK({
+      reportUrl: `${API_CONFIG.BASE_URL}/api/performance`,
+      appId: "1.0.1",
+    });
+    monitor.init();
+  }, []);
   return (
     <html lang="en">
       <head>

@@ -6,7 +6,9 @@ interface APIMetricData {
   url?: string;
   method?: string;
   startTime?: Date | number | string;
-  duration?: number;
+  eventData: {
+    duration?: number;
+  };
   status?: number;
   size?: number;
   pageUrl?: string;
@@ -141,7 +143,9 @@ export class ClickHouseService {
 
     const sanitizedPageUrl = sanitizeString(data.pageUrl);
     const sanitizedUserAgent = sanitizeString(data.userAgent);
-    const sanitizedNavigationType = sanitizeString(data.navigationType);
+    const sanitizedNavigationType = sanitizeString(
+      data.eventData.navigationType,
+    );
     const sanitizedConnectionInfo = JSON.stringify(data.connectionInfo || {});
 
     // Prepare the record with proper typing and sanitization
@@ -150,12 +154,12 @@ export class ClickHouseService {
       pageUrl: sanitizedPageUrl,
       userAgent: sanitizedUserAgent,
       timestamp: timestamp, // Use Unix timestamp (integer) instead of ISO string
-      fcp: data.fcp != null ? Number(data.fcp) : null,
-      lcp: data.lcp != null ? Number(data.lcp) : null,
-      cls: data.cls != null ? Number(data.cls) : null,
-      fid: data.fid != null ? Number(data.fid) : null,
-      ttfb: data.ttfb != null ? Number(data.ttfb) : null,
-      inp: data.inp != null ? Number(data.inp) : null,
+      fcp: data.eventData.fcp != null ? Number(data.eventData.fcp) : null,
+      lcp: data.eventData.lcp != null ? Number(data.eventData.lcp) : null,
+      cls: data.eventData.cls != null ? Number(data.eventData.cls) : null,
+      fid: data.eventData.fid != null ? Number(data.eventData.fid) : null,
+      ttfb: data.eventData.ttfb != null ? Number(data.eventData.ttfb) : null,
+      inp: data.eventData.inp != null ? Number(data.eventData.inp) : null,
       navigationType: sanitizedNavigationType,
       connectionInfo: sanitizedConnectionInfo,
     };
@@ -187,7 +191,7 @@ export class ClickHouseService {
         url: this.sanitizeString(data.url),
         method: this.sanitizeString(data.method, 10),
         startTime: startTimeTimestamp,
-        duration: Number(data.duration) || 0,
+        duration: Number(data.eventData.duration) || 0,
         status: Number(data.status) || 0,
         size: data.size != null ? Number(data.size) : null,
         pageUrl: this.sanitizeString(data.pageUrl),

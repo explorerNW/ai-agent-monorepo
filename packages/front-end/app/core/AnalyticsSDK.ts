@@ -588,7 +588,7 @@ export class AnalyticsSDK {
       timestamp: Date.now(),
       url: window.location.href,
     });
-    this.sendToBackend({ type: "performance", ...this.metrics });
+    // this.sendToBackend({ type: "performance", ...this.metrics });
 
     // Clear the tracked metrics after reporting
     this.apiCallMetrics = [];
@@ -671,23 +671,23 @@ export class AnalyticsSDK {
         );
 
         // 发送到后端，但不计入批量上报
-        this.sendToBackend({
-          type: "api-batch",
-          metrics: [
-            {
-              url,
-              method,
-              startTime,
-              duration,
-              status: response.status,
-              size: Number(response.headers.get("content-length")) || undefined,
-              ...this.metrics,
-            },
-          ],
-          pageUrl: window.location.href,
-          userAgent: navigator.userAgent,
-          timestamp: Date.now(), // Use number timestamp instead of ISO string
-        });
+        // this.sendToBackend({
+        //   type: "api-batch",
+        //   metrics: [
+        //     {
+        //       url,
+        //       method,
+        //       startTime,
+        //       duration,
+        //       status: response.status,
+        //       size: Number(response.headers.get("content-length")) || undefined,
+        //       ...this.metrics,
+        //     },
+        //   ],
+        //   pageUrl: window.location.href,
+        //   userAgent: navigator.userAgent,
+        //   timestamp: Date.now(), // Use number timestamp instead of ISO string
+        // });
         return response;
       })
       .catch((error) => {

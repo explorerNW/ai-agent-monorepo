@@ -1,0 +1,29 @@
+{
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    // 1. 基础目标与库支持
+    "target": "ES2020",
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+
+    // 2. 模块系统（保持 ESNext 即可，Rollup 会处理具体的 CJS/ESM 转换）
+    "module": "esnext",
+
+    // 3. 【新增】核心修复项：解决之前 'is not a module' 报错的关键
+    // bundler 模式更贴近 Vite/Rollup/Webpack 等现代打包器的解析规则
+    // 允许相对导入不强制写扩展名，且对 ESM/CJS 的兼容性更好
+    "moduleResolution": "bundler",
+
+    // 4. 目录与输出控制
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declaration": true,
+    "declarationDir": "./dist",
+
+    // 5. 【新增】严格模式（SDK 必备，保证代码健壮性）
+    "strict": true,
+
+    // 6. 【新增】互操作性配置（防止导入第三方包时报错）
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
+}
