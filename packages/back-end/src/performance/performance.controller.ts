@@ -2,20 +2,28 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { PerformanceService } from './performance.service';
 
 interface IPerformanceData {
-  data: {
-    type: string;
-    metrics: {
-      url: string;
-      method: string;
-      startTime: number | string;
-      duration: number;
-      status: number;
-      size?: number;
-    }[];
-    pageUrl: string;
-    userAgent: string;
-    timestamp: number | string;
-  };
+  anonymousId: string;
+  eventData?: {
+    url?: string;
+    fcp?: number;
+    lcp?: number;
+    cls?: number;
+    fid?: number;
+    ttfb?: number;
+    inp?: number;
+    error?: Error; // 错误对象
+    message?: string; // 错误信息
+    reason?: string; // 错误原因
+    stack?: string; // 错误堆栈
+    filename?: string; // 错误文件名
+    duration?: string; // 接口耗时
+    success?: boolean; // 接口是否成功
+    type?: 'page_view' | 'unhandledrejection';
+    path?: string; // 接口路径
+  }; // 具体的事件数据
+  eventType: string;
+  userAgent: string;
+  timestamp: number | string;
 }
 
 @Controller('api/performance')
@@ -25,39 +33,50 @@ export class PerformanceController {
   @Post()
   async recordPerformance(
     @Body()
-    performanceData: IPerformanceData,
+    performanceData: IPerformanceData[],
   ) {
     try {
-      if (performanceData.data.type === 'api') {
-        // 单个 API 指标（兼容旧格式）
-        return await this.performanceService.recordAPIMetric(performanceData);
-      } else if (performanceData.data.type === 'api-batch') {
-        // 批量 API 指标
-        const metrics = performanceData.data.metrics || [];
-        const pageUrl = performanceData.data.pageUrl || '';
-        const userAgent = performanceData.data.userAgent || '';
-        const batchTimestamp = performanceData.data.timestamp || Date.now();
+      const performanceList = performanceData.filter(
+        (data) => data.eventType === 'performance',
+      );
+      const apiList = performanceData.filter(
+        (data) => data.eventType === 'api',
+      );
+      const errorList = performanceData.filter(
+        (data) => data.eventType === 'error',
+      );
+      const customList = performanceData.filter(
+        (data) => data.eventType === 'custom',
+      );
 
-        for (const metric of metrics) {
-          // 确保每个指标都有完整的字段，并正确转换时间戳为ISO 8601格式
-          const formattedMetric = {
-            url: metric.url,
-            method: metric.method,
-            startTime: new Date(metric.startTime).toISOString(),
-            duration: Number(metric.duration),
-            status: Number(metric.status),
-            size: metric.size ? Number(metric.size) : undefined,
-            pageUrl: pageUrl,
-            userAgent: userAgent,
-            timestamp: new Date(batchTimestamp).toISOString(), // Convert to ISO string
-          };
-          await this.performanceService.recordAPIMetric(formattedMetric);
-        }
-        return { success: true, count: metrics.length };
-      } else {
-        // 性能指标
-        return await this.performanceService.recordPerformance(performanceData);
-      }
+      // 性能指标
+      await Promise.all(
+        performanceList.map((data) => {
+          return this.performanceService.recordPerformance(data);
+        }),
+      );
+
+      // API 指标
+      await Promise.all(
+        apiList.map((data) => {
+          return this.performanceService.recordAPIMetric(data);
+        }),
+      );
+
+      // 错误指标
+      await Promise.all(
+        errorList.map((data) => {
+          return this.performanceService.recordErrorMetric(data);
+        }),
+      );
+
+      // 自定义指标
+      await Promise.all(
+        customList.map((data) => {
+          return this.performanceService.recordCustomMetric(data);
+        }),
+      );
+      return { success: true };
     } catch (error) {
       console.error(
         '[PerformanceController] Error recording performance:',

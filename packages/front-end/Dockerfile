@@ -8,7 +8,9 @@ WORKDIR /app
 # Enable pnpm with Chinese mirror
 RUN corepack enable && \
     corepack prepare pnpm@9.15.0 --activate && \
-    npm config set registry https://registry.npmmirror.com
+    npm config set registry http://192.168.1.118:4873
+
+# https://registry.npmmirror.com
 
 # Copy workspace configuration files
 COPY .npmrc ./
