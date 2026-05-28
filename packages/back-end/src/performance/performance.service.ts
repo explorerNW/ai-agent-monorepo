@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientRMQ } from '@nestjs/microservices';
 import { ClickHouseService } from './clickhouse/clickhouse.service';
-import { map, Observable, of } from 'rxjs';
+import { map } from 'rxjs';
 
 @Injectable()
 export class PerformanceService {
@@ -22,41 +22,48 @@ export class PerformanceService {
     }
   }
 
-  recordPerformance(data: any): Observable<any> {
+  recordPerformance(data: any): Promise<any> {
     try {
       // 发送到 RabbitMQ - use emit for fire-and-forget (no response needed)
-      return this.client.emit('performance.metrics', data).pipe(
+      this.client.emit('performance.metrics', data).pipe(
         map(() => {
           this.logger.log('✅ API metric sent to RabbitMQ');
-          return { success: true };
         }),
       );
 
       // 同时保存到 ClickHouse (用于备份和分析)
       // await this.clickHouseService.insertPerformanceData(data);
+      return Promise.resolve({ success: true });
     } catch (error) {
       this.logger.error('Error recording performance metric:', error);
       // Don't throw - allow the request to succeed even if storage fails
-      return of({ success: false, error: 'Failed to store metric' });
+      return Promise.resolve({
+        success: false,
+        error: 'Failed to store metric',
+      });
     }
   }
 
-  recordAPIMetric(data: any): Observable<any> {
+  recordAPIMetric(data: any): Promise<any> {
     try {
       // 发送到 RabbitMQ - use emit for fire-and-forget (no response needed)
-      return this.client.emit('api.metrics', data).pipe(
+      this.client.emit('api.metrics', data).pipe(
         map(() => {
           this.logger.log('✅ API metric sent to RabbitMQ');
-          return { success: true };
         }),
       );
+
+      return Promise.resolve({ success: true });
 
       // 同时保存到 ClickHouse (用于备份和分析)
       // await this.clickHouseService.insertAPIData(data);
     } catch (error) {
       this.logger.error('Error recording API metric:', error);
       // Don't throw - allow the request to succeed even if storage fails
-      return of({ success: false, error: 'Failed to store API metric' });
+      return Promise.resolve({
+        success: false,
+        error: 'Failed to store API metric',
+      });
     }
   }
 
