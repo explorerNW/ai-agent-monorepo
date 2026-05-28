@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PerformanceController } from './performance.controller';
 import { PerformanceService } from './performance.service';
 import { ClickHouseService } from './clickhouse/clickhouse.service';
-import { RabbitMQConsumer } from './consumers/rabbitmq.consumer';
 
 @Module({
   imports: [
@@ -39,7 +38,7 @@ import { RabbitMQConsumer } from './consumers/rabbitmq.consumer';
     ]),
   ],
   controllers: [PerformanceController],
-  providers: [PerformanceService, ClickHouseService, RabbitMQConsumer],
+  providers: [PerformanceService, ClickHouseService],
   exports: [PerformanceService],
 })
 export class PerformanceModule {}

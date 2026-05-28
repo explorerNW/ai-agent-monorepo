@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientRMQ } from '@nestjs/microservices';
 import { ClickHouseService } from './clickhouse/clickhouse.service';
+import { map, Observable, of } from 'rxjs';
 
 @Injectable()
 export class PerformanceService {
@@ -13,42 +14,49 @@ export class PerformanceService {
 
   async onModuleInit() {
     try {
-      await this.client.connect();
-      this.logger.log('✅ RabbitMQ client connected');
+      await this.client.connect().then(() => {
+        this.logger.log('✅ RabbitMQ client connected');
+      });
     } catch (error) {
       this.logger.error('❌ Failed to connect to RabbitMQ:', error);
     }
   }
 
-  async recordPerformance(data: any): Promise<any> {
+  recordPerformance(data: any): Observable<any> {
     try {
       // 发送到 RabbitMQ - use emit for fire-and-forget (no response needed)
-      this.client.emit('performance.metrics', data);
+      return this.client.emit('performance.metrics', data).pipe(
+        map(() => {
+          this.logger.log('✅ API metric sent to RabbitMQ');
+          return { success: true };
+        }),
+      );
 
       // 同时保存到 ClickHouse (用于备份和分析)
-      await this.clickHouseService.insertPerformanceData(data);
-
-      return { success: true };
+      // await this.clickHouseService.insertPerformanceData(data);
     } catch (error) {
       this.logger.error('Error recording performance metric:', error);
       // Don't throw - allow the request to succeed even if storage fails
-      return { success: false, error: 'Failed to store metric' };
+      return of({ success: false, error: 'Failed to store metric' });
     }
   }
 
-  async recordAPIMetric(data: any): Promise<any> {
+  recordAPIMetric(data: any): Observable<any> {
     try {
       // 发送到 RabbitMQ - use emit for fire-and-forget (no response needed)
-      this.client.emit('api.metrics', data);
+      return this.client.emit('api.metrics', data).pipe(
+        map(() => {
+          this.logger.log('✅ API metric sent to RabbitMQ');
+          return { success: true };
+        }),
+      );
 
       // 同时保存到 ClickHouse (用于备份和分析)
-      await this.clickHouseService.insertAPIData(data);
-
-      return { success: true };
+      // await this.clickHouseService.insertAPIData(data);
     } catch (error) {
       this.logger.error('Error recording API metric:', error);
       // Don't throw - allow the request to succeed even if storage fails
-      return { success: false, error: 'Failed to store API metric' };
+      return of({ success: false, error: 'Failed to store API metric' });
     }
   }
 
