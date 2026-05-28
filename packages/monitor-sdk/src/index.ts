@@ -1,4 +1,3 @@
-import { onFCP, onLCP, onCLS, onTTFB, onINP } from "web-vitals";
 /**
  * 企业级前端监控 SDK (TypeScript版)
  * 核心特性：代理队列模式、双队列管理、性能与错误自动采集、SPA适配、可靠离页上报
@@ -45,6 +44,7 @@ export class EnterpriseMonitorSDK {
   private immediateQueue: MonitorEvent[] = []; // 实时上报队列（如报错）
   private anonymousId: string;
   private isInitialized = false;
+  private privateMetricsReported: boolean = false;
   private metrics = {
     lcp: 0,
     fcp: 0,
@@ -77,8 +77,7 @@ export class EnterpriseMonitorSDK {
     this.isInitialized = true;
 
     // 1. 自动采集性能指标 (FCP, LCP等)
-    this.collectMetrics();
-    // this.observePerformance();
+    this.observePerformance();
     // 2. 自动捕获全局 JS 错误
     this.observeErrors();
     // 3. 劫持 fetch 请求计算接口耗时
@@ -129,121 +128,97 @@ export class EnterpriseMonitorSDK {
     }
   }
 
-  // 自动采集性能指标
-  private collectMetrics() {
-    // 收集 FCP
-    onFCP((metric) => {
-      this.metrics.fcp = metric.value;
-      this.checkMetrics();
-    });
-    // 收集 LCP
-    onLCP((metric) => {
-      this.metrics.lcp = metric.value;
-      this.checkMetrics();
-    });
-    // 收集 CLS
-    onCLS((metric) => {
-      this.metrics.cls = metric.value;
-      this.checkMetrics();
-    });
-    // 收集 TTFB
-    onTTFB((metric) => {
-      this.metrics.ttfb = metric.value;
-      this.checkMetrics();
-    });
-    // 收集 INP (如果浏览器支持)
-    if ("PerformanceEventTiming" in window) {
-      onINP((metric) => {
-        this.metrics.inp = metric.value;
-        this.checkMetrics();
-      });
-    }
-  }
-
-  // 检查指标是否都采集完毕，如果是则上报性能指标
-  private checkMetrics() {
-    if (this.metrics.fcp > 0 && this.metrics.lcp > 0) {
-      this.enqueue(
-        {
-          eventType: "performance",
-          anonymousId: this.anonymousId,
-          pageUrl: window.location.href,
-          timestamp: Date.now(),
-          eventData: {
-            ...this.metrics,
-          },
-        },
-        true,
-      );
-    }
-  }
-
   // ================= 自动采集核心逻辑 =================
   // 1. 性能指标监听 (PerformanceObserver)
   private observePerformance() {
     if (!window.PerformanceObserver) return;
-    const observer = new PerformanceObserver((list) => {
-      const entries = list.getEntries();
-      const metric = {
-        lcp: 0,
-        fcp: 0,
-        cls: 0,
-        fid: 0,
-        ttfb: 0,
-        userAgent: navigator.userAgent,
-        navigationType: "",
-      };
-      const firstEntry = entries[0] as PerformanceEventTiming;
 
-      const fidValue = firstEntry.processingStart - firstEntry.startTime;
-      metric.fid = fidValue;
-
-      const navigationEntries = performance.getEntriesByType("navigation");
-      if (navigationEntries.length > 0) {
-        const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
-        metric.navigationType = navEntry.type;
-        metric.ttfb = navEntry.responseStart - navEntry.connectStart;
-      }
-
-      entries.forEach((entry) => {
-        // 采集 LCP
-        if (entry.entryType === "largest-contentful-paint") {
-          metric.lcp = entry.startTime;
-        }
-        // 采集 FCP
-        if (entry.entryType === "first-contentful-paint") {
-          metric.fcp = entry.startTime;
-        }
-        // 采集 CLS
-        if (entry.entryType === "layout-shift") {
-          metric.cls = entry.startTime;
-        }
-
-        metric.fid =
-          (entry as PerformanceEventTiming).processingStart - entry.startTime;
-
+    const report = () => {
+      if (this.metrics.fcp && this.metrics.lcp) {
         this.enqueue(
           {
             eventType: "performance",
             anonymousId: this.anonymousId,
             pageUrl: window.location.href,
             timestamp: Date.now(),
-            eventData: {
-              ...metric,
-            },
+            eventData: { ...this.metrics },
           },
-          false,
+          true,
         );
+        console.log("性能指标上报成功");
+      }
+    };
+
+    // FCP: 取 first-contentful-paint 的 startTime
+    try {
+      const fcpObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.name === "first-contentful-paint") {
+            this.metrics.fcp = entry.startTime;
+            break;
+          }
+        }
+        report();
       });
-    });
-    observer.observe({
-      entryTypes: [
-        "pant",
-        "first-contentful-paint",
-        "largest-contentful-paint",
-        "layout-shift",
-      ],
-    });
+      fcpObserver.observe({ type: "paint", buffered: true });
+    } catch {}
+
+    // LCP: 持续跟踪最大的 contentful paint
+    try {
+      const lcpObserver = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        this.metrics.lcp = entries[entries.length - 1].startTime;
+        report();
+      });
+      lcpObserver.observe({ type: "largest-contentful-paint", buffered: true });
+    } catch {}
+
+    // FID: processingStart - startTime
+    try {
+      const fidObserver = new PerformanceObserver((list) => {
+        const entry = list.getEntries()[0] as PerformanceEventTiming;
+        this.metrics.fid = entry.processingStart - entry.startTime;
+        report();
+      });
+      fidObserver.observe({ type: "first-input", buffered: true });
+    } catch {}
+
+    // CLS: 全生命周期累计，不覆盖
+    try {
+      let cumulativeCls = 0;
+      const clsObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!(entry as any).hadRecentInput) {
+            cumulativeCls += (entry as any).value;
+          }
+        }
+        this.metrics.cls = cumulativeCls;
+        report();
+      });
+      clsObserver.observe({ type: "layout-shift", buffered: true });
+    } catch {}
+
+    // INP: 追踪最差的交互持续时间
+    try {
+      let worstInp = 0;
+      const inpObserver = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const duration = (entry as PerformanceEventTiming).duration;
+          if (duration > worstInp) worstInp = duration;
+        }
+        this.metrics.inp = worstInp;
+        report();
+      });
+      inpObserver.observe({ type: "event", buffered: true });
+    } catch {}
+
+    // TTFB: responseStart - requestStart（修正：原代码用 connectStart 值偏大）
+    const navEntries = performance.getEntriesByType("navigation");
+    if (navEntries.length > 0) {
+      const nav = navEntries[0] as PerformanceNavigationTiming;
+      this.metrics.ttfb = nav.responseStart - nav.requestStart;
+      this.metrics.navigationType = nav.type;
+    }
   }
 
   // 2. 全局错误监听
@@ -322,16 +297,27 @@ export class EnterpriseMonitorSDK {
   // 4. SPA 路由监听
   private observeSPARoute() {
     const reportPageView = () => {
-      this.enqueue(
-        {
-          eventType: "custom",
-          timestamp: Date.now(),
-          pageUrl: window.location.href,
-          anonymousId: this.anonymousId,
-          eventData: { type: "page_view", path: window.location.pathname },
-        },
-        false,
-      );
+      if (this.privateMetricsReported) return;
+      setTimeout(() => {
+        this.observePerformance();
+        setTimeout(() => {
+          this.enqueue(
+            {
+              eventType: "custom",
+              timestamp: Date.now(),
+              pageUrl: window.location.href,
+              anonymousId: this.anonymousId,
+              eventData: {
+                type: "page_view",
+                path: window.location.pathname,
+                ...this.metrics,
+              },
+            },
+            true,
+          );
+          this.privateMetricsReported = true;
+        }, 500);
+      }, 500);
     };
 
     window.addEventListener("hashchange", reportPageView);

@@ -1,6 +1,6 @@
 {
   "name": "@explorernw/monitor-sdk",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "企业级前端监控 SDK，支持性能、错误、接口耗时自动采集",
   "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
@@ -37,7 +37,6 @@
     }
   },
   "dependencies": {
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "web-vitals": "^5.2.0"
+    "@rollup/plugin-node-resolve": "^16.0.3"
   }
 }

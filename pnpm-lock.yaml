@@ -198,8 +198,8 @@ importers:
   packages/front-end:
     dependencies:
       "@explorernw/monitor-sdk":
-        specifier: ^1.0.7
-        version: 1.0.7(rollup@4.60.4)
+        specifier: ^1.0.8
+        version: 1.0.8(rollup@4.60.4)
       "@react-router/node":
         specifier: 7.13.2
         version: 7.13.2(react-router@7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)
@@ -261,9 +261,6 @@ importers:
       "@rollup/plugin-node-resolve":
         specifier: ^16.0.3
         version: 16.0.3(rollup@4.60.4)
-      web-vitals:
-        specifier: ^5.2.0
-        version: 5.2.0
     devDependencies:
       "@rollup/plugin-terser":
         specifier: ^0.4.0
@@ -1183,10 +1180,10 @@ packages:
       }
     engines: { node: ^18.18.0 || ^20.9.0 || >=21.1.0 }
 
-  "@explorernw/monitor-sdk@1.0.7":
+  "@explorernw/monitor-sdk@1.0.8":
     resolution:
       {
-        integrity: sha512-MJQiOwgAUZI7BktwaGxlVPo436Ik74fS9Q9KnU4uXfOm7MtQu/wgPyETPYrRVsS6g8tyzTB5z1UjVMr0poESXw==,
+        integrity: sha512-tue4mrZSk6iwvQZexXEEb2mZgs1S6+FtfWWrlR+oU+fiRMlQsrj/VxZ57uDRLzj4DBqVzgioqZ6HCfwEesXsXw==,
       }
 
   "@humanfs/core@0.19.2":
@@ -1649,10 +1646,10 @@ packages:
     peerDependencies:
       "@langchain/core": ^1.1.44
 
-  "@langchain/langgraph-sdk@1.9.6":
+  "@langchain/langgraph-sdk@1.9.8":
     resolution:
       {
-        integrity: sha512-cem5LckknNULd8o4WiOpf+rv+Qxvfpf5MzXiCQb9JnEfJdCRrWsl0/qBeZRpAXMf/1Va3uDMZouTmw9odmI0Hw==,
+        integrity: sha512-t7HcTy5QL0taI4Zm096yWK5m99n0uW898E7fE8ub4h2+0Ylype5I9Ph3oAB2kCRzTtT/fVwDhsj90t8/c+aNAw==,
       }
     peerDependencies:
       "@langchain/core": ^1.1.44
@@ -3676,10 +3673,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  brace-expansion@1.1.14:
+  brace-expansion@1.1.15:
     resolution:
       {
-        integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==,
+        integrity: sha512-EwOCDEex4quD37XhqM3omwtMoJjr//isUZz1JopUNWms+4Z2ViyM/k1YIRePpoVNnQhENnxtFjLaxNHrT7xIUg==,
       }
 
   brace-expansion@2.1.1:
@@ -4390,10 +4387,10 @@ packages:
         integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==,
       }
 
-  electron-to-chromium@1.5.361:
+  electron-to-chromium@1.5.362:
     resolution:
       {
-        integrity: sha512-Q6Hts7N9FnJc5LeGRINFvLhCI9xZmNtTDe5ZbcVezQz7cU4a8Aua3GH1b8J2XY8Al9PF+OCwYqhgsOOheMdvkA==,
+        integrity: sha512-PUY2DrLvkjkUuWqq+KPL2iWshrJsZOcIojzRQ7eXFacc9dWga7MGMJAa15VbiejSZB1PAXaRLAiKgruHP8LB1w==,
       }
 
   emittery@0.13.1:
@@ -8397,10 +8394,10 @@ packages:
         integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==,
       }
 
-  which-typed-array@1.1.20:
+  which-typed-array@1.1.21:
     resolution:
       {
-        integrity: sha512-LYfpUkmqwl0h9A2HL09Mms427Q1RZWuOHsukfVcKRq9q95iQxdw0ix1JQrqbcDR9PH1QDwf5Qo8OZb5lksZ8Xg==,
+        integrity: sha512-zbRA8cVm6io/d5W8uIe2hblzN76/Wm3v/yiythQvr+dpBWeqhPSWIDNj4zOyHi4zKbMK6DN34Xsr9jPHJERAEw==,
       }
     engines: { node: ">= 0.4" }
 
@@ -9140,7 +9137,7 @@ snapshots:
       "@eslint/core": 0.17.0
       levn: 0.4.1
 
-  "@explorernw/monitor-sdk@1.0.7(rollup@4.60.4)":
+  "@explorernw/monitor-sdk@1.0.8(rollup@4.60.4)":
     dependencies:
       "@rollup/plugin-node-resolve": 16.0.3(rollup@4.60.4)
     transitivePeerDependencies:
@@ -9557,7 +9554,7 @@ snapshots:
       "@langchain/core": 1.1.48(openai@6.39.0(zod@4.4.3))
       uuid: 10.0.0
 
-  "@langchain/langgraph-sdk@1.9.6(@langchain/core@1.1.48(openai@6.39.0(zod@4.4.3)))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)":
+  "@langchain/langgraph-sdk@1.9.8(@langchain/core@1.1.48(openai@6.39.0(zod@4.4.3)))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)":
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.0(zod@4.4.3))
       "@langchain/protocol": 0.0.15
@@ -9573,7 +9570,7 @@ snapshots:
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.0(zod@4.4.3))
       "@langchain/langgraph-checkpoint": 1.0.2(@langchain/core@1.1.48(openai@6.39.0(zod@4.4.3)))
-      "@langchain/langgraph-sdk": 1.9.6(@langchain/core@1.1.48(openai@6.39.0(zod@4.4.3)))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      "@langchain/langgraph-sdk": 1.9.8(@langchain/core@1.1.48(openai@6.39.0(zod@4.4.3)))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       "@langchain/protocol": 0.0.15
       "@standard-schema/spec": 1.1.0
       uuid: 10.0.0
@@ -10779,7 +10776,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  brace-expansion@1.1.14:
+  brace-expansion@1.1.15:
     dependencies:
       balanced-match: 1.0.2
       concat-map: 0.0.1
@@ -10800,7 +10797,7 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.10.32
       caniuse-lite: 1.0.30001793
-      electron-to-chromium: 1.5.361
+      electron-to-chromium: 1.5.362
       node-releases: 2.0.46
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
 
@@ -11136,7 +11133,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.361: {}
+  electron-to-chromium@1.5.362: {}
 
   emittery@0.13.1: {}
 
@@ -11784,7 +11781,7 @@ snapshots:
 
   is-typed-array@1.1.15:
     dependencies:
-      which-typed-array: 1.1.20
+      which-typed-array: 1.1.21
 
   is-unicode-supported@0.1.0: {}
 
@@ -12422,7 +12419,7 @@ snapshots:
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 1.1.14
+      brace-expansion: 1.1.15
 
   minimatch@9.0.9:
     dependencies:
@@ -13680,7 +13677,7 @@ snapshots:
       tr46: 0.0.3
       webidl-conversions: 3.0.1
 
-  which-typed-array@1.1.20:
+  which-typed-array@1.1.21:
     dependencies:
       available-typed-arrays: 1.0.7
       call-bind: 1.0.9
