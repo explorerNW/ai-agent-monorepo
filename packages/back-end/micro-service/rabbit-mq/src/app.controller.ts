@@ -3,11 +3,15 @@ import { AppService } from './app.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AnalyticsDto } from './analytics.dto';
 import { catchError, map, throwError } from 'rxjs';
+import { ClickHouseService } from './clickhouse/clickhouse.service';
 
 @Controller()
 export class AppController {
   private readonly logger = new Logger(AppController.name);
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly clickHouseService: ClickHouseService,
+  ) {}
 
   @MessagePattern('rmq-message')
   message(@Payload() payload: AnalyticsDto[]) {
@@ -23,5 +27,24 @@ export class AppController {
         return throwError(() => ({ message_send: false, error }));
       }),
     );
+  }
+
+  @MessagePattern('performance.metrics')
+  async handlePerformanceMetrics(@Payload() data: any) {
+    this.logger.log('Received performance metrics:');
+
+    // 存储到 ClickHouse
+    await this.clickHouseService.insertPerformanceData(data);
+
+    return { success: true, message: 'Performance data stored successfully' };
+  }
+
+  @MessagePattern('api.metrics')
+  async handleAPIMetrics(@Payload() data: any) {
+    this.logger.log('Received API metrics:');
+    // 存储到 ClickHouse
+    await this.clickHouseService.insertAPIData(data);
+
+    return { success: true, message: 'API data stored successfully' };
   }
 }
