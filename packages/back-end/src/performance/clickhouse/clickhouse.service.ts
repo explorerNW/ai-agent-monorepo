@@ -19,7 +19,7 @@ interface APIMetricData {
 @Injectable()
 export class ClickHouseService {
   private client = createClient({
-    host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
+    url: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
     username: process.env.CLICKHOUSE_USER || 'default',
     password: process.env.CLICKHOUSE_PASSWORD || '',
     database: process.env.CLICKHOUSE_DB || 'performance_db',

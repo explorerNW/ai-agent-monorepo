@@ -47,4 +47,20 @@ export class AppController {
 
     return { success: true, message: 'API data stored successfully' };
   }
+
+  @MessagePattern('get.performance.summary')
+  async getPerformanceSummary(
+    @Payload() data: { fromDate: string; toDate: string },
+  ) {
+    try {
+      this.logger.log('Received performance summary request:', data);
+      return await this.clickHouseService.getPerformanceSummary(
+        new Date(data.fromDate),
+        new Date(data.toDate),
+      );
+    } catch (error) {
+      this.logger.error('Error processing performance summary request:', error);
+      throw error;
+    }
+  }
 }

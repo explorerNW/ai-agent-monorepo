@@ -19,7 +19,7 @@ interface APIMetricData {
 @Injectable()
 export class ClickHouseService {
   private client = createClient({
-    host: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
+    url: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
     username: process.env.CLICKHOUSE_USER || 'default',
     password: process.env.CLICKHOUSE_PASSWORD || '',
     database: process.env.CLICKHOUSE_DB || 'performance_db',
@@ -233,7 +233,7 @@ export class ClickHouseService {
         avg(cls) as avg_cls,
         count(*) as total_records
       FROM ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics
-      WHERE timestamp >= {from: DateTime} AND timestamp <= {to: DateTime}
+      WHERE timestamp >= parseDateTimeBestEffort({from: String}) AND timestamp <= parseDateTimeBestEffort({to: String})
         AND fcp IS NOT NULL
         AND lcp IS NOT NULL
       GROUP BY pageUrl

@@ -270,6 +270,9 @@ jobs:
             CLICKHOUSE_USER=${{ secrets.CLICKHOUSE_USER }}
             CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
             CLICKHOUSE_DB=${{ secrets.CLICKHOUSE_DB }}
+            REDIS_USER=${{ secrets.REDIS_USER }}
+            REDIS_PASS=${{ secrets.REDIS_PASS }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
             EOF
 
             # Restore SSL certificates from latest backup (if available)

@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientRMQ } from '@nestjs/microservices';
 import { ClickHouseService } from './clickhouse/clickhouse.service';
-import { map } from 'rxjs';
+import { map, firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class PerformanceService {
@@ -95,5 +95,11 @@ export class PerformanceService {
       // Don't throw - allow the request to succeed even if storage fails
       return { success: false, error: 'Failed to store custom metric' };
     }
+  }
+
+  async getPerformanceSummary(fromDate: string, toDate: string): Promise<any> {
+    return await firstValueFrom(
+      this.client.send('get.performance.summary', { fromDate, toDate }),
+    );
   }
 }
