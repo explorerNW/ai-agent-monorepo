@@ -13,7 +13,7 @@ NC='\033[0m'
 
 # Configuration
 DOMAIN="${SSL_DOMAIN:-niewang.uunat.com}"
-EMAIL="${SSL_EMAIL:-admin@uunat.com}"
+EMAIL="${SSL_EMAIL:-superexplorernw@163.com}"
 CERT_DIR="/etc/letsencrypt"
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 

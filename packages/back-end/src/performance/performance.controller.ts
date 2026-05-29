@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Logger, Query } from '@nestjs/common';
 import { PerformanceService } from './performance.service';
 
 interface IPerformanceData {
@@ -28,6 +28,7 @@ interface IPerformanceData {
 
 @Controller('api/performance')
 export class PerformanceController {
+  private readonly logger: Logger = new Logger(PerformanceController.name);
   constructor(private readonly performanceService: PerformanceService) {}
 
   @Post()
@@ -84,5 +85,16 @@ export class PerformanceController {
       );
       throw error;
     }
+  }
+
+  @Get('summary')
+  async getSummary(
+    @Query('fromDate') fromDate: string,
+    @Query('toDate') toDate: string,
+  ) {
+    return await this.performanceService.getPerformanceSummary(
+      fromDate,
+      toDate,
+    );
   }
 }
