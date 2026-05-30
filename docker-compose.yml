@@ -109,6 +109,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - ai-agent-network
