@@ -29,6 +29,7 @@
     "@langchain/langgraph-checkpoint-redis": "^1.0.6",
     "@langchain/ollama": "^1.2.6",
     "@langchain/openai": "^1.4.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@nestjs/cache-manager": "^3.1.2",
     "@nestjs/common": "^11.1.19",
     "@nestjs/config": "^4.0.4",
@@ -43,6 +44,7 @@
     "cache-manager": "^7.2.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
+    "express": "^5.2.1",
     "form-data": "^4.0.5",
     "langchain": "^1.2.37",
     "mongoose": "^9.6.2",
@@ -57,7 +59,9 @@
     "rxjs": "^7.8.1",
     "tesseract.js": "^7.0.0",
     "typeorm": "^0.3.29",
-    "zod": "^4.3.6"
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

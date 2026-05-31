@@ -10,8 +10,8 @@ import { CodeReviewController } from './code-review/code-review.controller';
 import { PDFProcessModule } from './pdf-process/pdf-process.module';
 import { AnalyticsModule } from './analysis/analytics.module';
 import { RedisModule } from './redis/redis.module';
-import { TimeLocationMcpModule } from './mcp/time-location/time-location.module';
 import { PerformanceModule } from './performance/performance.module';
+import { McpModule } from './mcp/mcp.module';
 
 @Module({
   imports: [
@@ -38,7 +38,7 @@ import { PerformanceModule } from './performance/performance.module';
     AiModule,
     PDFProcessModule,
     AnalyticsModule,
-    TimeLocationMcpModule,
+    McpModule,
     PerformanceModule,
   ],
   controllers: [AppController, CodeReviewController],
