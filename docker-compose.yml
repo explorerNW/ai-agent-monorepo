@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: ai-agent-postgres
     environment:
       POSTGRES_DB: ${DB_NAME:-analytics}
@@ -11,8 +11,8 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"
     networks:
       - ai-agent-network
     healthcheck:
@@ -39,6 +39,8 @@ services:
       - ${REDIS_PASS}
       - --appendonly
       - "yes"
+    # ports:
+    #   - "6379:6379"
     env_file:
       - ./packages/back-end/.env
     environment:
@@ -68,7 +70,7 @@ services:
     image: rabbitmq:4-management
     container_name: ai-agent-rabbitmq
     ports:
-      - "5672:5672"
+      # - "5672:5672"
       - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
