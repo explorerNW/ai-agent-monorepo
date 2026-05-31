@@ -104,6 +104,10 @@ services:
     environment:
       - NODE_ENV=production
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:5672
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
     env_file:
       - ./packages/back-end/.env
     depends_on:
@@ -154,9 +158,9 @@ services:
     env_file:
       - ./packages/back-end/.env
     environment:
-      CLICKHOUSE_DB: performance_db
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: "admin@me"
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
     restart: always
     networks:
       - ai-agent-network
@@ -217,10 +221,10 @@ services:
       - DB_USER=${DB_USER:-admin}
       - DB_PASSWORD=${DB_PASSWORD:-admin123}
       - DB_NAME=${DB_NAME:-analytics}
-      - CLICKHOUSE_HOST=http://clickhouse:8123
-      - CLICKHOUSE_USER=default
-      - CLICKHOUSE_PASSWORD=admin@me
-      - CLICKHOUSE_DB=performance_db
+      - CLICKHOUSE_HOST=${CLICKHOUSE_HOST}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB}
     env_file:
       - ./packages/back-end/.env
     volumes:
