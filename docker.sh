@@ -198,13 +198,13 @@ deploy_rolling() {
     #echo -e "${GREEN}✓ Backup created at ${backup_dir}${NC}"
     
     # Build new images
-    #echo -e "${BLUE}Step 3: Building new images...${NC}"
-    #if [ "$force_mode" = "true" ]; then
-    #    $DOCKER_COMPOSE build --no-cache
-    #else
-    #    $DOCKER_COMPOSE build
-    #fi
-    #echo -e "${GREEN}✓ New images built successfully${NC}"
+    echo -e "${BLUE}Step 3: Building new images...${NC}"
+    if [ "$force_mode" = "true" ]; then
+        $DOCKER_COMPOSE build --no-cache
+    else
+        $DOCKER_COMPOSE build
+    fi
+    echo -e "${GREEN}✓ New images built successfully${NC}"
     
     # Perform rolling update
     echo -e "${BLUE}Step 4: Performing rolling update...${NC}"

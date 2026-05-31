@@ -30,6 +30,8 @@ export async function sendChatMessage(
   messages: ChatMessage[],
 ): Promise<ReadableStream> {
   const startTime = performance.now();
+  const analytics_uid =
+    localStorage.getItem("analytics_uid") || startTime.toString();
 
   try {
     const response = await analyticsInstance.trackedFetch(
@@ -38,6 +40,7 @@ export async function sendChatMessage(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-session-id": analytics_uid,
         },
         body: JSON.stringify({ messages }),
       },
