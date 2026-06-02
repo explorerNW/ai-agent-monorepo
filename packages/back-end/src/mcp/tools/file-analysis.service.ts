@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { McpTool } from '../dto/mcp.decorators';
+import { OpenAI } from 'openai';
 
 @Injectable()
 export class FileAnalysisService {
@@ -28,18 +29,46 @@ export class FileAnalysisService {
     files: Array<{ filePath: string; content: string }>;
     userInstruction?: string;
   }) {
-    // 在这里处理业务逻辑
-    const summary = args.files
-      .map((f) => `- ${f.filePath} (${f.content.length} chars)`)
-      .join('\n');
+    const openai = new OpenAI({
+      apiKey: process.env.DASHSCOPE_API_KEY, // 从环境变量读取
+      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    });
 
-    return Promise.resolve({
+    const messages: any[] = [
+      {
+        role: 'system',
+        content:
+          '你是一个代码分析专家。请仔细分析提供的代码，给出结构清晰、专业且可操作的反馈。',
+      },
+      {
+        role: 'user',
+        content: args.files
+          .map((f) => f.content.replaceAll(' ', ''))
+          .join('\n\n'),
+      },
+    ];
+    const stream = await (openai.chat.completions as any).create({
+      model: 'qwen3.6-27b',
+      messages,
+      stream: true,
+      enable_thinking: true,
+    });
+
+    let fullContent = '';
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content || '';
+      if (!delta) continue;
+
+      fullContent += delta;
+    }
+
+    return {
       content: [
         {
           type: 'text',
-          text: `成功接收到 ${args.files.length} 个文件:\n${summary}\n\n用户指令: ${args.userInstruction || '无'}`,
+          text: fullContent.trim(),
         },
       ],
-    });
+    };
   }
 }

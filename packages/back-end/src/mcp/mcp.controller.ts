@@ -6,10 +6,14 @@ import {
   UseGuards,
   Logger,
   Req,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import type { Request } from 'express';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
+import { Observable, Subject, merge, interval } from 'rxjs';
+import { map, takeUntil } from 'rxjs/operators';
 import {
   MCP_TOOL_METADATA,
   MCP_RESOURCE_METADATA,
@@ -30,6 +34,7 @@ export class McpController {
   private toolsMap = new Map<string, any>();
   private resourcesMap = new Map<string, any>();
   private promptsMap = new Map<string, any>();
+  private sseSubjects = new Map<string, Subject<MessageEvent>>();
 
   constructor(
     private readonly discoveryService: DiscoveryService,
@@ -90,6 +95,37 @@ export class McpController {
     }
   }
 
+  @Sse()
+  sse(@Req() req: Request): Observable<MessageEvent> {
+    const sessionId = uuidv4();
+    const subject = new Subject<MessageEvent>();
+
+    this.sseSubjects.set(sessionId, subject);
+
+    // 发送 session.created 事件，告知客户端 sessionId
+    subject.next({
+      data: JSON.stringify({ sessionId }),
+      type: 'session.created',
+    });
+
+    // 客户端断开时清理
+    req.on('close', () => {
+      this.sseSubjects.delete(sessionId);
+      subject.complete();
+      this.logger.log(`SSE session closed: ${sessionId}`);
+    });
+
+    this.logger.log(`SSE session created: ${sessionId}`);
+
+    // 合并 keepalive 心跳，防止代理/负载均衡器断开空闲连接
+    const keepalive = interval(15000).pipe(
+      map(() => ({ data: '' }) as any),
+      takeUntil(subject),
+    );
+
+    return merge(subject.asObservable(), keepalive);
+  }
+
   @Post()
   async handleJsonRpc(
     @Body() body: any,
@@ -98,35 +134,7 @@ export class McpController {
   ) {
     const { method, params, id } = body;
     const traceId = uuidv4(); // 生成唯一链路追踪ID
-    // const accept = req.headers.accept;
-
-    // 如果客户端请求 SSE 流
-    // if (accept?.includes('text/event-stream')) {
-    //   res.writeHead(200, {
-    //     'Content-Type': 'text/event-stream',
-    //     'Cache-Control': 'no-cache',
-    //     Connection: 'keep-alive',
-    //     'X-Accel-Buffering': 'no', // 禁用 Nginx 缓冲
-    //   });
-    //   res.flushHeaders();
-
-    //   // 发送初始连接确认事件
-    //   res.write('event: endpoint\ndata: /mcp\n\n');
-
-    //   // 心跳保活，每 30 秒发送一次注释行
-    //   const heartbeat = setInterval(() => {
-    //     if (!res.writableEnded) {
-    //       res.write(':keep-alive\n\n');
-    //     }
-    //   }, 30000);
-
-    //   // 客户端断开时清理
-    //   req.on('close', () => {
-    //     clearInterval(heartbeat);
-    //   });
-
-    //   return;
-    // }
+    const sessionId = (req.query as any).sessionId; // StreamableHTTP 客户端通过 query 传递 sessionId
 
     let response: any;
 
@@ -237,7 +245,7 @@ export class McpController {
               (!args || Object.keys(args).length === 0)
             ) {
               this.logger.warn(
-                `[${traceId}] LLM passed invalid params to ${handlerKey}, using defaults.`,
+                `[${traceId}|${sessionId}] LLM passed invalid params to ${handlerKey}, using defaults.`,
               );
               args = {};
             } else {
@@ -251,7 +259,7 @@ export class McpController {
         const result: McpResponse = await target.handler(args);
         const duration = Date.now() - startTime;
         this.logger.log(
-          `[${traceId}] Executed ${method} (${handlerKey}) in ${duration}ms`,
+          `[${traceId}|${sessionId}] Executed ${method} (${handlerKey}) in ${duration}ms`,
         );
 
         response = { jsonrpc: '2.0', id, result };
@@ -264,7 +272,7 @@ export class McpController {
       }
     } catch (error: any) {
       this.logger.error(
-        `[${traceId}] MCP Error: ${error.message}`,
+        `[${traceId}|${sessionId}] MCP Error: ${error.message}`,
         error.stack,
       );
       // 捕获异常，返回标准化的错误文本给 AI，避免 AI 陷入死循环
