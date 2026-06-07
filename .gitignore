@@ -53,3 +53,5 @@ temp_ocr/
 
 clickhouse-data/
 grafana-data/
+
+venv/
