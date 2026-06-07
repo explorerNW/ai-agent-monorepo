@@ -323,13 +323,13 @@ jobs:
             docker ps --format "table {{.Names}}\t{{.Status}}" || true
 
       # 4. 执行文档生成脚本
-      - name: Generate Markdown Docs
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
-        run: |
-          python tools/generate_docs.py --input ./packages --output ./docs/generated
+      # - name: Generate Markdown Docs
+      #   env:
+      #     LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      #     LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+      #     LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      #   run: |
+      #     python tools/generate_docs.py --input ./packages --output ./docs/generated
 
       # 步骤5: 部署后验证
       - name: Post-deployment Verification
