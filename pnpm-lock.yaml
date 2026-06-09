@@ -33,13 +33,13 @@ importers:
         version: 1.4.0(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
       "@langchain/community":
         specifier: ^1.1.29
-        version: 1.1.29(@browserbasehq/sdk@2.12.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.60.0)(deepmerge@4.3.1)(dotenv@17.4.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(zod@4.4.3))(@clickhouse/client@1.18.5)(@ibm-cloud/watsonx-ai@1.7.13)(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ibm-cloud-sdk-core@5.4.20)(ignore@7.0.5)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(pg@8.21.0)(playwright@1.60.0)(redis@4.7.1)(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)
+        version: 1.1.29(@browserbasehq/sdk@2.12.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.60.0)(deepmerge@4.3.1)(dotenv@17.4.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(zod@4.4.3))(@clickhouse/client@1.18.5)(@ibm-cloud/watsonx-ai@1.7.13)(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ibm-cloud-sdk-core@5.4.20)(ignore@7.0.5)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(pg@8.21.0)(playwright@1.60.0)(redis@6.0.0)(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)
       "@langchain/core":
         specifier: ^1.1.48
         version: 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       "@langchain/langgraph":
         specifier: ^1.2.5
-        version: 1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
+        version: 1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
       "@langchain/langgraph-checkpoint-postgres":
         specifier: ^1.0.1
         version: 1.0.1(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(@langchain/langgraph-checkpoint@1.0.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)))
@@ -78,7 +78,7 @@ importers:
         version: 11.1.24(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)
       "@nestjs/typeorm":
         specifier: ^11.0.1
-        version: 11.0.1(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+        version: 11.0.1(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
       amqp-connection-manager:
         specifier: ^5.0.0
         version: 5.0.0(amqplib@1.2.0)
@@ -105,7 +105,7 @@ importers:
         version: 4.0.5
       langchain:
         specifier: ^1.2.37
-        version: 1.4.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(ws@8.21.0)(zod-to-json-schema@3.25.2(zod@4.4.3))
+        version: 1.4.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)(zod-to-json-schema@3.25.2(zod@4.4.3))
       mongoose:
         specifier: ^9.6.2
         version: 9.6.2
@@ -130,6 +130,9 @@ importers:
       pgvector:
         specifier: ^0.2.1
         version: 0.2.1
+      redis:
+        specifier: ^6.0.0
+        version: 6.0.0
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -141,7 +144,7 @@ importers:
         version: 7.0.0
       typeorm:
         specifier: ^0.3.29
-        version: 0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+        version: 0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -181,13 +184,13 @@ importers:
         version: 6.0.3
       eslint:
         specifier: ^9.18.0
-        version: 9.39.4(jiti@2.7.0)
+        version: 9.39.4
       eslint-config-prettier:
         specifier: ^10.0.1
-        version: 10.1.8(eslint@9.39.4(jiti@2.7.0))
+        version: 10.1.8(eslint@9.39.4)
       eslint-plugin-prettier:
         specifier: ^5.2.2
-        version: 5.5.5(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.3)
+        version: 5.5.5(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.39.4))(eslint@9.39.4)(prettier@3.8.3)
       globals:
         specifier: ^16.0.0
         version: 16.5.0
@@ -220,7 +223,7 @@ importers:
         version: 5.9.3
       typescript-eslint:
         specifier: ^8.20.0
-        version: 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+        version: 8.60.0(eslint@9.39.4)(typescript@5.9.3)
 
   packages/front-end:
     dependencies:
@@ -2536,12 +2539,36 @@ packages:
     peerDependencies:
       "@redis/client": ^1.0.0
 
+  "@redis/bloom@6.0.0":
+    resolution:
+      {
+        integrity: sha512-P0n5NkV9IIdT6nYXOfMHG83sho8pE7Nay7yw27wOGVLv4DthgvzebpGz6m7VuMTizeJmw3LPw2Xek5wFUhGpVw==,
+      }
+    engines: { node: ">= 20.0.0" }
+    peerDependencies:
+      "@redis/client": ^6.0.0
+
   "@redis/client@1.6.1":
     resolution:
       {
         integrity: sha512-/KCsg3xSlR+nCK8/8ZYSknYxvXHwubJrU82F3Lm1Fp6789VQ0/3RJKfsmRXjqfaTA++23CvC3hqmqe/2GEt6Kw==,
       }
     engines: { node: ">=14" }
+
+  "@redis/client@6.0.0":
+    resolution:
+      {
+        integrity: sha512-NS4iIT25r24sAjNQ2nSRdCW5jPJoV0rxkBee27oTeR+RXaOu89cjIsrww5rPBaYVGVdL1QCx9uz9141gZiSKdQ==,
+      }
+    engines: { node: ">= 20.0.0" }
+    peerDependencies:
+      "@node-rs/xxhash": ^1.1.0
+      "@opentelemetry/api": ">=1 <2"
+    peerDependenciesMeta:
+      "@node-rs/xxhash":
+        optional: true
+      "@opentelemetry/api":
+        optional: true
 
   "@redis/graph@1.1.1":
     resolution:
@@ -2559,6 +2586,15 @@ packages:
     peerDependencies:
       "@redis/client": ^1.0.0
 
+  "@redis/json@6.0.0":
+    resolution:
+      {
+        integrity: sha512-F+eqFfgPcy57Zs1KW7UtLnBtRk6lxAUIoe7dyZerpm6e+ssYXG/dWJrbrHFYs0b7tt6QBtYpVuukBuM9XqhUAg==,
+      }
+    engines: { node: ">= 20.0.0" }
+    peerDependencies:
+      "@redis/client": ^6.0.0
+
   "@redis/search@1.2.0":
     resolution:
       {
@@ -2567,6 +2603,15 @@ packages:
     peerDependencies:
       "@redis/client": ^1.0.0
 
+  "@redis/search@6.0.0":
+    resolution:
+      {
+        integrity: sha512-VHuCJ2W0YWFixGZh/l//8JiyOsD4gN+NhjdRAGIoUe0UQ4mtq1NyY2ZJ973XT+vYhaU21XdK8r8oNrd5n7wbzQ==,
+      }
+    engines: { node: ">= 20.0.0" }
+    peerDependencies:
+      "@redis/client": ^6.0.0
+
   "@redis/time-series@1.1.0":
     resolution:
       {
@@ -2574,6 +2619,15 @@ packages:
       }
     peerDependencies:
       "@redis/client": ^1.0.0
+
+  "@redis/time-series@6.0.0":
+    resolution:
+      {
+        integrity: sha512-QWhkYsg+3lhBrBf+cbzybtV8LQcSrk7iXIgTaGU+pHNFTkql7TpVRE24ROS6M2ybVIV6O/zxTqfxgxxYiqyw0Q==,
+      }
+    engines: { node: ">= 20.0.0" }
+    peerDependencies:
+      "@redis/client": ^6.0.0
 
   "@remix-run/node-fetch-server@0.13.3":
     resolution:
@@ -8039,6 +8093,13 @@ packages:
         integrity: sha512-S1bJDnqLftzHXHP8JsT5II/CtHWQrASX5K96REjWjlmWKrviSOLWmM7QnRLstAWsu1VBBV1ffV6DzCvxNP0UJQ==,
       }
 
+  redis@6.0.0:
+    resolution:
+      {
+        integrity: sha512-n9Thfc39OXleEoPT2k5gwKsqY+HfCww3YS71ofcr9KKbkn89bpjU9dToIlD+JRdM3/GYQkwMtVgTxLyed+LptQ==,
+      }
+    engines: { node: ">= 20.0.0" }
+
   reflect-metadata@0.2.2:
     resolution:
       {
@@ -10154,9 +10215,9 @@ snapshots:
   "@esbuild/win32-x64@0.27.7":
     optional: true
 
-  "@eslint-community/eslint-utils@4.9.1(eslint@9.39.4(jiti@2.7.0))":
+  "@eslint-community/eslint-utils@4.9.1(eslint@9.39.4)":
     dependencies:
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       eslint-visitor-keys: 3.4.3
 
   "@eslint-community/regexpp@4.12.2": {}
@@ -10607,7 +10668,7 @@ snapshots:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       zod: 4.4.3
 
-  "@langchain/classic@1.0.34(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)":
+  "@langchain/classic@1.0.34(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)":
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       "@langchain/openai": 1.4.7(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ws@8.21.0)
@@ -10620,7 +10681,7 @@ snapshots:
       zod: 4.4.3
     optionalDependencies:
       langsmith: 0.7.2(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
-      typeorm: 0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      typeorm: 0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
     transitivePeerDependencies:
       - "@opentelemetry/api"
       - "@opentelemetry/exporter-trace-otlp-proto"
@@ -10628,11 +10689,11 @@ snapshots:
       - openai
       - ws
 
-  "@langchain/community@1.1.29(@browserbasehq/sdk@2.12.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.60.0)(deepmerge@4.3.1)(dotenv@17.4.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(zod@4.4.3))(@clickhouse/client@1.18.5)(@ibm-cloud/watsonx-ai@1.7.13)(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ibm-cloud-sdk-core@5.4.20)(ignore@7.0.5)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(pg@8.21.0)(playwright@1.60.0)(redis@4.7.1)(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)":
+  "@langchain/community@1.1.29(@browserbasehq/sdk@2.12.0)(@browserbasehq/stagehand@1.14.0(@playwright/test@1.60.0)(deepmerge@4.3.1)(dotenv@17.4.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(zod@4.4.3))(@clickhouse/client@1.18.5)(@ibm-cloud/watsonx-ai@1.7.13)(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ibm-cloud-sdk-core@5.4.20)(ignore@7.0.5)(jsonwebtoken@9.0.3)(lodash@4.18.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(pg@8.21.0)(playwright@1.60.0)(redis@6.0.0)(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)":
     dependencies:
       "@browserbasehq/stagehand": 1.14.0(@playwright/test@1.60.0)(deepmerge@4.3.1)(dotenv@17.4.1)(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(zod@4.4.3)
       "@ibm-cloud/watsonx-ai": 1.7.13
-      "@langchain/classic": 1.0.34(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)
+      "@langchain/classic": 1.0.34(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))(ws@8.21.0)
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       "@langchain/openai": 1.4.7(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(ws@8.21.0)
       binary-extensions: 2.3.0
@@ -10652,8 +10713,8 @@ snapshots:
       lodash: 4.18.1
       pg: 8.21.0
       playwright: 1.60.0
-      redis: 4.7.1
-      typeorm: 0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      redis: 6.0.0
+      typeorm: 0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
       ws: 8.21.0
     transitivePeerDependencies:
       - "@opentelemetry/api"
@@ -10697,7 +10758,7 @@ snapshots:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       uuid: 10.0.0
 
-  "@langchain/langgraph-sdk@1.9.8(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)":
+  "@langchain/langgraph-sdk@1.9.8(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))":
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       "@langchain/protocol": 0.0.15
@@ -10705,15 +10766,12 @@ snapshots:
       p-queue: 9.3.0
       p-retry: 7.1.1
       uuid: 13.0.2
-    optionalDependencies:
-      react: 19.2.6
-      react-dom: 19.2.6(react@19.2.6)
 
-  "@langchain/langgraph@1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)":
+  "@langchain/langgraph@1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)":
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       "@langchain/langgraph-checkpoint": 1.0.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
-      "@langchain/langgraph-sdk": 1.9.8(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      "@langchain/langgraph-sdk": 1.9.8(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
       "@langchain/protocol": 0.0.15
       "@standard-schema/spec": 1.1.0
       uuid: 10.0.0
@@ -10922,13 +10980,13 @@ snapshots:
       "@nestjs/microservices": 11.1.24(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(amqp-connection-manager@5.0.0(amqplib@1.2.0))(amqplib@1.2.0)(cache-manager@7.2.8)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       "@nestjs/platform-express": 11.1.24(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)
 
-  "@nestjs/typeorm@11.0.1(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))":
+  "@nestjs/typeorm@11.0.1(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.24)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))":
     dependencies:
       "@nestjs/common": 11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       "@nestjs/core": 11.1.24(@nestjs/common@11.1.24(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/platform-express@11.1.24)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
-      typeorm: 0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      typeorm: 0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
 
   "@noble/hashes@1.8.0": {}
 
@@ -11043,11 +11101,19 @@ snapshots:
     dependencies:
       "@redis/client": 1.6.1
 
+  "@redis/bloom@6.0.0(@redis/client@6.0.0)":
+    dependencies:
+      "@redis/client": 6.0.0
+
   "@redis/client@1.6.1":
     dependencies:
       cluster-key-slot: 1.1.2
       generic-pool: 3.9.0
       yallist: 4.0.0
+
+  "@redis/client@6.0.0":
+    dependencies:
+      cluster-key-slot: 1.1.2
 
   "@redis/graph@1.1.1(@redis/client@1.6.1)":
     dependencies:
@@ -11057,13 +11123,25 @@ snapshots:
     dependencies:
       "@redis/client": 1.6.1
 
+  "@redis/json@6.0.0(@redis/client@6.0.0)":
+    dependencies:
+      "@redis/client": 6.0.0
+
   "@redis/search@1.2.0(@redis/client@1.6.1)":
     dependencies:
       "@redis/client": 1.6.1
 
+  "@redis/search@6.0.0(@redis/client@6.0.0)":
+    dependencies:
+      "@redis/client": 6.0.0
+
   "@redis/time-series@1.1.0(@redis/client@1.6.1)":
     dependencies:
       "@redis/client": 1.6.1
+
+  "@redis/time-series@6.0.0(@redis/client@6.0.0)":
+    dependencies:
+      "@redis/client": 6.0.0
 
   "@remix-run/node-fetch-server@0.13.3": {}
 
@@ -11500,15 +11578,15 @@ snapshots:
     dependencies:
       "@types/yargs-parser": 21.0.3
 
-  "@typescript-eslint/eslint-plugin@8.60.0(@typescript-eslint/parser@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)":
+  "@typescript-eslint/eslint-plugin@8.60.0(@typescript-eslint/parser@8.60.0(eslint@9.39.4)(typescript@5.9.3))(eslint@9.39.4)(typescript@5.9.3)":
     dependencies:
       "@eslint-community/regexpp": 4.12.2
-      "@typescript-eslint/parser": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      "@typescript-eslint/parser": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
       "@typescript-eslint/scope-manager": 8.60.0
-      "@typescript-eslint/type-utils": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
-      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      "@typescript-eslint/type-utils": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
+      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
       "@typescript-eslint/visitor-keys": 8.60.0
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       ignore: 7.0.5
       natural-compare: 1.4.0
       ts-api-utils: 2.5.0(typescript@5.9.3)
@@ -11516,14 +11594,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  "@typescript-eslint/parser@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)":
+  "@typescript-eslint/parser@8.60.0(eslint@9.39.4)(typescript@5.9.3)":
     dependencies:
       "@typescript-eslint/scope-manager": 8.60.0
       "@typescript-eslint/types": 8.60.0
       "@typescript-eslint/typescript-estree": 8.60.0(typescript@5.9.3)
       "@typescript-eslint/visitor-keys": 8.60.0
       debug: 4.4.3
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -11546,13 +11624,13 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  "@typescript-eslint/type-utils@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)":
+  "@typescript-eslint/type-utils@8.60.0(eslint@9.39.4)(typescript@5.9.3)":
     dependencies:
       "@typescript-eslint/types": 8.60.0
       "@typescript-eslint/typescript-estree": 8.60.0(typescript@5.9.3)
-      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
       debug: 4.4.3
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -11575,13 +11653,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  "@typescript-eslint/utils@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)":
+  "@typescript-eslint/utils@8.60.0(eslint@9.39.4)(typescript@5.9.3)":
     dependencies:
-      "@eslint-community/eslint-utils": 4.9.1(eslint@9.39.4(jiti@2.7.0))
+      "@eslint-community/eslint-utils": 4.9.1(eslint@9.39.4)
       "@typescript-eslint/scope-manager": 8.60.0
       "@typescript-eslint/types": 8.60.0
       "@typescript-eslint/typescript-estree": 8.60.0(typescript@5.9.3)
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -12473,19 +12551,19 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
-  eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)):
+  eslint-config-prettier@10.1.8(eslint@9.39.4):
     dependencies:
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
 
-  eslint-plugin-prettier@5.5.5(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.3):
+  eslint-plugin-prettier@5.5.5(@types/eslint@9.6.1)(eslint-config-prettier@10.1.8(eslint@9.39.4))(eslint@9.39.4)(prettier@3.8.3):
     dependencies:
-      eslint: 9.39.4(jiti@2.7.0)
+      eslint: 9.39.4
       prettier: 3.8.3
       prettier-linter-helpers: 1.0.1
       synckit: 0.11.12
     optionalDependencies:
       "@types/eslint": 9.6.1
-      eslint-config-prettier: 10.1.8(eslint@9.39.4(jiti@2.7.0))
+      eslint-config-prettier: 10.1.8(eslint@9.39.4)
 
   eslint-scope@5.1.1:
     dependencies:
@@ -12503,9 +12581,9 @@ snapshots:
 
   eslint-visitor-keys@5.0.1: {}
 
-  eslint@9.39.4(jiti@2.7.0):
+  eslint@9.39.4:
     dependencies:
-      "@eslint-community/eslint-utils": 4.9.1(eslint@9.39.4(jiti@2.7.0))
+      "@eslint-community/eslint-utils": 4.9.1(eslint@9.39.4)
       "@eslint-community/regexpp": 4.12.2
       "@eslint/config-array": 0.21.2
       "@eslint/config-helpers": 0.4.2
@@ -12539,8 +12617,6 @@ snapshots:
       minimatch: 3.1.5
       natural-compare: 1.4.0
       optionator: 0.9.4
-    optionalDependencies:
-      jiti: 2.7.0
     transitivePeerDependencies:
       - supports-color
 
@@ -13572,10 +13648,10 @@ snapshots:
     dependencies:
       "@keyv/serialize": 1.1.1
 
-  langchain@1.4.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(ws@8.21.0)(zod-to-json-schema@3.25.2(zod@4.4.3)):
+  langchain@1.4.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)(zod-to-json-schema@3.25.2(zod@4.4.3)):
     dependencies:
       "@langchain/core": 1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
-      "@langchain/langgraph": 1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
+      "@langchain/langgraph": 1.3.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
       "@langchain/langgraph-checkpoint": 1.0.2(@langchain/core@1.1.48(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0))
       langsmith: 0.7.2(openai@6.39.1(ws@8.21.0)(zod@4.4.3))(ws@8.21.0)
       zod: 4.4.3
@@ -14266,6 +14342,17 @@ snapshots:
       "@redis/search": 1.2.0(@redis/client@1.6.1)
       "@redis/time-series": 1.1.0(@redis/client@1.6.1)
 
+  redis@6.0.0:
+    dependencies:
+      "@redis/bloom": 6.0.0(@redis/client@6.0.0)
+      "@redis/client": 6.0.0
+      "@redis/json": 6.0.0(@redis/client@6.0.0)
+      "@redis/search": 6.0.0(@redis/client@6.0.0)
+      "@redis/time-series": 6.0.0(@redis/client@6.0.0)
+    transitivePeerDependencies:
+      - "@node-rs/xxhash"
+      - "@opentelemetry/api"
+
   reflect-metadata@0.2.2: {}
 
   regenerator-runtime@0.13.11: {}
@@ -14851,7 +14938,7 @@ snapshots:
 
   typedarray@0.0.6: {}
 
-  typeorm@0.3.30(pg@8.21.0)(redis@4.7.1)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)):
+  typeorm@0.3.30(pg@8.21.0)(redis@6.0.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)):
     dependencies:
       "@sqltools/formatter": 1.2.5
       ansis: 4.3.0
@@ -14870,19 +14957,19 @@ snapshots:
       yargs: 17.7.2
     optionalDependencies:
       pg: 8.21.0
-      redis: 4.7.1
+      redis: 6.0.0
       ts-node: 10.9.2(@types/node@22.19.19)(typescript@5.9.3)
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
 
-  typescript-eslint@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3):
+  typescript-eslint@8.60.0(eslint@9.39.4)(typescript@5.9.3):
     dependencies:
-      "@typescript-eslint/eslint-plugin": 8.60.0(@typescript-eslint/parser@8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
-      "@typescript-eslint/parser": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      "@typescript-eslint/eslint-plugin": 8.60.0(@typescript-eslint/parser@8.60.0(eslint@9.39.4)(typescript@5.9.3))(eslint@9.39.4)(typescript@5.9.3)
+      "@typescript-eslint/parser": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
       "@typescript-eslint/typescript-estree": 8.60.0(typescript@5.9.3)
-      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
-      eslint: 9.39.4(jiti@2.7.0)
+      "@typescript-eslint/utils": 8.60.0(eslint@9.39.4)(typescript@5.9.3)
+      eslint: 9.39.4
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color

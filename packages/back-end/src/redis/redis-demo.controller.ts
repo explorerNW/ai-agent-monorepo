@@ -7,10 +7,15 @@ import {
   Param,
   Body,
   UseInterceptors,
+  Inject,
 } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { UseRedisCache, InvalidateCache } from './redis.decorators';
 import { RedisCacheInterceptor } from './redis.interceptor';
+import { Idempotent } from '../idempotent/idempotent.decorator';
+import { IdempotentInterceptor } from '../idempotent/idempotent.interceptor';
+import { REDIS_CLIENT } from './redis.module';
+import type { RedisClientType } from 'redis';
 
 /**
  * Redis功能演示控制器
@@ -19,7 +24,11 @@ import { RedisCacheInterceptor } from './redis.interceptor';
 @Controller('redis-demo')
 @UseInterceptors(RedisCacheInterceptor)
 export class RedisDemoController {
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    @Inject({ forwardRef: () => REDIS_CLIENT })
+    private readonly redisClient: RedisClientType,
+  ) {}
 
   /**
    * 示例1: 基础缓存操作
@@ -89,6 +98,8 @@ export class RedisDemoController {
    * 示例3: 分布式锁 - 防止并发问题
    */
   @Post('lock/inventory/:productId')
+  @Idempotent(10) // 幂等性保护，10秒内重复提交视为无效
+  @UseInterceptors(IdempotentInterceptor)
   async distributedLockExample(@Param('productId') productId: string) {
     const lockKey = `lock:inventory:${productId}`;
 
@@ -104,7 +115,11 @@ export class RedisDemoController {
         }
 
         stock--;
-        await this.redisService.set(stockKey, stock, { ttl: 3600 });
+        await this.redisService.set(stockKey, stock, {
+          ttl: 36000,
+          jitter: true,
+          jitterRatio: 0.1,
+        });
 
         return {
           operation: 'Distributed Lock - Inventory Deduction',
