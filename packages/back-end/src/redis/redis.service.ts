@@ -1,14 +1,16 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { randomInt } from 'crypto';
 import { LockOptions, CacheOptions } from './redis.interfaces';
+
 import {
   LOCK_DEFAULT_OPTIONS,
   CACHE_DEFAULT_OPTIONS,
   SPECIAL_CACHE_KEYS,
 } from './redis.constants';
+import type { RedisClientType } from 'redis';
+import { REDIS_CLIENT } from './redis.module';
 
 @Injectable()
 export class RedisService {
@@ -16,7 +18,8 @@ export class RedisService {
 
   constructor(
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
-    private readonly configService: ConfigService,
+    @Inject({ forwardRef: () => REDIS_CLIENT })
+    private readonly redisClient: RedisClientType,
   ) {}
 
   /**
@@ -116,10 +119,16 @@ export class RedisService {
     try {
       // 使用 SET key value NX EX ttl 原子操作获取锁
       // cache-manager v5+ 使用 set 方法直接设置
-      await this.cache.set(lockKey, lockId, Math.floor(ttl / 1000));
+      await this.redisClient.set(lockKey, lockId, {
+        expiration: {
+          type: 'EX',
+          value: Math.floor(ttl / 1000),
+        },
+        condition: 'NX',
+      });
 
       // 验证是否设置成功（如果key已存在，set会失败）
-      const currentValue = await this.cache.get(lockKey);
+      const currentValue = await this.redisClient.get(lockKey);
       if (currentValue === lockId) {
         return lockId;
       }
@@ -152,17 +161,38 @@ export class RedisService {
    * 获取分布式锁（阻塞等待）
    */
   async lock(lockKey: string, options?: LockOptions): Promise<string | null> {
-    const retryDelay = options?.retryDelay || LOCK_DEFAULT_OPTIONS.RETRY_DELAY;
     const maxRetries = options?.retryCount || LOCK_DEFAULT_OPTIONS.RETRY_COUNT;
+    const baseRetryDelay =
+      options?.retryDelay || LOCK_DEFAULT_OPTIONS.RETRY_DELAY;
+    // 增加一个总超时时间参数，防止线程无限挂起
+    const maxWaitTime = options?.ttl || 3000; // 默认最多等待 3 秒
+    const startTime = Date.now();
 
     for (let i = 0; i < maxRetries; i++) {
+      // 1. 尝试获取锁
       const lockId = await this.tryLock(lockKey, options);
       if (lockId) {
         return lockId;
       }
 
-      // 等待后重试
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      // 2. 检查是否已经超过了最大等待时间
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= maxWaitTime) {
+        this.logger.warn(`Lock acquisition timed out for key: ${lockKey}`);
+        break;
+      }
+
+      // 3. 计算带有 Jitter 和指数退避的重试延迟
+      // 延迟时间 = 基础延迟 * (2的当前重试次方) + 随机抖动(0~100ms)
+      const exponentialDelay = baseRetryDelay * Math.pow(2, i);
+      const jitter = Math.floor(Math.random() * 100);
+      const actualDelay = Math.min(
+        exponentialDelay + jitter,
+        maxWaitTime - elapsed,
+      );
+
+      // 4. 等待后重试
+      await new Promise((resolve) => setTimeout(resolve, actualDelay));
     }
 
     return null;

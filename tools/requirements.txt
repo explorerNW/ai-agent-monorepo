@@ -1,0 +1,11 @@
+# 1. 调用大模型 API 的官方 SDK
+openai
+
+# 2. 用于安全读取 .env 文件中的环境变量
+python-dotenv
+
+# 3. 用于解析 TypeScript 代码的 Tree-sitter 核心库
+tree-sitter
+
+# 4. 用于解析 TypeScript 语法的 Tree-sitter 插件
+tree-sitter-typescript

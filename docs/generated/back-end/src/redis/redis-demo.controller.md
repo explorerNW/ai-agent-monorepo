@@ -1,215 +1,215 @@
-# RedisDemoController 技术文档
+# Redis Demo Controller 技术文档
 
 ## 文件概述
 
-`RedisDemoController.ts` 是一个 TypeScript 模块，用于演示如何在应用中使用 Redis。此模块包含多个函数和方法，每个函数都有其特定的功能。
+`redis-demo.controller.ts` 是一个 TypeScript 模块，包含了一系列与 Redis 相关的控制器方法。这些方法用于处理客户端请求、缓存数据以及执行分布式锁操作等任务。
 
-### 类：RedisDemoController
+### 类说明
 
-- **描述**：这是一个控制器类，用于处理与 Redis 相关的操作。
-- **参数**：无
-- **业务意图**：提供一个框架来演示如何在应用中使用 Redis。
+#### 1. `RedisDemoController`
 
-## 函数/方法
+- **描述**: 这是一个封装了与 Redis 数据库交互的控制器类。
+- **参数**:
+  - `redisClient`: 引用到 Redis 客户端对象，通常通过配置文件或环境变量获取。
+- **业务意图**: 提供了处理 Redis 相关操作的方法。
 
-### constructor()
+### 函数说明
 
-```typescript
-constructor() {
-  // 初始化代码
-}
+#### 1. `constructor`
+
+- **描述**: 构造函数，初始化与 Redis 的连接。
+- **参数**:
+  - `redisClient`: 引用到 Redis 客户端对象。
+- **业务意图**: 初始化 Redis 连接，为后续的缓存操作做好准备。
+
+#### 2. `basicCacheExample`
+
+- **描述**: 示例方法，用于基本的缓存数据操作。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 缓存值。
+- **业务意图**: 提供一个简单的示例来展示如何使用 Redis 进行缓存。
+
+#### 3. `getOrSetExample`
+
+- **描述**: 示例方法，用于获取或设置缓存数据。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 需要缓存的值。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行缓存操作。
+
+#### 4. `distributedLockExample`
+
+- **描述**: 示例方法，用于分布式锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+  - `timeout`: 锁的超时时间。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行分布式锁操作。
+
+#### 5. `autoCacheExample`
+
+- **描述**: 示例方法，用于自动缓存数据的操作。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 需要缓存的值。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行自动缓存操作。
+
+#### 6. `invalidateCacheExample`
+
+- **描述**: 示例方法，用于清除缓存数据的操作。
+- **参数**:
+  - `key`: 缓存键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 清除缓存数据。
+
+#### 7. `batchDeleteExample`
+
+- **描述**: 示例方法，用于批量删除缓存数据的操作。
+- **参数**:
+  - `keys`: 需要删除的缓存键列表。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 批量删除缓存数据。
+
+#### 8. `bloomFilterCheck`
+
+- **描述**: 示例方法，用于检查 Bloom Filter 的操作。
+- **参数**:
+  - `key`: 需要检查的键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 检查 Bloom Filter 是否包含特定键。
+
+#### 9. `bloomFilterAdd`
+
+- **描述**: 示例方法，用于添加到 Bloom Filter 的操作。
+- **参数**:
+  - `key`: 需要添加的键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 添加到 Bloom Filter 中。
+
+#### 10. `manualLockExample`
+
+- **描述**: 示例方法，手动获取锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+- **业务意图**: 提供一个示例来展示如何手动获取锁。
+
+#### 11. `blockingLockExample`
+
+- **描述**: 示例方法，阻塞式获取锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 阻塞式获取锁。
+
+#### 12. `cacheStats`
+
+- **描述**: 示例方法，显示缓存统计信息的方法。
+- **参数**:
+  - `key`: 缓存键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 显示缓存的统计数据。
+
+## 结构化 Markdown 技术文档
+
+```markdown
+# Redis Demo Controller 技术文档
+
+## 文件概述
+
+`redis-demo.controller.ts` 是一个 TypeScript 模块，包含了一系列与 Redis 相关的控制器方法。这些方法用于处理客户端请求、缓存数据以及执行分布式锁操作等任务。
+
+### 类说明
+
+#### 1. `RedisDemoController`
+
+- **描述**: 这是一个封装了与 Redis 数据库交互的控制器类。
+- **参数**:
+  - `redisClient`: 引用到 Redis 客户端对象，通常通过配置文件或环境变量获取。
+- **业务意图**: 提供了处理 Redis 相关操作的方法。
+
+### 函数说明
+
+#### 1. `constructor`
+
+- **描述**: 构造函数，初始化与 Redis 的连接。
+- **参数**:
+  - `redisClient`: 引用到 Redis 客户端对象。
+- **业务意图**: 初始化 Redis 连接，为后续的缓存操作做好准备。
+
+#### 2. `basicCacheExample`
+
+- **描述**: 示例方法，用于基本的缓存数据操作。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 缓存值。
+- **业务意图**: 提供一个简单的示例来展示如何使用 Redis 进行缓存。
+
+#### 3. `getOrSetExample`
+
+- **描述**: 示例方法，用于获取或设置缓存数据。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 需要缓存的值。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行缓存操作。
+
+#### 4. `distributedLockExample`
+
+- **描述**: 示例方法，用于分布式锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+  - `timeout`: 锁的超时时间。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行分布式锁操作。
+
+#### 5. `autoCacheExample`
+
+- **描述**: 示例方法，用于自动缓存数据的操作。
+- **参数**:
+  - `key`: 缓存键。
+  - `value`: 需要缓存的值。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 进行自动缓存操作。
+
+#### 6. `invalidateCacheExample`
+
+- **描述**: 示例方法，用于清除缓存数据的操作。
+- **参数**:
+  - `key`: 缓存键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 清除缓存数据。
+
+#### 7. `batchDeleteExample`
+
+- **描述**: 示例方法，用于批量删除缓存数据的操作。
+- **参数**:
+  - `keys`: 需要删除的缓存键列表。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 批量删除缓存数据。
+
+#### 8. `bloomFilterCheck`
+
+- **描述**: 示例方法，用于检查 Bloom Filter 的操作。
+- **参数**:
+  - `key`: 需要检查的键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 检查 Bloom Filter 是否包含特定键。
+
+#### 9. `bloomFilterAdd`
+
+- **描述**: 示例方法，用于添加到 Bloom Filter 的操作。
+- **参数**:
+  - `key`: 需要添加的键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 添加到 Bloom Filter 中。
+
+#### 10. `manualLockExample`
+
+- **描述**: 示例方法，手动获取锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+- **业务意图**: 提供一个示例来展示如何手动获取锁。
+
+#### 11. `blockingLockExample`
+
+- **描述**: 示例方法，阻塞式获取锁的操作。
+- **参数**:
+  - `lockKey`: 锁的关键字。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 阻塞式获取锁。
+
+#### 12. `cacheStats`
+
+- **描述**: 示例方法，显示缓存统计信息的方法。
+- **参数**:
+  - `key`: 缓存键。
+- **业务意图**: 提供一个示例来展示如何使用 Redis 显示缓存的统计数据。
 ```
 
-#### 参数解释：
-
-- `无`：此函数没有参数。
-
-#### 业务意图：
-
-初始化控制器实例，为后续的处理操作做准备。
-
-### basicCacheExample()
-
-```typescript
-basicCacheExample() {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `无`：此方法不接受任何参数。
-
-#### 业务意图：
-
-演示如何使用基本缓存功能来存储和检索数据。
-
-### getOrSetExample()
-
-```typescript
-getOrSetExample(key: string, value: any) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `key`: 字符串，表示要操作的键。
-- `value`: 可以是任何类型的数据，用于存储或检索。
-
-#### 业务意图：
-
-演示如何使用 Redis 的 `get` 和 `set` 方法来获取和设置数据。
-
-### distributedLockExample()
-
-```typescript
-distributedLockExample(lockName: string, callback: () => void) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `lockName`: 字符串，表示要使用的分布式锁的名称。
-- `callback`: 函数，用于处理锁操作的结果。
-
-#### 业务意图：
-
-演示如何使用 Redis 的分布式锁功能来确保并发安全。
-
-### autoCacheExample()
-
-```typescript
-autoCacheExample(key: string, value: any) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `key`: 字符串，表示要操作的键。
-- `value`: 可以是任何类型的数据，用于存储或检索。
-
-#### 业务意图：
-
-演示如何使用 Redis 的自动缓存功能来存储和检索数据。
-
-### invalidateCacheExample()
-
-```typescript
-invalidateCacheExample(key: string) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `key`: 字符串，表示要操作的键。
-
-#### 业务意图：
-
-演示如何使用 Redis 的 `delete` 方法来删除缓存条目。
-
-### batchDeleteExample()
-
-```typescript
-batchDeleteExample(keys: string[]) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `keys`: 数组，包含要删除的所有键名。
-
-#### 业务意图：
-
-演示如何批量删除 Redis 中的多个键值对。
-
-### bloomFilterCheck()
-
-```typescript
-bloomFilterCheck(key: string) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `key`: 字符串，表示要检查的键。
-
-#### 业务意图：
-
-演示如何使用 Redis 的 Bloom Filter 来检查数据是否存在。
-
-### bloomFilterAdd()
-
-```typescript
-bloomFilterAdd(key: string, value: any) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `key`: 字符串，表示要添加到 Bloom Filter 的键。
-- `value`: 可以是任何类型的数据，用于存储或检索。
-
-#### 业务意图：
-
-演示如何使用 Redis 的 Bloom Filter 来检查数据是否存在，并在必要时进行插入操作。
-
-### manualLockExample()
-
-```typescript
-manualLockExample(lockName: string, callback: () => void) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `lockName`: 字符串，表示要使用的分布式锁的名称。
-- `callback`: 函数，用于处理锁操作的结果。
-
-#### 业务意图：
-
-演示如何使用 Redis 的手动锁功能来确保并发安全。
-
-### blockingLockExample()
-
-```typescript
-blockingLockExample(lockName: string, callback: () => void) {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `lockName`: 字符串，表示要使用的分布式锁的名称。
-- `callback`: 函数，用于处理锁操作的结果。
-
-#### 业务意图：
-
-演示如何使用 Redis 的阻塞锁功能来确保并发安全。
-
-### cacheStats()
-
-```typescript
-cacheStats() {
-  // 示例代码
-}
-```
-
-#### 参数解释：
-
-- `无`：此方法不接受任何参数。
-
-#### 业务意图：
-
-演示如何获取缓存的统计信息，如命中率、总访问次数等。
-
-## 总结
-
-`RedisDemoController.ts` 是一个用于演示 Redis 使用的 TypeScript 模块。它包含多个函数和方法，每个函数都有其特定的功能，通过这些功能可以展示在应用中使用 Redis 的不同方式。
+这个技术文档详细地介绍了每个类、接口、类型和函数的功能、参数解释以及业务意图，帮助开发者更好地理解和利用这些代码。

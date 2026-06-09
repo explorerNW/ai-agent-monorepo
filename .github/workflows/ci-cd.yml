@@ -322,6 +322,18 @@ jobs:
             sleep 5
             docker ps --format "table {{.Names}}\t{{.Status}}" || true
 
+      # 3. 设置 Python 环境并安装依赖
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: '3.11'
+
+      # - name: Install dependencies
+      #   run: |
+      #     pip install -r requirements.txt
+      #     # 如果使用了 MkDocs 等静态生成器，在此安装
+      #     # pip install mkdocs mkdocs-material
+
       # 4. 执行文档生成脚本
       # - name: Generate Markdown Docs
       #   env:
