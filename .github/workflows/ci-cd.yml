@@ -253,6 +253,9 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_NAME=${{ secrets.DB_NAME }}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            REDIS_USER=${{ secrets.REDIS_USER }}
+            REDIS_PASS=${{ secrets.REDIS_PASS }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
             EOF
 
             # 生成根目录 .env (用于 docker-compose)
