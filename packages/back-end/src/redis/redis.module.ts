@@ -7,6 +7,7 @@ import { RedisDemoController } from './redis-demo.controller';
 import { createClient, RedisClientType } from 'redis';
 import { logger } from '../utils';
 import { IdempotentInterceptor } from '../idempotent/idempotent.interceptor';
+import { SeckillService } from './seckill.service';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 
@@ -48,6 +49,7 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
     RedisService,
     RedisCacheInterceptor,
     IdempotentInterceptor,
+    SeckillService,
   ],
   controllers: [RedisDemoController],
   exports: [RedisService, RedisCacheInterceptor, REDIS_CLIENT],

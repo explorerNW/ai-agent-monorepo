@@ -16,6 +16,8 @@ import { Idempotent } from '../idempotent/idempotent.decorator';
 import { IdempotentInterceptor } from '../idempotent/idempotent.interceptor';
 import { REDIS_CLIENT } from './redis.module';
 import type { RedisClientType } from 'redis';
+import { SeckillService } from './seckill.service';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Redis功能演示控制器
@@ -28,6 +30,7 @@ export class RedisDemoController {
     private readonly redisService: RedisService,
     @Inject({ forwardRef: () => REDIS_CLIENT })
     private readonly redisClient: RedisClientType,
+    private readonly seckillService: SeckillService,
   ) {}
 
   /**
@@ -299,5 +302,36 @@ export class RedisDemoController {
       }, 100);
     });
     return promise;
+  }
+
+  @Post('grab/:voucherId')
+  @UseInterceptors(IdempotentInterceptor)
+  async grabOrder(@Param('voucherId') voucherId: string) {
+    const userId = uuidv4(); // 假设通过守卫解析出用户ID
+    const orderId = uuidv4(); // 生成全局唯一订单号
+
+    const result = await this.seckillService.executeSeckill(
+      voucherId,
+      userId,
+      orderId,
+    );
+
+    switch (result) {
+      case 1:
+        return { code: 400, msg: '库存不足' };
+      case 2:
+        return { code: 400, msg: '不能重复下单' };
+      case 0:
+        // 秒杀成功，立即返回订单号，后续订单入库由 MQ 消费者异步处理
+        return { code: 200, msg: '抢单成功', orderId };
+      case -2:
+        return { code: 400, msg: '库存值格式错误' };
+      case -3:
+        return { code: 400, msg: '库存扣减异常' };
+      case -4:
+        return { code: 500, msg: '消息队列发送失败' };
+      default:
+        return { code: 500, msg: '系统异常' };
+    }
   }
 }
