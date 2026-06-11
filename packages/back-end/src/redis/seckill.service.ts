@@ -1,21 +1,33 @@
-import { Injectable, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { REDIS_CLIENT } from './redis.module';
 import type { RedisClientType } from 'redis';
 
 @Injectable()
-export class SeckillService {
+export class SeckillService implements OnModuleInit {
+  private readonly logger = new Logger(SeckillService.name);
   // 预加载 Lua 脚本，避免每次请求都读取磁盘 IO
-  private readonly seckillScript: string;
+  private seckillScript: string;
 
   constructor(
     @Inject({ forwardRef: () => REDIS_CLIENT })
     private readonly redisClient: RedisClientType,
-  ) {
-    // 在构造函数中读取 Lua 脚本内容
+  ) {}
+
+  onModuleInit() {
     const scriptPath = path.join(__dirname, 'scripts/seckill.lua');
-    this.seckillScript = fs.readFileSync(scriptPath, 'utf-8');
+    try {
+      this.seckillScript = fs.readFileSync(scriptPath, 'utf-8');
+    } catch (error: any) {
+      throw new Error(`Failed to load seckill Lua script: ${error.message}`);
+    }
   }
 
   async executeSeckill(
@@ -33,9 +45,15 @@ export class SeckillService {
 
       // result 为 Lua 脚本返回的 0, 1, 2
       return Number(result);
-    } catch (error) {
-      console.error('Lua 脚本执行失败:', error);
-      throw new Error('系统繁忙，请稍后再试');
+    } catch (error: any) {
+      // 记录详细错误信息供调试
+      this.logger.error('Seckill execution failed', error.stack);
+
+      // 向上传播一个标准化的业务异常，或者重新抛出带上下文的错误
+      throw new InternalServerErrorException(
+        'Seckill service unavailable',
+        error,
+      );
     }
   }
 }
