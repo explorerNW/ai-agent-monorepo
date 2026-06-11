@@ -8,6 +8,7 @@ import {
   Body,
   UseInterceptors,
   Inject,
+  Req,
 } from '@nestjs/common';
 import { RedisService } from './redis.service';
 import { UseRedisCache, InvalidateCache } from './redis.decorators';
@@ -305,9 +306,13 @@ export class RedisDemoController {
   }
 
   @Post('grab/:voucherId')
+  @Idempotent(10) // 幂等性保护，10秒内重复提交视为无效请求
   @UseInterceptors(IdempotentInterceptor)
-  async grabOrder(@Param('voucherId') voucherId: string) {
-    const userId = uuidv4(); // 假设通过守卫解析出用户ID
+  async grabOrder(
+    @Param('voucherId') voucherId: string,
+    @Req() request: Request,
+  ) {
+    const userId = request.headers['x-request-id'] || uuidv4(); // 假设通过守卫解析出用户ID
     const orderId = uuidv4(); // 生成全局唯一订单号
 
     try {
