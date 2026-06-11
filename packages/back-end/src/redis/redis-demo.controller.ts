@@ -330,6 +330,8 @@ export class RedisDemoController {
         case 0:
           // 秒杀成功，立即返回订单号，后续订单入库由 MQ 消费者异步处理
           return { code: 200, msg: '抢单成功', orderId };
+        case -1:
+          return { code: 400, msg: '库存 Key 不存在，可能是配置错误或未预热' };
         case -2:
           return { code: 400, msg: '库存值格式错误' };
         case -3:
