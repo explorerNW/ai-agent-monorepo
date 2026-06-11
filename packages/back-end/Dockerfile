@@ -90,6 +90,8 @@ RUN cd ../.. && pnpm install --prod --frozen-lockfile --ignore-scripts --filter=
 
 # Copy built application from builder
 COPY --from=builder /app/packages/back-end/dist ./dist
+COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./dist/src/redis/scripts/seckill.lua
+
 
 # Create necessary directories with proper permissions
 RUN mkdir -p uploads && \
