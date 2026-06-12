@@ -1,23 +1,22 @@
 import { useRef, useEffect } from "react";
+import type { EChartsOption, EChartsType } from "echarts";
 import * as echarts from "echarts";
-import type { EChartsOption } from "echarts";
 import type { WebVitalsData } from "~/types/performance";
 
 interface ApiPerformanceChartProps {
   data: WebVitalsData[];
 }
 
-export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
+function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!chartRef.current) return;
 
-    let chart = echarts.getInstanceByDom(chartRef.current);
+    let chart = echarts.getInstanceByDom(chartRef.current) as EChartsType;
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-
     // Helper function to extract API path from full URL
     const extractApiPath = (url: string): string => {
       try {
@@ -87,7 +86,7 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
           },
         },
       };
-      chart.setOption(option, { notMerge: false, lazyUpdate: true });
+      chart?.setOption(option, { notMerge: false, lazyUpdate: true });
       return;
     }
 
@@ -170,7 +169,7 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
       ],
     };
 
-    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+    chart?.setOption(option, { notMerge: false, lazyUpdate: true });
 
     return () => {
       if (chart) {
@@ -181,3 +180,5 @@ export function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
 
   return <div ref={chartRef} style={{ width: "100%", height: "400px" }} />;
 }
+
+export default ApiPerformanceChart;

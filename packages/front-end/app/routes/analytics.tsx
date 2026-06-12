@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { getWebVitalsStats } from "~/services/api";
-import {
-  DistributionChart,
-  TimelineChart,
-  ApiPerformanceChart,
-  RoutePerformanceChart,
-} from "~/components";
 import type { WebVitalsData } from "~/types/performance";
 import BottomNavigation from "~/components/BottomNavigation";
 import React from "react";
+
+const TimelineChart = React.lazy(() => import("~/components/TimelineChart"));
+const DistributionChart = React.lazy(
+  () => import("~/components/DistributionChart"),
+);
+const ApiPerformanceChart = React.lazy(
+  () => import("~/components/ApiPerformanceChart"),
+);
+const RoutePerformanceChart = React.lazy(
+  () => import("~/components/RoutePerformanceChart"),
+);
 
 export default function Analytics() {
   const [data, setData] = useState<WebVitalsData[]>([]);
@@ -163,85 +168,99 @@ export default function Analytics() {
 
             {/* Timeline Chart */}
             <div className="bg-gray-900 rounded-lg p-4">
-              <TimelineChart data={data} days={days} />
+              <Suspense fallback={<div>图表加载中...</div>}>
+                <TimelineChart data={data} days={days} />
+              </Suspense>
             </div>
 
             {/* Metric Distribution Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-gray-900 rounded-lg p-4">
-                <DistributionChart
-                  data={data}
-                  title="LCP Distribution"
-                  metricKey="lcp"
-                  thresholds={{
-                    good: 2500,
-                    needsImprovement: 4000,
-                    labels: [
-                      "Good (≤2.5s)",
-                      "Needs Improvement (2.5-4s)",
-                      "Poor (>4s)",
-                    ],
-                  }}
-                />
+                <Suspense fallback={<div>图表加载中...</div>}>
+                  <DistributionChart
+                    data={data}
+                    title="LCP Distribution"
+                    metricKey="lcp"
+                    thresholds={{
+                      good: 2500,
+                      needsImprovement: 4000,
+                      labels: [
+                        "Good (≤2.5s)",
+                        "Needs Improvement (2.5-4s)",
+                        "Poor (>4s)",
+                      ],
+                    }}
+                  />
+                </Suspense>
               </div>
               <div className="bg-gray-900 rounded-lg p-4">
-                <DistributionChart
-                  data={data}
-                  title="FCP Distribution"
-                  metricKey="fcp"
-                  thresholds={{
-                    good: 1800,
-                    needsImprovement: 3000,
-                    labels: [
-                      "Good (≤1.8s)",
-                      "Needs Improvement (1.8-3s)",
-                      "Poor (>3s)",
-                    ],
-                  }}
-                />
+                <Suspense fallback={<div>图表加载中...</div>}>
+                  <DistributionChart
+                    data={data}
+                    title="FCP Distribution"
+                    metricKey="fcp"
+                    thresholds={{
+                      good: 1800,
+                      needsImprovement: 3000,
+                      labels: [
+                        "Good (≤1.8s)",
+                        "Needs Improvement (1.8-3s)",
+                        "Poor (>3s)",
+                      ],
+                    }}
+                  />
+                </Suspense>
               </div>
               <div className="bg-gray-900 rounded-lg p-4">
-                <DistributionChart
-                  data={data}
-                  title="CLS Distribution"
-                  metricKey="cls"
-                  thresholds={{
-                    good: 0.1,
-                    needsImprovement: 0.25,
-                    labels: [
-                      "Good (≤0.1)",
-                      "Needs Improvement (0.1-0.25)",
-                      "Poor (>0.25)",
-                    ],
-                  }}
-                />
+                <Suspense fallback={<div>图表加载中...</div>}>
+                  <DistributionChart
+                    data={data}
+                    title="CLS Distribution"
+                    metricKey="cls"
+                    thresholds={{
+                      good: 0.1,
+                      needsImprovement: 0.25,
+                      labels: [
+                        "Good (≤0.1)",
+                        "Needs Improvement (0.1-0.25)",
+                        "Poor (>0.25)",
+                      ],
+                    }}
+                  />
+                </Suspense>
               </div>
               <div className="bg-gray-900 rounded-lg p-4">
-                <DistributionChart
-                  data={data}
-                  title="TTFB Distribution"
-                  metricKey="ttfb"
-                  thresholds={{
-                    good: 800,
-                    needsImprovement: 1800,
-                    labels: [
-                      "Good (≤800ms)",
-                      "Needs Improvement (800-1800ms)",
-                      "Poor (>1800ms)",
-                    ],
-                  }}
-                />
+                <Suspense fallback={<div>图表加载中...</div>}>
+                  <DistributionChart
+                    data={data}
+                    title="TTFB Distribution"
+                    metricKey="ttfb"
+                    thresholds={{
+                      good: 800,
+                      needsImprovement: 1800,
+                      labels: [
+                        "Good (≤800ms)",
+                        "Needs Improvement (800-1800ms)",
+                        "Poor (>1800ms)",
+                      ],
+                    }}
+                  />
+                </Suspense>
               </div>
             </div>
 
             {/* API Performance Chart */}
             <div className="bg-gray-900 rounded-lg p-4">
-              <ApiPerformanceChart data={data} />
+              <Suspense fallback={<div>图表加载中...</div>}>
+                <ApiPerformanceChart data={data} />
+              </Suspense>
             </div>
 
             {/* Route Performance Chart */}
             <div className="bg-gray-900 rounded-lg p-4">
-              <RoutePerformanceChart data={data} />
+              <Suspense fallback={<div>图表加载中...</div>}>
+                <RoutePerformanceChart data={data} />
+              </Suspense>
             </div>
           </>
         )}

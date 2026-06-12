@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import * as echarts from "echarts";
-import type { EChartsOption } from "echarts";
+import type { EChartsOption, EChartsType } from "echarts";
 import type { WebVitalsData } from "~/types/performance";
 
 interface DistributionChartProps {
@@ -17,7 +17,7 @@ interface DistributionChartProps {
   };
 }
 
-export function DistributionChart({
+function DistributionChart({
   data,
   title,
   metricKey,
@@ -28,11 +28,10 @@ export function DistributionChart({
   useEffect(() => {
     if (!chartRef.current || data.length === 0) return;
 
-    let chart = echarts.getInstanceByDom(chartRef.current);
+    let chart = echarts.getInstanceByDom(chartRef.current) as EChartsType;
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-
     const values = data
       .map((item) => item.metrics[metricKey]?.value || 0)
       .filter((v) => v >= 0);
@@ -93,7 +92,7 @@ export function DistributionChart({
       ],
     };
 
-    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+    chart?.setOption(option, { notMerge: false, lazyUpdate: true });
 
     return () => {
       if (chart) {
@@ -104,3 +103,5 @@ export function DistributionChart({
 
   return <div ref={chartRef} style={{ width: "100%", height: "300px" }} />;
 }
+
+export default DistributionChart;

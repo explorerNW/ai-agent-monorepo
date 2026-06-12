@@ -1,23 +1,22 @@
 import { useRef, useEffect } from "react";
 import * as echarts from "echarts";
-import type { EChartsOption } from "echarts";
+import type { EChartsOption, EChartsType } from "echarts";
 import type { WebVitalsData } from "~/types/performance";
 
 interface RoutePerformanceChartProps {
   data: WebVitalsData[];
 }
 
-export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
+function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!chartRef.current) return;
 
-    let chart = echarts.getInstanceByDom(chartRef.current);
+    let chart = echarts.getInstanceByDom(chartRef.current) as EChartsType;
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-
     // Extract route performance data with FCP and LCP
     const routeData: Array<{
       route: string;
@@ -75,7 +74,7 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
           },
         },
       };
-      chart.setOption(option, { notMerge: false, lazyUpdate: true });
+      chart?.setOption(option, { notMerge: false, lazyUpdate: true });
       return;
     }
 
@@ -159,7 +158,7 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       ],
     };
 
-    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+    chart?.setOption(option, { notMerge: false, lazyUpdate: true });
 
     return () => {
       if (chart) {
@@ -170,3 +169,5 @@ export function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
 
   return <div ref={chartRef} style={{ width: "100%", height: "400px" }} />;
 }
+
+export default RoutePerformanceChart;

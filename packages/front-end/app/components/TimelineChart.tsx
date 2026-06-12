@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import * as echarts from "echarts";
-import type { EChartsOption } from "echarts";
+import type { EChartsOption, EChartsType } from "echarts";
 import type { WebVitalsData } from "~/types/performance";
 
 interface TimelineChartProps {
@@ -8,17 +8,15 @@ interface TimelineChartProps {
   days: number;
 }
 
-export function TimelineChart({ data, days }: TimelineChartProps) {
+function TimelineChart({ data, days }: TimelineChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!chartRef.current || data.length === 0) return;
-
-    let chart = echarts.getInstanceByDom(chartRef.current);
+    let chart = echarts.getInstanceByDom(chartRef.current) as EChartsType;
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-
     // Helper function to format timestamp
     const formatTimestamp = (timestamp: string): string => {
       const date = new Date(timestamp);
@@ -204,7 +202,7 @@ export function TimelineChart({ data, days }: TimelineChartProps) {
       ],
     };
 
-    chart.setOption(option, { notMerge: false, lazyUpdate: true });
+    chart?.setOption(option, { notMerge: false, lazyUpdate: true });
 
     return () => {
       if (chart) {
@@ -215,3 +213,5 @@ export function TimelineChart({ data, days }: TimelineChartProps) {
 
   return <div ref={chartRef} style={{ width: "100%", height: "400px" }} />;
 }
+
+export default TimelineChart;
