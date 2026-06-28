@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
 import { AiMemoryModule } from './ai-memory.module';
+import { WeatherAgentService } from './agents/weather.agent.service';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { AiMemoryModule } from './ai-memory.module';
     }),
   ],
   controllers: [AiController],
-  providers: [AiService],
+  providers: [AiService, WeatherAgentService],
   exports: [AiService],
 })
 export class AiModule {}
