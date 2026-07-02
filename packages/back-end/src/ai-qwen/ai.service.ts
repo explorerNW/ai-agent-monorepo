@@ -12,7 +12,7 @@ export class AiService {
     modelName: process.env.AI_MODEL_NAME, // 从环境变量读取模型名称
     apiKey: process.env.DASHSCOPE_API_KEY, // 使用 DashScope 兼容接口
     configuration: {
-      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1', // 替换为你使用的模型服务商地址
+      baseURL: process.env.AI_BASE_URL, // 替换为你使用的模型服务商地址
     },
     temperature: 0.7,
     streaming: true, // 🔥 关键：开启流式输出模式
