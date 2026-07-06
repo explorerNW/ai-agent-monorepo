@@ -9,6 +9,8 @@ import { AiMemoryMiddleware } from './ai-memory.middleware';
 import { MemoryConfig } from './memory.types';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OpenAIEmbeddings } from '@langchain/openai';
+import { CHECKPOINTER } from './core/memory/checkpointer.tokens';
+import { createCheckpointer } from './core/memory/checkpointer.factory';
 
 @Module({
   imports: [
@@ -58,10 +60,15 @@ export class AiMemoryModule implements NestModule {
           useFactory: options.useFactory,
           inject: options.inject || [],
         },
+        {
+          provide: CHECKPOINTER,
+          useFactory: (config: MemoryConfig) => createCheckpointer(config),
+          inject: ['MEMORY_CONFIG'],
+        },
         AiMemoryMiddleware,
         AiMemoryService,
       ],
-      exports: [AiMemoryService, AiMemoryMiddleware],
+      exports: [AiMemoryService, AiMemoryMiddleware, CHECKPOINTER],
     };
   }
 

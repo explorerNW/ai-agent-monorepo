@@ -3,10 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
 import { AiMemoryModule } from './ai-memory.module';
+import { LlmModule } from './core/llm/llm.module';
 import { WeatherAgentService } from './agents/weather.agent.service';
+import { WeatherToolFactory } from './agents/weather.tool';
 
 @Module({
   imports: [
+    LlmModule.forRootAsync(),
     AiMemoryModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -21,7 +24,7 @@ import { WeatherAgentService } from './agents/weather.agent.service';
     }),
   ],
   controllers: [AiController],
-  providers: [AiService, WeatherAgentService],
+  providers: [AiService, WeatherToolFactory, WeatherAgentService],
   exports: [AiService],
 })
 export class AiModule {}

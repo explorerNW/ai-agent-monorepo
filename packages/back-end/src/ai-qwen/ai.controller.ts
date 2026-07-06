@@ -46,10 +46,22 @@ export class AiController {
   }
 
   @Post('weather')
-  async aiWeather(@Body() body: { city: string }, @Res() res: Response) {
+  async aiWeather(
+    @Body()
+    body: {
+      city: string;
+      sessionId?: string;
+      userId?: string;
+      userName?: string;
+    },
+    @Res() res: Response,
+  ) {
     try {
-      // 调用 Service，传入一个回调函数来接收 AI 生成的每一个 token
-      const weather = await this.weatherAgentService.getWeather(body.city);
+      const weather = await this.weatherAgentService.getWeather(body.city, {
+        sessionId: body.sessionId,
+        userId: body.userId,
+        metadata: { user_name: body.userName },
+      });
       res.status(200).json(weather);
     } catch (error) {
       console.error('Chat error:', error);

@@ -1,20 +1,19 @@
 import { Injectable, Inject, Logger, OnModuleInit } from '@nestjs/common';
-import { MemorySaver } from '@langchain/langgraph';
-import { RedisSaver } from '@langchain/langgraph-checkpoint-redis';
-import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
+import { BaseCheckpointSaver } from '@langchain/langgraph';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { BaseMessage } from '@langchain/core/messages';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { Pool } from 'pg';
-import { AiMemoryContext, CheckpointerType } from './memory.types';
+import { CHECKPOINTER } from './core/memory/checkpointer.tokens';
+import { AiMemoryContext } from './memory.types';
 
 import type { MemoryConfig } from './memory.types';
 
 @Injectable()
 export class AiMemoryService implements OnModuleInit {
   private readonly logger = new Logger(AiMemoryService.name);
-  private checkpointer: any;
+  private checkpointer: BaseCheckpointSaver;
   private vectorStore: PGVectorStore | null = null;
 
   private readonly windowSize: number;
@@ -24,9 +23,11 @@ export class AiMemoryService implements OnModuleInit {
   constructor(
     @Inject('MEMORY_CONFIG') config: MemoryConfig,
     @Inject('EMBEDDINGS_MODEL') private readonly embeddings: OpenAIEmbeddings,
+    @Inject(CHECKPOINTER) checkpointer: BaseCheckpointSaver,
   ) {
     this.config = config;
     this.windowSize = config.shortTermWindow || 10;
+    this.checkpointer = checkpointer;
   }
 
   /**
@@ -36,13 +37,7 @@ export class AiMemoryService implements OnModuleInit {
    */
   async onModuleInit() {
     try {
-      // 1. 初始化短期记忆 Checkpointer
-      // 使用配置文件中指定的checkpointerType进行初始化
-      this.checkpointer = await this.initCheckpointer(
-        this.config.checkpointerType,
-      );
-
-      // 2. 如果开启长期记忆，初始化向量库
+      // 如果开启长期记忆，初始化向量库
       if (this.config.enableVectorRetrieval && this.config.postgresConnString) {
         this.pool = new Pool({
           connectionString: this.config.postgresConnString,
@@ -65,31 +60,9 @@ export class AiMemoryService implements OnModuleInit {
           'Successfully initialized Vector Store for Long-term Memory.',
         );
       }
-
-      this.logger.log(
-        `Successfully initialized ${this.config.checkpointerType} checkpointer.`,
-      );
     } catch (error) {
       this.logger.error('Failed to initialize memory modules:', error);
       throw error;
-    }
-  }
-
-  private async initCheckpointer(type: CheckpointerType) {
-    switch (type) {
-      case 'redis': {
-        const saver = RedisSaver.fromUrl(this.config.redisUrl!);
-        return saver;
-      }
-      case 'postgres': {
-        const saver = PostgresSaver.fromConnString(
-          this.config.postgresConnString!,
-        );
-        await saver.setup();
-        return saver;
-      }
-      default:
-        return new MemorySaver();
     }
   }
 
