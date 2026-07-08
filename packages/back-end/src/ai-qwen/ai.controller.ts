@@ -1,7 +1,17 @@
-import { Controller, Post, Body, Res, Logger, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Logger,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { AiService } from './ai.service';
 import { WeatherAgentService } from './agents/weather.agent.service';
+import { XHeaderKey } from './decorators';
+import { XGuard } from './guards';
 
 interface ChatDto {
   role: string;
@@ -46,21 +56,24 @@ export class AiController {
   }
 
   @Post('weather')
+  @XHeaderKey(['x-session-id', 'x-user-id', 'x-user-name'])
+  @UseGuards(XGuard)
   async aiWeather(
     @Body()
     body: {
       city: string;
-      sessionId?: string;
-      userId?: string;
-      userName?: string;
     },
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     try {
+      const sessionId = req.headers['x-session-id'] as string;
+      const userId = req.headers['x-user-id'] as string;
+      const userName = req.headers['x-user-name'] as string;
       const weather = await this.weatherAgentService.getWeather(body.city, {
-        sessionId: body.sessionId,
-        userId: body.userId,
-        metadata: { user_name: body.userName },
+        sessionId,
+        userId,
+        metadata: { user_name: userName },
       });
       res.status(200).json(weather);
     } catch (error) {

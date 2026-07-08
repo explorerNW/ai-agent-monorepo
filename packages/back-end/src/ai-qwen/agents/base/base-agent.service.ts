@@ -38,13 +38,15 @@ export abstract class BaseAgentService implements OnModuleInit {
    * @param ctx 代理调用上下文，包含会话ID、用户ID和元数据
    * @returns 包含线程配置、用户标识和回调处理器的运行配置
    */
-  buildConfig(ctx: AgentInvokeContext): RunnableConfig {
+  buildConfig(
+    ctx: AgentInvokeContext,
+  ): RunnableConfig & { context: Record<string, unknown> } {
     return {
       configurable: {
         thread_id: ctx.sessionId,
         user_id: ctx.userId,
-        context: ctx.metadata ?? {},
       },
+      context: ctx.metadata ?? {},
       callbacks: [
         {
           handleToolStart: (tool) => {

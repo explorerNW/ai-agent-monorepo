@@ -21,10 +21,7 @@ export class WeatherToolFactory {
 
   create() {
     return tool(
-      async ({ city }: { city: string }, config) => {
-        this.logger.debug(
-          `user_name: ${config.configurable?.context?.user_name}`,
-        );
+      async ({ city }: { city: string }) => {
         try {
           const res = await this.axiosInstance.post<{
             data: { outputs: { weather_content: string } };
