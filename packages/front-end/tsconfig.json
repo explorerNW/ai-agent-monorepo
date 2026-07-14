@@ -1,10 +1,5 @@
 {
-  "include": [
-    "**/*",
-    "**/.server/**/*",
-    "**/.client/**/*",
-    ".react-router/types/**/*"
-  ],
+  "include": ["**/*", "**/.server/**/*", "**/.client/**/*", ".react-router/types/**/*"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "types": ["node", "vite/client"],
@@ -15,7 +10,14 @@
     "jsx": "react-jsx",
     "rootDirs": [".", "./.react-router/types"],
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./app/*"],
+      "@/*": ["./app/*"], // 通用兜底
+      "@app/*": ["./app/*"], // 应用层
+      "@shared/*": ["./app/shared/*"], // 共享基础设施
+      "@features/*": ["./app/features/*"], // 业务模块
+      "@config/*": ["./app/config/*"], // 配置专用
+      "@store/*": ["./app/store/*"], // 全局状态管理
+      "@hooks/*": ["./app/hooks/*"], // 自定义 hooks"
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

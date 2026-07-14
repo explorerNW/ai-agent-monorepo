@@ -145,6 +145,42 @@ ai-agent-monorepo/
 └── ARCHITECTURE.md         # 架构设计文档
 ```
 
+### react + redux toolkit + tanstack query
+
+#### 目录结构
+
+```bash
+src/
+├── app/                  # 应用级配置
+│   ├── store.ts          # Redux Store 配置
+│   ├── queryClient.ts    # TanStack Query Client 配置
+│   ├── providers.tsx     # 全局Provider聚合
+│   └── router.tsx
+├── shared/               # 共享基础设施（无业务逻辑）
+│   ├── api/              # Axios实例、拦截器、类型定义
+│   ├── hooks/            # useAuth, usePermission 等通用hooks
+│   ├── components/       # UI组件库
+│   └── utils/
+├── features/             # 业务功能模块（核心）
+│   ├── auth/
+│   │   ├── api/          # login(), getUserInfo() + QueryKeys
+│   │   ├── model/        # authSlice.ts (仅存token/user偏好)
+│   │   ├── ui/           # LoginForm, UserAvatar
+│   │   └── index.ts      # 公共API导出桶
+│   ├── dashboard/
+│   └── orders/
+└── pages/                # 页面组装层
+```
+
+#### 状态管理
+
+| 状态类型       | 管理工具           | 典型场景                           | 封装重点                                   |
+| :------------- | :----------------- | :--------------------------------- | :----------------------------------------- |
+| 服务端状态     | TanStack Query     | API数据、缓存、分页、无限滚动      | 统一HttpClient、QueryKey工厂、全局错误处理 |
+| 客户端全局状态 | Redux Toolkit      | 用户信息、主题、权限、复杂表单向导 | Slice模块化、Selector记忆化、中间件        |
+| UI/局部状态    | useState / Context | 弹窗开关、Tab切换、临时输入        | 避免过度全局化                             |
+| URL状态        | URL Params         | 筛选条件、分页页码、搜索词         | 状态持久化、分享链接                       |
+
 ### 监控指标
 
 1. LCP (最大内容绘制): 页面加载性能
