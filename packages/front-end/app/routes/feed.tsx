@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import FeedHeader from "./components/FeedHeader";
-import StoriesCarousel from "./components/StoriesCarousel";
-import PublishGrid from "./components/PublishGrid";
-import type { StoryItem } from "./components/StoriesCarousel";
-import type { PublishCard } from "./components/PublishCard";
+import React from 'react';
+import FeedHeader from './components/FeedHeader';
+import StoriesCarousel from './components/StoriesCarousel';
+import PublishGrid from './components/PublishGrid';
+import type { StoryItem } from './components/StoriesCarousel';
+import type { PublishCard } from './components/PublishCard';
 
 /**
  * Feed Page Component
@@ -24,46 +24,46 @@ import type { PublishCard } from "./components/PublishCard";
 // Mock data - In production, this would come from API/props
 const mockStories: StoryItem[] = [
   {
-    id: "1",
-    avatarUrl: "/images/feed/images/story-1.png",
+    id: '1',
+    avatarUrl: '/images/feed/images/story-1.png',
     hasUnseenStory: true,
     isVerified: true,
   },
-  { id: "2", avatarUrl: "/images/feed/images/story-2.png" },
-  { id: "3", avatarUrl: "/images/feed/images/story-3.png", isVerified: true },
+  { id: '2', avatarUrl: '/images/feed/images/story-2.png' },
+  { id: '3', avatarUrl: '/images/feed/images/story-3.png', isVerified: true },
   {
-    id: "4",
-    avatarUrl: "/images/feed/images/story-4.png",
+    id: '4',
+    avatarUrl: '/images/feed/images/story-4.png',
     hasUnseenStory: true,
   },
-  { id: "5", avatarUrl: "/images/feed/images/story-5.png" },
+  { id: '5', avatarUrl: '/images/feed/images/story-5.png' },
 ];
 
 const mockPublishes: PublishCard[] = [
-  { id: "1", imageUrl: "/images/feed/images/image-1.png", hasVideo: true },
+  { id: '1', imageUrl: '/images/feed/images/image-1.png', hasVideo: true },
   {
-    id: "2",
-    imageUrl: "/images/feed/images/image-2.png",
+    id: '2',
+    imageUrl: '/images/feed/images/image-2.png',
     hasMultipleImages: true,
     imageCount: 3,
   },
-  { id: "3", imageUrl: "/images/feed/images/image-3.png" },
+  { id: '3', imageUrl: '/images/feed/images/image-3.png' },
   {
-    id: "4",
-    imageUrl: "/images/feed/images/image-4.png",
+    id: '4',
+    imageUrl: '/images/feed/images/image-4.png',
     hasMultipleImages: true,
     imageCount: 2,
   },
-  { id: "5", imageUrl: "/images/feed/images/image-5.png" },
-  { id: "6", imageUrl: "/images/feed/images/image-6.png", hasVideo: true },
+  { id: '5', imageUrl: '/images/feed/images/image-5.png' },
+  { id: '6', imageUrl: '/images/feed/images/image-6.png', hasVideo: true },
 ];
 
 export function meta() {
   return [
-    { title: "Feed - Infinite" },
+    { title: 'Feed - Infinite' },
     {
-      name: "description",
-      content: "View your personalized feed with stories and publishes",
+      name: 'description',
+      content: 'View your personalized feed with stories and publishes',
     },
   ];
 }
@@ -77,10 +77,7 @@ export default function FeedPage() {
       {/* Main content container */}
       <main className="relative max-w-[375px] mx-auto">
         {/* Header section */}
-        <FeedHeader
-          avatarUrl="/images/feed/images/avatar.png"
-          sinceLastVisitCount={24}
-        />
+        <FeedHeader avatarUrl="/images/feed/images/avatar.png" sinceLastVisitCount={24} />
 
         {/* Stories carousel */}
         <StoriesCarousel stories={mockStories} />
