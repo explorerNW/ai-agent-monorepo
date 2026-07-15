@@ -3,12 +3,12 @@
  * Centralized API communication layer using environment configuration
  */
 
-import { API_CONFIG, env } from "~/config/env";
-import { analyticsInstance } from "~/core/instance";
-import type { WebVitalsData } from "~/types/performance";
+import { API_CONFIG } from '~/config/env';
+import { analyticsInstance } from '~/core/instance';
+import type { WebVitalsData } from '~/types/performance';
 
 export interface ChatMessage {
-  role: "user" | "assistant" | "system";
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -26,37 +26,31 @@ export interface ChatResponse {
  * @param messages - Array of chat messages
  * @returns ReadableStream for processing response
  */
-export async function sendChatMessage(
-  messages: ChatMessage[],
-): Promise<ReadableStream> {
+export async function sendChatMessage(messages: ChatMessage[]): Promise<ReadableStream> {
   const startTime = performance.now();
-  const analytics_uid =
-    localStorage.getItem("analytics_uid") || startTime.toString();
+  const analytics_uid = localStorage.getItem('analytics_uid') || startTime.toString();
 
   try {
-    const response = await analyticsInstance.trackedFetch(
-      API_CONFIG.CHAT_ENDPOINT,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-session-id": analytics_uid,
-        },
-        body: JSON.stringify({ messages }),
+    const response = await analyticsInstance.trackedFetch(API_CONFIG.CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-id': analytics_uid,
       },
-    );
+      body: JSON.stringify({ messages }),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     if (!response.body) {
-      throw new Error("No response body");
+      throw new Error('No response body');
     }
 
     return response.body;
   } catch (error) {
-    console.error("Chat API call failed:", error);
+    console.error('Chat API call failed:', error);
     throw error;
   }
 }
@@ -67,23 +61,20 @@ export async function sendChatMessage(
  * @param url - Optional URL filter
  * @returns Web Vitals statistics data
  */
-export async function getWebVitalsStats(
-  days: number = 7,
-  url?: string,
-): Promise<WebVitalsData[]> {
+export async function getWebVitalsStats(days: number = 7, url?: string): Promise<WebVitalsData[]> {
   const params = new URLSearchParams();
-  params.append("days", days.toString());
+  params.append('days', days.toString());
   if (url) {
-    params.append("url", url);
+    params.append('url', url);
   }
 
   try {
     const response = await analyticsInstance.trackedFetch(
       `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
       {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
       },
     );
@@ -94,7 +85,7 @@ export async function getWebVitalsStats(
 
     return response.json();
   } catch (error) {
-    console.error("Failed to fetch Web Vitals stats:", error);
+    console.error('Failed to fetch Web Vitals stats:', error);
     throw error;
   }
 }
@@ -111,7 +102,7 @@ export async function processStream(
   onComplete?: () => void,
 ): Promise<void> {
   const reader = stream.getReader();
-  const decoder = new TextDecoder("utf-8");
+  const decoder = new TextDecoder('utf-8');
 
   try {
     let done = false;
