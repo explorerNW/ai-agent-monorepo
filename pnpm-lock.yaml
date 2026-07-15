@@ -420,52 +420,6 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  packages/my-react-router-app:
-    dependencies:
-      "@react-router/node":
-        specifier: 8.0.0
-        version: 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      "@react-router/serve":
-        specifier: 8.0.0
-        version: 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      isbot:
-        specifier: ^5.1.36
-        version: 5.1.40
-      react:
-        specifier: ^19.2.7
-        version: 19.2.7
-      react-dom:
-        specifier: ^19.2.7
-        version: 19.2.7(react@19.2.7)
-      react-router:
-        specifier: 8.0.0
-        version: 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-    devDependencies:
-      "@react-router/dev":
-        specifier: 8.0.0
-        version: 8.0.0(@react-router/serve@8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3))(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
-      "@tailwindcss/vite":
-        specifier: ^4.2.2
-        version: 4.3.0(vite@8.0.14(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
-      "@types/node":
-        specifier: ^22
-        version: 22.19.19
-      "@types/react":
-        specifier: ^19.2.14
-        version: 19.2.15
-      "@types/react-dom":
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.15)
-      tailwindcss:
-        specifier: ^4.2.2
-        version: 4.3.0
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vite:
-        specifier: ^8.0.3
-        version: 8.0.14(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
-
 packages:
   "@alloc/quick-lru@5.2.0":
     resolution:
@@ -3056,33 +3010,6 @@ packages:
       wrangler:
         optional: true
 
-  "@react-router/dev@8.0.0":
-    resolution:
-      {
-        integrity: sha512-oqbGgh/ubCBiNSH7p/eLsEWJVVBQ2RcODUS/JhqPSX9EfBzaxrbtPZol/xivODyvHgFH0aW0MEbkNWqsUhtUkw==,
-      }
-    engines: { node: ">=22.22.0" }
-    hasBin: true
-    peerDependencies:
-      "@react-router/serve": ^8.0.0
-      "@vitejs/plugin-rsc": ~0.5.26
-      react-router: ^8.0.0
-      react-server-dom-webpack: ^19.2.7
-      typescript: ^5.1.0 || ^6.0.0
-      vite: ^7.0.0 || ^8.0.0
-      wrangler: ^4.0.0
-    peerDependenciesMeta:
-      "@react-router/serve":
-        optional: true
-      "@vitejs/plugin-rsc":
-        optional: true
-      react-server-dom-webpack:
-        optional: true
-      typescript:
-        optional: true
-      wrangler:
-        optional: true
-
   "@react-router/express@7.13.2":
     resolution:
       {
@@ -3093,20 +3020,6 @@ packages:
       express: ^4.17.1 || ^5
       react-router: 7.13.2
       typescript: ^5.1.0
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
-  "@react-router/express@8.0.0":
-    resolution:
-      {
-        integrity: sha512-AnTzeRL7/jv0ReU8h4fSUjA+4bkfLwTXkt0udLlJQnPv21g22s3t8U/cP1lxE72xwzQcMDvdfeOh0JDlNO659w==,
-      }
-    engines: { node: ">=22.22.0" }
-    peerDependencies:
-      express: ^4.22.2 || ^5
-      react-router: 8.0.0
-      typescript: ^5.1.0 || ^6.0.0
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -3124,19 +3037,6 @@ packages:
       typescript:
         optional: true
 
-  "@react-router/node@8.0.0":
-    resolution:
-      {
-        integrity: sha512-v/WipSNRa6N+YBIxvawjSRT6NA2f3m5UvkAztLgAKAeIqGhlEMTdAQU4TzU/T7/EkJ7jws1dvRKLLHzq3F6pOQ==,
-      }
-    engines: { node: ">=22.22.0" }
-    peerDependencies:
-      react-router: 8.0.0
-      typescript: ^5.1.0 || ^6.0.0
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
   "@react-router/serve@7.13.2":
     resolution:
       {
@@ -3146,16 +3046,6 @@ packages:
     hasBin: true
     peerDependencies:
       react-router: 7.13.2
-
-  "@react-router/serve@8.0.0":
-    resolution:
-      {
-        integrity: sha512-8nDp5pQCb3eY47/BabfH3SdMTWJIz69YmNWXGi6IWe9AE+qKdwyWNUc6aY1Jx8wnVQ833mj0v0fkpl+1hkBVxg==,
-      }
-    engines: { node: ">=22.22.0" }
-    hasBin: true
-    peerDependencies:
-      react-router: 8.0.0
 
   "@redis/bloom@1.2.0":
     resolution:
@@ -5507,13 +5397,6 @@ packages:
       }
     engines: { node: ">= 14.16.0" }
 
-  chokidar@5.0.0:
-    resolution:
-      {
-        integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==,
-      }
-    engines: { node: ">= 20.19.0" }
-
   chrome-trace-event@1.0.4:
     resolution:
       {
@@ -5794,12 +5677,6 @@ packages:
     resolution:
       {
         integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==,
-      }
-
-  cookie-es@3.1.1:
-    resolution:
-      {
-        integrity: sha512-UaXxwISYJPTr9hwQxMFYZ7kNhSXboMXP+Z3TRX6f1/NyaGPfuNUZOWP1pUEb75B2HjfklIYLVRfWiFZJyC6Npg==,
       }
 
   cookie-signature@1.0.7:
@@ -6654,13 +6531,6 @@ packages:
       }
     engines: { node: ">=6" }
 
-  exit-hook@5.1.0:
-    resolution:
-      {
-        integrity: sha512-INjr2xyxHo7bhAqf5ong++GZPPnpcuBcaXUKt03yf7Fie9yWD7FapL4teOU0+awQazGs5ucBh7xWs/AD+6nhog==,
-      }
-    engines: { node: ">=20" }
-
   exit-x@0.2.2:
     resolution:
       {
@@ -7066,13 +6936,6 @@ packages:
         integrity: sha512-g/Q1aTSDOxFpchXC4i8ZWvxA1lnPqx/JHqcpIw0/LX9T8x/GBbi6YnlN5nhaKIFkT8oFsscUKgDJYxfwfS6QsQ==,
       }
     engines: { node: ">=8" }
-
-  get-port@7.2.0:
-    resolution:
-      {
-        integrity: sha512-afP4W205ONCuMoPBqcR6PSXnzX35KTcJygfJfcp+QY+uwm3p20p1YczWXhlICIzGMCxYBQcySEcOgsJcrkyobg==,
-      }
-    engines: { node: ">=16" }
 
   get-proto@1.0.1:
     resolution:
@@ -8116,14 +7979,6 @@ packages:
     resolution:
       {
         integrity: sha512-xKqzzWXDttJuOcawBt4KnKHHIf5oQ/Cxax+0PWFG+DFDgHNAdi+TXECADI+RYiFUMmx8792xsMbbgXj4CwnP4g==,
-      }
-    engines: { node: ">=6" }
-    hasBin: true
-
-  jsesc@3.1.0:
-    resolution:
-      {
-        integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==,
       }
     engines: { node: ">=6" }
     hasBin: true
@@ -9736,14 +9591,6 @@ packages:
     peerDependencies:
       react: ^19.2.6
 
-  react-dom@19.2.7:
-    resolution:
-      {
-        integrity: sha512-t0BRVXvbiE/o20Hfw669rLbMCDWtYZLvmJigy2f0MxsXF+71pxhR3xOkspmsO8h3ZlNzyibAmtCa3l4lYKk6gQ==,
-      }
-    peerDependencies:
-      react: ^19.2.7
-
   react-error-boundary@3.1.4:
     resolution:
       {
@@ -9793,13 +9640,6 @@ packages:
       }
     engines: { node: ">=0.10.0" }
 
-  react-refresh@0.18.0:
-    resolution:
-      {
-        integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==,
-      }
-    engines: { node: ">=0.10.0" }
-
   react-router-dom@7.15.1:
     resolution:
       {
@@ -9836,19 +9676,6 @@ packages:
       react-dom:
         optional: true
 
-  react-router@8.0.0:
-    resolution:
-      {
-        integrity: sha512-AyS7LUn9M3g2/IBJDJNpWqElaQjPVBHGgMsdLGee6B2JLwP9STSpRwN8N4SauOeFTb0X5ZN0wxa1Iek78jF8Iw==,
-      }
-    engines: { node: ">=22.22.0" }
-    peerDependencies:
-      react: ">=19.2.7"
-      react-dom: ">=19.2.7"
-    peerDependenciesMeta:
-      react-dom:
-        optional: true
-
   react@19.2.4:
     resolution:
       {
@@ -9860,13 +9687,6 @@ packages:
     resolution:
       {
         integrity: sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==,
-      }
-    engines: { node: ">=0.10.0" }
-
-  react@19.2.7:
-    resolution:
-      {
-        integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==,
       }
     engines: { node: ">=0.10.0" }
 
@@ -9883,13 +9703,6 @@ packages:
         integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==,
       }
     engines: { node: ">= 14.18.0" }
-
-  readdirp@5.0.0:
-    resolution:
-      {
-        integrity: sha512-9u/XQ1pvrQtYyMpZe7DXKv2p5CNvyVwzUB6uhLAnQwHMSgKMBR62lc7AHljaeteeHXn11XTAaLLUVZYVZyuRBQ==,
-      }
-    engines: { node: ">= 20.19.0" }
 
   redis@4.7.1:
     resolution:
@@ -13392,44 +13205,6 @@ snapshots:
       - tsx
       - yaml
 
-  "@react-router/dev@8.0.0(@react-router/serve@8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3))(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))":
-    dependencies:
-      "@babel/core": 7.29.7
-      "@babel/generator": 7.29.7
-      "@babel/parser": 7.29.7
-      "@babel/plugin-syntax-jsx": 7.29.7(@babel/core@7.29.7)
-      "@babel/preset-typescript": 7.29.7(@babel/core@7.29.7)
-      "@babel/traverse": 7.29.7
-      "@babel/types": 7.29.7
-      "@react-router/node": 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      "@remix-run/node-fetch-server": 0.13.3
-      arg: 5.0.2
-      babel-dead-code-elimination: 1.0.12
-      chokidar: 5.0.0
-      dedent: 1.7.2
-      es-module-lexer: 2.1.0
-      exit-hook: 5.1.0
-      isbot: 5.1.40
-      jsesc: 3.1.0
-      lodash: 4.18.1
-      p-map: 7.0.4
-      pathe: 2.0.3
-      picocolors: 1.1.1
-      pkg-types: 2.3.1
-      prettier: 3.8.3
-      react-refresh: 0.18.0
-      react-router: 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      semver: 7.8.1
-      tinyglobby: 0.2.16
-      valibot: 1.4.1(typescript@5.9.3)
-      vite: 8.0.14(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
-    optionalDependencies:
-      "@react-router/serve": 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-
   "@react-router/express@7.13.2(express@4.22.2)(react-router@7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)":
     dependencies:
       "@react-router/node": 7.13.2(react-router@7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)
@@ -13438,25 +13213,10 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  "@react-router/express@8.0.0(express@5.2.1)(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)":
-    dependencies:
-      "@react-router/node": 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      express: 5.2.1
-      react-router: 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-    optionalDependencies:
-      typescript: 5.9.3
-
   "@react-router/node@7.13.2(react-router@7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@5.9.3)":
     dependencies:
       "@mjackson/node-fetch-server": 0.2.0
       react-router: 7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-    optionalDependencies:
-      typescript: 5.9.3
-
-  "@react-router/node@8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)":
-    dependencies:
-      "@remix-run/node-fetch-server": 0.13.3
-      react-router: 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     optionalDependencies:
       typescript: 5.9.3
 
@@ -13470,21 +13230,6 @@ snapshots:
       get-port: 5.1.1
       morgan: 1.10.1
       react-router: 7.13.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      source-map-support: 0.5.21
-    transitivePeerDependencies:
-      - supports-color
-      - typescript
-
-  "@react-router/serve@8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)":
-    dependencies:
-      "@react-router/express": 8.0.0(express@5.2.1)(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      "@react-router/node": 8.0.0(react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(typescript@5.9.3)
-      "@remix-run/node-fetch-server": 0.13.3
-      compression: 1.8.1
-      express: 5.2.1
-      get-port: 7.2.0
-      morgan: 1.10.1
-      react-router: 8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       source-map-support: 0.5.21
     transitivePeerDependencies:
       - supports-color
@@ -14803,10 +14548,6 @@ snapshots:
     dependencies:
       readdirp: 4.1.2
 
-  chokidar@5.0.0:
-    dependencies:
-      readdirp: 5.0.0
-
   chrome-trace-event@1.0.4: {}
 
   ci-info@4.4.0: {}
@@ -14949,8 +14690,6 @@ snapshots:
       meow: 13.2.0
 
   convert-source-map@2.0.0: {}
-
-  cookie-es@3.1.1: {}
 
   cookie-signature@1.0.7: {}
 
@@ -15592,8 +15331,6 @@ snapshots:
 
   exit-hook@2.2.1: {}
 
-  exit-hook@5.1.0: {}
-
   exit-x@0.2.2: {}
 
   expect@30.4.1:
@@ -15916,8 +15653,6 @@ snapshots:
   get-package-type@0.1.0: {}
 
   get-port@5.1.1: {}
-
-  get-port@7.2.0: {}
 
   get-proto@1.0.1:
     dependencies:
@@ -16706,8 +16441,6 @@ snapshots:
       argparse: 2.0.1
 
   jsesc@3.0.2: {}
-
-  jsesc@3.1.0: {}
 
   json-buffer@3.0.1: {}
 
@@ -17569,11 +17302,6 @@ snapshots:
       react: 19.2.6
       scheduler: 0.27.0
 
-  react-dom@19.2.7(react@19.2.7):
-    dependencies:
-      react: 19.2.7
-      scheduler: 0.27.0
-
   react-error-boundary@3.1.4(react@19.2.6):
     dependencies:
       "@babel/runtime": 7.29.7
@@ -17595,8 +17323,6 @@ snapshots:
       redux: 5.0.1
 
   react-refresh@0.14.2: {}
-
-  react-refresh@0.18.0: {}
 
   react-router-dom@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
@@ -17620,18 +17346,9 @@ snapshots:
     optionalDependencies:
       react-dom: 19.2.6(react@19.2.6)
 
-  react-router@8.0.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
-    dependencies:
-      cookie-es: 3.1.1
-      react: 19.2.7
-    optionalDependencies:
-      react-dom: 19.2.7(react@19.2.7)
-
   react@19.2.4: {}
 
   react@19.2.6: {}
-
-  react@19.2.7: {}
 
   readable-stream@3.6.2:
     dependencies:
@@ -17640,8 +17357,6 @@ snapshots:
       util-deprecate: 1.0.2
 
   readdirp@4.1.2: {}
-
-  readdirp@5.0.0: {}
 
   redis@4.7.1:
     dependencies:
