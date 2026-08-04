@@ -61,7 +61,7 @@ export async function sendChatMessage(messages: ChatMessage[]): Promise<Readable
  * @param url - Optional URL filter
  * @returns Web Vitals statistics data
  */
-export async function getWebVitalsStats(days: number = 7, url?: string): Promise<WebVitalsData[]> {
+export async function getWebVitalsStats(days: number = 7, url?: string) {
   const params = new URLSearchParams();
   params.append('days', days.toString());
   if (url) {
@@ -69,7 +69,7 @@ export async function getWebVitalsStats(days: number = 7, url?: string): Promise
   }
 
   try {
-    const response = await analyticsInstance.trackedFetch(
+    return analyticsInstance.trackedFetch(
       `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
       {
         method: 'GET',
@@ -78,12 +78,6 @@ export async function getWebVitalsStats(days: number = 7, url?: string): Promise
         },
       },
     );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
   } catch (error) {
     console.error('Failed to fetch Web Vitals stats:', error);
     throw error;
