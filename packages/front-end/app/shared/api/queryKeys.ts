@@ -12,4 +12,7 @@ export const queryKeys = {
   orders: {
     /* ... */
   },
+  webVitalsStats: {
+    days: (days: number) => ['web-vitals-stats', days] as const,
+  },
 } as const;

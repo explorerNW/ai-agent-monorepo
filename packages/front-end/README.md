@@ -99,17 +99,18 @@ Check browser DevTools → Application tab to verify Service Worker registration
 - 📊 Real-time update notifications
 - 🛠️ Developer tools for cache management
 
-
 ### 状态管理
-| 状态类型 | 管理工具 | 典型场景 | 封装重点 |
-| :--- | :--- | :--- | :--- |
-| 服务端状态 | TanStack Query | API数据、缓存、分页、无限滚动 | 统一HttpClient、QueryKey工厂、全局错误处理 |
-| 客户端全局状态 | Redux Toolkit | 用户信息、主题、权限、复杂表单向导 | Slice模块化、Selector记忆化、中间件 |
-| UI/局部状态 | useState / Context | 弹窗开关、Tab切换、临时输入 | 避免过度全局化 |
-| URL状态 | URL Params | 筛选条件、分页页码、搜索词 | 状态持久化、分享链接 |
+
+| 状态类型       | 管理工具           | 典型场景                           | 封装重点                                   |
+| :------------- | :----------------- | :--------------------------------- | :----------------------------------------- |
+| 服务端状态     | TanStack Query     | API数据、缓存、分页、无限滚动      | 统一HttpClient、QueryKey工厂、全局错误处理 |
+| 客户端全局状态 | Redux Toolkit      | 用户信息、主题、权限、复杂表单向导 | Slice模块化、Selector记忆化、中间件        |
+| UI/局部状态    | useState / Context | 弹窗开关、Tab切换、临时输入        | 避免过度全局化                             |
+| URL状态        | URL Params         | 筛选条件、分页页码、搜索词         | 状态持久化、分享链接                       |
 
 #### 目录结构
-```bash
+
+````bash
 src/
 ├── app/                  # 应用级配置
 │   ├── store.ts          # Redux Store 配置
@@ -142,7 +143,7 @@ docker build -t my-app .
 
 # Run the container
 docker run -p 3000:3000 my-app
-```
+````
 
 The containerized application can be deployed to any platform that supports Docker, including:
 
