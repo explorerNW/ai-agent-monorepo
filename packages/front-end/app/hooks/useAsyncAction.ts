@@ -1,12 +1,15 @@
-import { useState, useCallback } from "react";
-import { useAppDispatch } from "~/store/hooks";
+import { useState, useCallback } from 'react';
+import { useAppDispatch } from '~/store/hooks';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useAsyncAction = (actionCreator: any) => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [error, setError] = useState<any>(null);
 
   const execute = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (...args: any[]) => {
       try {
         setLoading(true);

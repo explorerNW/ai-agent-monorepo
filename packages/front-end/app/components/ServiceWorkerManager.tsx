@@ -1,15 +1,8 @@
-import { useServiceWorker } from "../hooks/useServiceWorker";
+import { useServiceWorker } from '../hooks/useServiceWorker';
 
 export function ServiceWorkerManager() {
-  const {
-    status,
-    isLoading,
-    error,
-    checkForUpdates,
-    skipWaiting,
-    refreshCache,
-    hasUpdate,
-  } = useServiceWorker();
+  const { status, isLoading, error, checkForUpdates, skipWaiting, refreshCache, hasUpdate } =
+    useServiceWorker();
 
   if (!status.isSupported) {
     return (
@@ -54,18 +47,16 @@ export function ServiceWorkerManager() {
       <div className="bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full ${
-              status.isActive ? "bg-green-500" : "bg-gray-500"
-            }`}
+            className={`w-2 h-2 rounded-full ${status.isActive ? 'bg-green-500' : 'bg-gray-500'}`}
           />
-          <span>{status.isActive ? "Online" : "Offline"}</span>
+          <span>{status.isActive ? 'Online' : 'Offline'}</span>
         </div>
 
         {/* Debug info in development */}
         {import.meta.env.DEV && (
           <div className="mt-2 text-xs text-gray-400">
-            <div>Registered: {status.isRegistered ? "✓" : "✗"}</div>
-            <div>Active: {status.isActive ? "✓" : "✗"}</div>
+            <div>Registered: {status.isRegistered ? '✓' : '✗'}</div>
+            <div>Active: {status.isActive ? '✓' : '✗'}</div>
           </div>
         )}
       </div>

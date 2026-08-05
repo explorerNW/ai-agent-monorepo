@@ -43,7 +43,6 @@ export default defineConfig(({ mode }) => ({
   build: {
     rolldownOptions: {
       output: {
-        cssCodeSplit: true,
         codeSplitting: {
           minSize: 50 * 1024, // 大于 50KB 的包进行拆分
           maxSize: 250 * 1024, // 最大不超过 200KB

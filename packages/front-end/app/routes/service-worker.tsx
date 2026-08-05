@@ -1,26 +1,22 @@
-import type { Route } from "./+types/home";
-import { usePageView } from "~/hooks/useTrack";
-import FeedPage from "./feed";
-import { useState } from "react";
-import React from "react";
-import BottomNavigation from "~/components/BottomNavigation";
-import { ServiceWorkerManager } from "~/components";
+import type { Route } from './+types/home';
+import { useState } from 'react';
+import React from 'react';
+import BottomNavigation from '~/components/BottomNavigation';
+import { ServiceWorkerManager } from '~/components';
 
+// eslint-disable-next-line no-empty-pattern, react-refresh/only-export-components
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Service Worker Management" },
+    { title: 'Service Worker Management' },
     {
-      name: "description",
-      content: "Manage service workers for the application",
+      name: 'description',
+      content: 'Manage service workers for the application',
     },
   ];
 }
 
 export default function ServiceWorkerManagementPage() {
-  // 页面浏览埋点 - 必须在顶层调用
-  usePageView();
-
-  const [activeTab, setActiveTab] = useState<string>("service_worker");
+  const [activeTab, setActiveTab] = useState<string>('service_worker');
 
   // Memoize handler to prevent unnecessary re-renders in child components
   const handleTabChange = React.useCallback((tabId: string) => {

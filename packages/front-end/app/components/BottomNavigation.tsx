@@ -1,5 +1,5 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Navigation Item Interface
@@ -34,55 +34,23 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
     // Define navigation items with their icons
     const navItems: NavItem[] = [
       {
-        id: "feed",
-        label: "Feed",
-        isActive: activeTab === "feed",
+        id: 'feed',
+        label: 'Feed',
+        isActive: activeTab === 'feed',
         icon: (
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <rect
-              x="3"
-              y="3"
-              width="7"
-              height="7"
-              rx="1"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <rect
-              x="12"
-              y="3"
-              width="7"
-              height="7"
-              rx="1"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <rect
-              x="3"
-              y="12"
-              width="7"
-              height="7"
-              rx="1"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <rect
-              x="12"
-              y="12"
-              width="7"
-              height="7"
-              rx="1"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+            <rect x="12" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+            <rect x="3" y="12" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
+            <rect x="12" y="12" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" />
           </svg>
         ),
-        link: "/",
+        link: '/',
       },
       {
-        id: "analytics",
-        label: "Analytics",
-        isActive: activeTab === "analytics",
+        id: 'analytics',
+        label: 'Analytics',
+        isActive: activeTab === 'analytics',
         icon: (
           <svg
             className="w-[22px] h-[22px]"
@@ -90,38 +58,17 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <rect
-              x="3"
-              y="13"
-              width="4"
-              height="6"
-              rx="1"
-              fill="currentColor"
-            />
-            <rect
-              x="9"
-              y="8"
-              width="4"
-              height="11"
-              rx="1"
-              fill="currentColor"
-            />
-            <rect
-              x="15"
-              y="3"
-              width="4"
-              height="16"
-              rx="1"
-              fill="currentColor"
-            />
+            <rect x="3" y="13" width="4" height="6" rx="1" fill="currentColor" />
+            <rect x="9" y="8" width="4" height="11" rx="1" fill="currentColor" />
+            <rect x="15" y="3" width="4" height="16" rx="1" fill="currentColor" />
           </svg>
         ),
-        link: "/analytics",
+        link: '/analytics',
       },
       {
-        id: "service_worker",
-        label: "SW Manager",
-        isActive: activeTab === "service_worker",
+        id: 'service_worker',
+        label: 'SW Manager',
+        isActive: activeTab === 'service_worker',
         icon: (
           <svg width="22" height="29" viewBox="0 0 22 29" fill="none">
             <path
@@ -129,20 +76,15 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
               stroke="currentColor"
               strokeWidth="2"
             />
-            <path
-              d="M3 9L11 15L19 9"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            <path d="M3 9L11 15L19 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         ),
-        link: "/service-worker",
+        link: '/service-worker',
       },
       {
-        id: "notifications",
-        label: "Notifications",
-        isActive: activeTab === "notifications",
+        id: 'notifications',
+        label: 'Notifications',
+        isActive: activeTab === 'notifications',
         icon: (
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path
@@ -159,18 +101,13 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
         ),
       },
       {
-        id: "search",
-        label: "Search",
-        isActive: activeTab === "search",
+        id: 'search',
+        label: 'Search',
+        isActive: activeTab === 'search',
         icon: (
           <svg width="20" height="21" viewBox="0 0 20 21" fill="none">
             <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="2" />
-            <path
-              d="M14 14L18 18"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
+            <path d="M14 14L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         ),
       },
@@ -189,14 +126,12 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() =>
-                item.link ? navigate(item.link) : onTabChange(item.id)
-              } // Only trigger onTabChange if there's no link
+              onClick={() => (item.link ? navigate(item.link) : onTabChange(item.id))} // Only trigger onTabChange if there's no link
               className={`flex flex-col items-center justify-center w-[75px] h-[49px] transition-colors ${
-                item.isActive ? "text-white" : "text-[#CFD9E4]"
+                item.isActive ? 'text-white' : 'text-[#CFD9E4]'
               }`}
               aria-label={item.label}
-              aria-current={item.isActive ? "page" : undefined}
+              aria-current={item.isActive ? 'page' : undefined}
             >
               {/* Icon */}
               <div className="mb-1">{item.icon}</div>
@@ -230,11 +165,10 @@ export function NavItem({
       {/* Label */}
       <span
         className={`text-[10px] font-normal leading-none tracking-[1.2%] mt-auto mb-0 ${
-          isActive ? "text-white" : "text-[#CFD9E4]"
+          isActive ? 'text-white' : 'text-[#CFD9E4]'
         }`}
         style={{
-          fontFamily:
-            "SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif",
+          fontFamily: 'SF Pro Text, -apple-system, BlinkMacSystemFont, sans-serif',
         }}
       >
         {label}
@@ -243,6 +177,6 @@ export function NavItem({
   );
 }
 
-BottomNavigation.displayName = "BottomNavigation";
+BottomNavigation.displayName = 'BottomNavigation';
 
 export default BottomNavigation;

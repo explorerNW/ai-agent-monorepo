@@ -27,18 +27,18 @@ export const env: EnvConfig = {
   // API Configuration
   // Use relative path to avoid mixed content issues
   // All API requests will go through Nginx HTTPS proxy
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "",
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '',
 
   // Application Info
-  appName: import.meta.env.VITE_APP_NAME || "AI Assistant",
-  appVersion: import.meta.env.VITE_APP_VERSION || "1.0.0",
+  appName: import.meta.env.VITE_APP_NAME || 'AI Assistant',
+  appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
 
   // Feature Flags
-  enableStreaming: import.meta.env.VITE_ENABLE_STREAMING !== "false",
-  enableFileUpload: import.meta.env.VITE_ENABLE_FILE_UPLOAD === "true",
+  enableStreaming: import.meta.env.VITE_ENABLE_STREAMING !== 'false',
+  enableFileUpload: import.meta.env.VITE_ENABLE_FILE_UPLOAD === 'true',
 
   // Development
-  debugMode: import.meta.env.VITE_DEBUG_MODE === "true",
+  debugMode: import.meta.env.VITE_DEBUG_MODE === 'true',
 };
 
 /**
@@ -57,8 +57,8 @@ export const API_CONFIG = {
  * @returns Full URL string
  */
 export function getApiUrl(endpoint: string): string {
-  const baseUrl = env.apiBaseUrl.replace(/\/$/, ""); // Remove trailing slash
-  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const baseUrl = env.apiBaseUrl.replace(/\/$/, ''); // Remove trailing slash
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${baseUrl}${path}`;
 }
 
@@ -66,7 +66,7 @@ export function getApiUrl(endpoint: string): string {
  * Log current configuration in debug mode
  */
 if (env.debugMode) {
-  console.log("🔧 App Configuration:", {
+  console.log('🔧 App Configuration:', {
     apiBaseUrl: env.apiBaseUrl,
     appName: env.appName,
     version: env.appVersion,

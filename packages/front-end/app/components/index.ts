@@ -1,1 +1,1 @@
-export { ServiceWorkerManager } from "./ServiceWorkerManager";
+export { ServiceWorkerManager } from './ServiceWorkerManager';

@@ -1,8 +1,9 @@
-import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 
 export function createCustomStore<TState, TActions>(
   initialState: TState,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   actions: (set: any, get: any) => TActions,
 ) {
   const useStore = create<TState & TActions>()(

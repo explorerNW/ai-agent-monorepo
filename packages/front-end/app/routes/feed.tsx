@@ -58,6 +58,7 @@ const mockPublishes: PublishCard[] = [
   { id: '6', imageUrl: '/images/feed/images/image-6.png', hasVideo: true },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function meta() {
   return [
     { title: 'Feed - Infinite' },

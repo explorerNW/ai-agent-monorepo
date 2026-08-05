@@ -8,7 +8,6 @@ import {
 } from 'react-router';
 
 import './app.css';
-import { useRoutePerformance } from './hooks/useRoutePerformance';
 import { useEffect } from 'react';
 import { EnterpriseMonitorSDK } from '@explorernw/monitor-sdk';
 import { API_CONFIG } from './config/env';
@@ -49,8 +48,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  useRoutePerformance();
-
   // Register Service Worker - Only in production
   useEffect(() => {
     // Only register service worker in production builds
