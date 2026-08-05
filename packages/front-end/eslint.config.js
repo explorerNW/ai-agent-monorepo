@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
   // 全局忽略
-  { ignores: ['dist'] },
+  { ignores: ['dist', '.react-router/**/*.{ts,tsx}'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

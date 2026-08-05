@@ -1,7 +1,7 @@
-import { useRef, useEffect } from "react";
-import type { EChartsOption, EChartsType } from "echarts";
-import * as echarts from "echarts";
-import type { WebVitalsData } from "~/types/performance";
+import { useRef, useEffect } from 'react';
+import type { EChartsOption, EChartsType } from 'echarts';
+import * as echarts from 'echarts';
+import type { WebVitalsData } from '~/types/performance';
 
 interface ApiPerformanceChartProps {
   data: WebVitalsData[];
@@ -20,13 +20,13 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
     // Helper function to extract API path from full URL
     const extractApiPath = (url: string): string => {
       try {
-        if (url.startsWith("http://") || url.startsWith("https://")) {
+        if (url.startsWith('http://') || url.startsWith('https://')) {
           const urlObj = new URL(url);
           return urlObj.pathname;
         }
         return url;
       } catch {
-        return url.replace(/^https?:\/\/[^\/]+/, "");
+        return url.replace(/^https?:\/\/[^/]+/, '');
       }
     };
 
@@ -52,10 +52,7 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
     });
 
     // Group by URL and calculate averages
-    const urlStats: Record<
-      string,
-      { durations: number[]; successes: number[] }
-    > = {};
+    const urlStats: Record<string, { durations: number[]; successes: number[] }> = {};
     apiCallsData.forEach((call) => {
       const apiPath = extractApiPath(call.url);
       if (!urlStats[apiPath]) {
@@ -71,17 +68,17 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
       // Show empty state
       const option: EChartsOption = {
         title: {
-          text: "API Performance",
-          left: "center",
-          textStyle: { color: "#fff" },
+          text: 'API Performance',
+          left: 'center',
+          textStyle: { color: '#fff' },
         },
         graphic: {
-          type: "text",
-          left: "center",
-          top: "middle",
+          type: 'text',
+          left: 'center',
+          top: 'middle',
           style: {
-            text: "No API performance data available",
-            fill: "#999",
+            text: 'No API performance data available',
+            fill: '#999',
             fontSize: 16,
           },
         },
@@ -92,79 +89,75 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
 
     const avgDurations = urls.map((url) => {
       const stats = urlStats[url];
-      return (
-        stats.durations.reduce((sum, d) => sum + d, 0) / stats.durations.length
-      ).toFixed(2);
+      return (stats.durations.reduce((sum, d) => sum + d, 0) / stats.durations.length).toFixed(2);
     });
     const successRates = urls.map((url) => {
       const stats = urlStats[url];
-      return (
-        stats.successes.reduce((sum, s) => sum + s, 0) / stats.successes.length
-      ).toFixed(2);
+      return (stats.successes.reduce((sum, s) => sum + s, 0) / stats.successes.length).toFixed(2);
     });
 
     const option: EChartsOption = {
       title: {
-        text: "API Performance",
-        left: "center",
-        textStyle: { color: "#fff" },
+        text: 'API Performance',
+        left: 'center',
+        textStyle: { color: '#fff' },
       },
       tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "cross" },
+        trigger: 'axis',
+        axisPointer: { type: 'cross' },
       },
       legend: {
-        data: ["Avg Duration (ms)", "Success Rate (%)"],
-        textStyle: { color: "#999" },
+        data: ['Avg Duration (ms)', 'Success Rate (%)'],
+        textStyle: { color: '#999' },
         top: 30,
       },
       grid: {
-        left: "3%",
-        right: "4%",
-        bottom: "3%",
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
         containLabel: true,
         top: 70,
       },
       xAxis: {
-        type: "category",
+        type: 'category',
         data: urls,
         axisLabel: {
-          color: "#999",
+          color: '#999',
           rotate: 45,
           fontSize: 10,
         },
       },
       yAxis: [
         {
-          type: "value",
-          name: "Duration (ms)",
-          position: "left",
-          axisLabel: { color: "#999" },
-          splitLine: { lineStyle: { color: "#333" } },
+          type: 'value',
+          name: 'Duration (ms)',
+          position: 'left',
+          axisLabel: { color: '#999' },
+          splitLine: { lineStyle: { color: '#333' } },
         },
         {
-          type: "value",
-          name: "Success Rate (%)",
-          position: "right",
-          axisLabel: { color: "#999" },
+          type: 'value',
+          name: 'Success Rate (%)',
+          position: 'right',
+          axisLabel: { color: '#999' },
           splitLine: { show: false },
           max: 100,
         },
       ],
       series: [
         {
-          name: "Avg Duration (ms)",
-          type: "bar",
+          name: 'Avg Duration (ms)',
+          type: 'bar',
           data: avgDurations,
-          itemStyle: { color: "#1890ff" },
+          itemStyle: { color: '#1890ff' },
         },
         {
-          name: "Success Rate (%)",
-          type: "line",
+          name: 'Success Rate (%)',
+          type: 'line',
           yAxisIndex: 1,
           data: successRates,
           smooth: true,
-          itemStyle: { color: "#52c41a" },
+          itemStyle: { color: '#52c41a' },
         },
       ],
     };
@@ -178,7 +171,7 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
     };
   }, [data]);
 
-  return <div ref={chartRef} style={{ width: "100%", height: "400px" }} />;
+  return <div ref={chartRef} style={{ width: '100%', height: '400px' }} />;
 }
 
 export default ApiPerformanceChart;

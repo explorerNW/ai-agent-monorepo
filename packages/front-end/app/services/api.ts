@@ -4,8 +4,6 @@
  */
 
 import { API_CONFIG } from '~/config/env';
-import { analyticsInstance } from '~/core/instance';
-import type { WebVitalsData } from '~/types/performance';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -31,7 +29,7 @@ export async function sendChatMessage(messages: ChatMessage[]): Promise<Readable
   const analytics_uid = localStorage.getItem('analytics_uid') || startTime.toString();
 
   try {
-    const response = await analyticsInstance.trackedFetch(API_CONFIG.CHAT_ENDPOINT, {
+    const response = await fetch(API_CONFIG.CHAT_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,15 +67,12 @@ export async function getWebVitalsStats(days: number = 7, url?: string) {
   }
 
   try {
-    return analyticsInstance.trackedFetch(
-      `${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+    return fetch(`${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
+    });
   } catch (error) {
     console.error('Failed to fetch Web Vitals stats:', error);
     throw error;

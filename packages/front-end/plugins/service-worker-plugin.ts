@@ -1,7 +1,7 @@
-import type { Plugin } from "vite";
-import * as fs from "fs";
-import * as path from "path";
-import { createHash as createCryptoHash } from "crypto";
+import type { Plugin } from 'vite';
+import * as fs from 'fs';
+import * as path from 'path';
+import { createHash as createCryptoHash } from 'crypto';
 
 interface ServiceWorkerPluginOptions {
   swSrc: string;
@@ -10,27 +10,23 @@ interface ServiceWorkerPluginOptions {
   precachePatterns?: string[];
 }
 
-export function serviceWorkerPlugin(
-  options: ServiceWorkerPluginOptions,
-): Plugin {
+export function serviceWorkerPlugin(options: ServiceWorkerPluginOptions): Plugin {
   const {
     swSrc,
     swDest,
     injectRegister = true,
-    precachePatterns = [
-      "**/*.{js,css,html,json,png,jpg,jpeg,gif,svg,woff,woff2}",
-    ],
+    precachePatterns = ['**/*.{js,css,html,json,png,jpg,jpeg,gif,svg,woff,woff2}'],
   } = options;
 
-  let buildOutputDir = "";
+  let buildOutputDir = '';
   let assetList: Array<{ url: string; revision: string }> = [];
 
   return {
-    name: "vite-plugin-service-worker",
+    name: 'vite-plugin-service-worker',
 
     configResolved(config) {
       // Get the build output directory
-      buildOutputDir = path.resolve(config.root, config.build.outDir || "dist");
+      buildOutputDir = path.resolve(config.root, config.build.outDir || 'dist');
     },
 
     generateBundle(_, bundle) {
@@ -38,15 +34,14 @@ export function serviceWorkerPlugin(
       assetList = [];
 
       for (const [fileName, asset] of Object.entries(bundle)) {
-        if (asset.type === "asset" || asset.type === "chunk") {
+        if (asset.type === 'asset' || asset.type === 'chunk') {
           // Skip service worker itself
-          if (fileName.includes("sw.") || fileName.includes("service-worker")) {
+          if (fileName.includes('sw.') || fileName.includes('service-worker')) {
             continue;
           }
 
           // Calculate hash for cache busting
-          const content =
-            asset.type === "asset" ? (asset.source as string) : asset.code;
+          const content = asset.type === 'asset' ? (asset.source as string) : asset.code;
 
           const hash = createHash(content.toString());
 
@@ -57,9 +52,7 @@ export function serviceWorkerPlugin(
         }
       }
 
-      console.log(
-        `[Service Worker] Collected ${assetList.length} assets for precaching`,
-      );
+      console.log(`[Service Worker] Collected ${assetList.length} assets for precaching`);
     },
 
     closeBundle() {
@@ -71,14 +64,11 @@ export function serviceWorkerPlugin(
         return;
       }
 
-      let swContent = fs.readFileSync(swSourcePath, "utf-8");
+      let swContent = fs.readFileSync(swSourcePath, 'utf-8');
 
       // Inject precache manifest
       const manifestJSON = JSON.stringify(assetList, null, 2);
-      swContent = swContent.replace(
-        /\/\* __PRECACHE_MANIFEST__ \*\//,
-        manifestJSON,
-      );
+      swContent = swContent.replace(/\/\* __PRECACHE_MANIFEST__ \*\//, manifestJSON);
 
       // Create destination directory if it doesn't exist
       const destDir = path.dirname(path.resolve(process.cwd(), swDest));
@@ -88,7 +78,7 @@ export function serviceWorkerPlugin(
 
       // Write the optimized service worker
       const swDestPath = path.resolve(process.cwd(), swDest);
-      fs.writeFileSync(swDestPath, swContent, "utf-8");
+      fs.writeFileSync(swDestPath, swContent, 'utf-8');
 
       console.log(`[Service Worker] Generated at ${swDestPath}`);
 
@@ -101,10 +91,7 @@ export function serviceWorkerPlugin(
 }
 
 function createHash(content: string): string {
-  return createCryptoHash("sha256")
-    .update(content)
-    .digest("hex")
-    .substring(0, 8);
+  return createCryptoHash('sha256').update(content).digest('hex').substring(0, 8);
 }
 
 function injectRegistrationScript(outputDir: string) {
@@ -123,20 +110,15 @@ if ('serviceWorker' in navigator) {
 `;
 
   // Inject into index.html if it exists
-  const indexPath = path.join(outputDir, "index.html");
+  const indexPath = path.join(outputDir, 'index.html');
   if (fs.existsSync(indexPath)) {
-    let html = fs.readFileSync(indexPath, "utf-8");
+    let html = fs.readFileSync(indexPath, 'utf-8');
 
     // Check if already injected
-    if (!html.includes("navigator.serviceWorker.register")) {
-      html = html.replace(
-        "</body>",
-        `<script>${registerScript}</script>\n</body>`,
-      );
-      fs.writeFileSync(indexPath, html, "utf-8");
-      console.log(
-        "[Service Worker] Injected registration script into index.html",
-      );
+    if (!html.includes('navigator.serviceWorker.register')) {
+      html = html.replace('</body>', `<script>${registerScript}</script>\n</body>`);
+      fs.writeFileSync(indexPath, html, 'utf-8');
+      console.log('[Service Worker] Injected registration script into index.html');
     }
   }
 }

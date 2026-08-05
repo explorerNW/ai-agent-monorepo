@@ -1,6 +1,6 @@
-import React from "react";
-import PublishCard from "./PublishCard";
-import type { PublishCard as PublishCardType } from "./PublishCard";
+import React from 'react';
+import PublishCard from './PublishCard';
+import type { PublishCard as PublishCardType } from './PublishCard';
 
 /**
  * PublishGrid Component
@@ -27,6 +27,6 @@ const PublishGrid: React.FC<PublishGridProps> = React.memo(({ publishes }) => {
   );
 });
 
-PublishGrid.displayName = "PublishGrid";
+PublishGrid.displayName = 'PublishGrid';
 
 export default PublishGrid;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import {
   checkServiceWorkerStatus,
   checkForUpdates,
@@ -6,7 +6,7 @@ import {
   getCacheInfo,
   onServiceWorkerUpdate,
   type ServiceWorkerStatus,
-} from "../utils/serviceWorker";
+} from '../utils/serviceWorker';
 
 interface UseServiceWorkerReturn {
   status: ServiceWorkerStatus;
@@ -48,9 +48,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
         }
       } catch (err) {
         if (mounted) {
-          setError(
-            err instanceof Error ? err : new Error("Failed to check SW status"),
-          );
+          setError(err instanceof Error ? err : new Error('Failed to check SW status'));
           setIsLoading(false);
         }
       }
@@ -62,7 +60,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
     const cleanup = onServiceWorkerUpdate(() => {
       if (mounted) {
         setHasUpdate(true);
-        console.log("[SW] New version available");
+        console.log('[SW] New version available');
       }
     });
 
@@ -82,9 +80,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
         setHasUpdate(newStatus.waitingUpdate);
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Failed to check for updates"),
-      );
+      setError(err instanceof Error ? err : new Error('Failed to check for updates'));
     }
   }, []);
 
@@ -95,9 +91,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
       // Reload page to activate new SW
       window.location.reload();
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Failed to skip waiting"),
-      );
+      setError(err instanceof Error ? err : new Error('Failed to skip waiting'));
     }
   }, []);
 
@@ -105,14 +99,12 @@ export function useServiceWorker(): UseServiceWorkerReturn {
   const handleRefreshCache = useCallback(async () => {
     try {
       const cacheInfo = await getCacheInfo();
-      console.log("[SW] Current cache info:", cacheInfo);
+      console.log('[SW] Current cache info:', cacheInfo);
 
       // Force update check
       await handleCheckForUpdates();
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Failed to refresh cache"),
-      );
+      setError(err instanceof Error ? err : new Error('Failed to refresh cache'));
     }
   }, [handleCheckForUpdates]);
 

@@ -1,6 +1,6 @@
-import { makeAutoObservable } from "mobx";
-import type { IReactionDisposer } from "mobx";
-import { useState, useEffect, useMemo } from "react";
+import { makeAutoObservable } from 'mobx';
+import type { IReactionDisposer } from 'mobx';
+import { useState, useEffect, useMemo } from 'react';
 
 interface StoreOptions<TState, TActions> {
   // 1. 初始状态
@@ -8,10 +8,7 @@ interface StoreOptions<TState, TActions> {
   // 2. 动作定义（接收 state 本身，方便内部修改）
   actions: (state: TState) => TActions;
   // 3. 可选：自定义联动逻辑（副作用）
-  setupEffects?: (
-    state: TState,
-    dispose: (disposer: IReactionDisposer) => void,
-  ) => void;
+  setupEffects?: (state: TState, dispose: (disposer: IReactionDisposer) => void) => void;
 }
 
 export function createMobxStore<TState extends object, TActions extends object>(

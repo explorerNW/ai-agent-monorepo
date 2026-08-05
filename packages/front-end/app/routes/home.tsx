@@ -1,22 +1,19 @@
-import type { Route } from "./+types/home";
-import { usePageView } from "~/hooks/useTrack";
-import FeedPage from "./feed";
-import { useState } from "react";
-import React from "react";
-import BottomNavigation from "~/components/BottomNavigation";
+import type { Route } from './+types/home';
+import FeedPage from './feed';
+import { useState } from 'react';
+import React from 'react';
+import BottomNavigation from '~/components/BottomNavigation';
 
+// eslint-disable-next-line no-empty-pattern, react-refresh/only-export-components
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Infinite Feed" },
-    { name: "description", content: "Social media feed interface" },
+    { title: 'Infinite Feed' },
+    { name: 'description', content: 'Social media feed interface' },
   ];
 }
 
 export default function Home() {
-  // 页面浏览埋点 - 必须在顶层调用
-  usePageView();
-
-  const [activeTab, setActiveTab] = useState<string>("feed");
+  const [activeTab, setActiveTab] = useState<string>('feed');
 
   // Memoize handler to prevent unnecessary re-renders in child components
   const handleTabChange = React.useCallback((tabId: string) => {

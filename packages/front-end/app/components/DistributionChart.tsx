@@ -1,15 +1,12 @@
-import { useRef, useEffect } from "react";
-import * as echarts from "echarts";
-import type { EChartsOption, EChartsType } from "echarts";
-import type { WebVitalsData } from "~/types/performance";
+import { useRef, useEffect } from 'react';
+import * as echarts from 'echarts';
+import type { EChartsOption, EChartsType } from 'echarts';
+import type { WebVitalsData } from '~/types/performance';
 
 interface DistributionChartProps {
   data: WebVitalsData[];
   title: string;
-  metricKey: keyof Pick<
-    WebVitalsData["metrics"],
-    "lcp" | "fcp" | "cls" | "ttfb"
-  >;
+  metricKey: keyof Pick<WebVitalsData['metrics'], 'lcp' | 'fcp' | 'cls' | 'ttfb'>;
   thresholds: {
     good: number;
     needsImprovement: number;
@@ -17,12 +14,7 @@ interface DistributionChartProps {
   };
 }
 
-function DistributionChart({
-  data,
-  title,
-  metricKey,
-  thresholds,
-}: DistributionChartProps) {
+function DistributionChart({ data, title, metricKey, thresholds }: DistributionChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,9 +24,7 @@ function DistributionChart({
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-    const values = data
-      .map((item) => item.metrics[metricKey]?.value || 0)
-      .filter((v) => v >= 0);
+    const values = data.map((item) => item.metrics[metricKey]?.value || 0).filter((v) => v >= 0);
 
     const stats = { good: 0, needsImprovement: 0, poor: 0 };
     values.forEach((v) => {
@@ -46,45 +36,43 @@ function DistributionChart({
     const option: EChartsOption = {
       title: {
         text: title,
-        left: "center",
-        textStyle: { color: "#fff" },
+        left: 'center',
+        textStyle: { color: '#fff' },
       },
       tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "shadow" },
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
       },
       grid: {
-        left: "3%",
-        right: "4%",
-        bottom: "3%",
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
         containLabel: true,
       },
       xAxis: {
-        type: "category",
+        type: 'category',
         data: thresholds.labels,
-        axisLabel: { color: "#999" },
+        axisLabel: { color: '#999' },
       },
       yAxis: {
-        type: "value",
-        name: "Count",
-        axisLabel: { color: "#999" },
-        splitLine: { lineStyle: { color: "#333" } },
+        type: 'value',
+        name: 'Count',
+        axisLabel: { color: '#999' },
+        splitLine: { lineStyle: { color: '#333' } },
       },
       series: [
         {
-          name: title.split(" ")[0],
-          type: "bar",
+          name: title.split(' ')[0],
+          type: 'bar',
           data: [
             stats.good,
-            values.filter(
-              (v) => v > thresholds.good && v <= thresholds.needsImprovement,
-            ).length,
+            values.filter((v) => v > thresholds.good && v <= thresholds.needsImprovement).length,
             stats.needsImprovement,
             stats.poor,
           ],
           itemStyle: {
             color: (params) => {
-              const colors = ["#52c41a", "#faad14", "#ff4d4f"];
+              const colors = ['#52c41a', '#faad14', '#ff4d4f'];
               return colors[params.dataIndex];
             },
           },
@@ -101,7 +89,7 @@ function DistributionChart({
     };
   }, [data, title, metricKey, thresholds]);
 
-  return <div ref={chartRef} style={{ width: "100%", height: "300px" }} />;
+  return <div ref={chartRef} style={{ width: '100%', height: '300px' }} />;
 }
 
 export default DistributionChart;

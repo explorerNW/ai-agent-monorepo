@@ -1,36 +1,28 @@
-import { useState, useRef, useEffect } from "react";
-import {
-  sendChatMessage,
-  processStream,
-  type ChatMessage,
-} from "~/services/api";
-import { env } from "~/config/env";
+import { useState, useRef, useEffect } from 'react';
+import { sendChatMessage, processStream, type ChatMessage } from '~/services/api';
+import { env } from '~/config/env';
 
 export default function Chat() {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const currentMessageRef = useRef("");
+  const currentMessageRef = useRef('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage: ChatMessage = { role: "user", content: input };
+    const userMessage: ChatMessage = { role: 'user', content: input };
     // 1. 先把用户的消息上屏，并预留一条空的 AI 消息
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      { role: "assistant", content: "" },
-    ]);
-    setInput("");
+    setMessages((prev) => [...prev, userMessage, { role: 'assistant', content: '' }]);
+    setInput('');
     setIsLoading(true);
-    currentMessageRef.current = "";
+    currentMessageRef.current = '';
 
     try {
       // 2. 使用 API 服务发送消息（使用环境变量配置的 URL）
@@ -45,32 +37,30 @@ export default function Chat() {
           // 4. 使用 ref 中的完整内容更新最后一条 AI 消息（避免重复）
           setMessages((prev) => {
             const newMessages = [...prev];
-            newMessages[newMessages.length - 1].content =
-              currentMessageRef.current;
+            newMessages[newMessages.length - 1].content = currentMessageRef.current;
             return newMessages;
           });
         },
         () => {
           // Stream complete
           setIsLoading(false);
-          currentMessageRef.current = "";
+          currentMessageRef.current = '';
         },
       );
     } catch (error) {
-      console.error("Chat error:", error);
+      console.error('Chat error:', error);
       setMessages((prev) => {
         const newMessages = [...prev];
-        newMessages[newMessages.length - 1].content =
-          "Sorry, an error occurred. Please try again.";
+        newMessages[newMessages.length - 1].content = 'Sorry, an error occurred. Please try again.';
         return newMessages;
       });
       setIsLoading(false);
-      currentMessageRef.current = "";
+      currentMessageRef.current = '';
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
@@ -96,43 +86,41 @@ export default function Chat() {
           messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-[70%] px-4 py-3 rounded-2xl shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md"
-                    : "bg-white text-gray-800 border border-gray-200 rounded-bl-md"
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md'
+                    : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'
                 }`}
               >
                 <div className="text-sm font-semibold mb-1 opacity-75">
-                  {msg.role === "user" ? "You" : env.appName}
+                  {msg.role === 'user' ? 'You' : env.appName}
                 </div>
-                <div className="whitespace-pre-wrap break-words leading-relaxed">
-                  {msg.content}
-                </div>
+                <div className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</div>
               </div>
             </div>
           ))
         )}
         {isLoading &&
           messages.length > 0 &&
-          messages[messages.length - 1].role === "assistant" &&
+          messages[messages.length - 1].role === 'assistant' &&
           !messages[messages.length - 1].content && (
             <div className="flex justify-start">
               <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-md shadow-sm">
                 <div className="flex space-x-2">
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0ms" }}
+                    style={{ animationDelay: '0ms' }}
                   ></div>
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
+                    style={{ animationDelay: '150ms' }}
                   ></div>
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
+                    style={{ animationDelay: '300ms' }}
                   ></div>
                 </div>
               </div>

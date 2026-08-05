@@ -1,11 +1,12 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { PayloadAction } from "@reduxjs/toolkit";
+import { createSlice } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 
 // 假设这是从后端获取权限数据的接口
 // export const fetchPermissions = createAsyncThunk('permission/fetch', async () => { ... });
 
 interface PermissionState {
   perms: string[]; // 按钮级权限标识列表，如 ['user:add', 'order:view']
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   menus: any[]; // 动态生成的菜单数据
   loading: boolean;
 }
@@ -17,7 +18,7 @@ const initialState: PermissionState = {
 };
 
 const permissionSlice = createSlice({
-  name: "permission",
+  name: 'permission',
   initialState,
   reducers: {
     // 同步设置权限标识
@@ -25,6 +26,7 @@ const permissionSlice = createSlice({
       state.perms = action.payload;
     },
     // 同步设置菜单数据
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setMenus: (state, action: PayloadAction<any[]>) => {
       state.menus = action.payload;
     },

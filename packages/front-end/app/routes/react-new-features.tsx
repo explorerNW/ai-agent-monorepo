@@ -48,8 +48,10 @@ async function createUserAction(previousState: FormState, formData: FormData): P
 const Text = (props: { content: { text: string } }) => {
   const { content } = props;
   // 模拟一次高耗时的计算
+  // eslint-disable-next-line react-hooks/purity
   const start = Date.now();
   /* eslint-disable no-empty */
+  // eslint-disable-next-line react-hooks/purity
   while (Date.now() - start < 100) {}
 
   console.log('Text 重新执行了！');
