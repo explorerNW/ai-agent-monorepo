@@ -12,7 +12,7 @@ import { useEffect } from 'react';
 import { EnterpriseMonitorSDK } from '@explorernw/monitor-sdk';
 import { API_CONFIG } from './config/env';
 import type { Route } from '../.react-router/types/app/+types/root';
-import { queryClient } from './queryClient';
+import { queryClient } from './shared/api/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 export function Layout({ children }: { children: React.ReactNode }) {

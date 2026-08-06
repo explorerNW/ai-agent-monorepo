@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import { queryClient } from '~/queryClient';
+import { queryClient } from '@shared/api/queryClient';
 
 interface AuthState {
   token: string | null;
