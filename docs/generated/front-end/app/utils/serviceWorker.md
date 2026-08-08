@@ -1,244 +1,129 @@
-# serviceWorker.ts 技术文档
+# `serviceWorker.ts` 技术文档
 
-## 文件概述
+## 📖 1. 文件概述
 
-`serviceWorker.ts` 是一个 TypeScript 源文件，包含了服务工作区相关功能的实现。该文件的主要目的是处理服务工作区的状态检查、更新检测、缓存清理和预加载等操作。
+`serviceWorker.ts` 是一个面向 **PWA（渐进式 Web 应用）** 的 Service Worker 集中管控模块。该文件不直接注册 SW，而是作为 **主线程（Main Thread）与 Service Worker 通信的桥接层**，提供状态查询、版本更新检测、缓存生命周期管理及事件订阅能力。
 
-### 类、接口、函数推断
+**架构定位**：
 
-- **ServiceWorkerStatus**: 用于表示服务工作区状态的类型。
-- **checkServiceWorkerStatus**: 检查并报告服务工作区当前状态的方法。
-- **checkForUpdates**: 检测并更新服务工作区中可能需要更新的内容的方法。
-- **skipWaiting**: 跳过等待服务工作区加载完成的过程，加快页面加载速度的方法。
-- **clearAllCaches**: 清除所有缓存的函数。
-- **getCacheInfo**: 获取缓存信息的方法。
-- **onServiceWorkerUpdate**: 事件处理程序，用于监听并处理服务工作区更新的通知。
-- **precacheUrls**: 预加载 URL 到缓存中的方法。
-- **removeFromCache**: 移除特定 URL 的缓存项的函数。
+- **职责边界**：封装浏览器原生 `navigator.serviceWorker` 与 `caches` API，屏蔽底层异步细节与兼容性差异。
+- **设计模式**：采用函数式工具集 + 事件回调模式，保持无状态与高可测试性。
+- **业务价值**：实现离线缓存、静默更新、用户可控的激活策略、缓存健康监控，显著提升首屏性能与弱网可用性。
 
-### 类、接口、类型和函数说明
+---
 
-#### ServiceWorkerStatus
+## 🧱 2. 核心数据结构
 
-```typescript
-interface ServiceWorkerStatus {
-  // 用于表示服务工作区状态的类型，例如：'active', 'waiting', 'idle'
-}
-```
+### `ServiceWorkerStatus` (Interface)
 
-- **业务意图**: `ServiceWorkerStatus` 是一个表示服务工作区状态的类型。通过这个接口可以获取和报告服务工作区当前的状态，如是否正在加载、等待或处于空闲状态。
+| 属性                | 说明                                               | 推断类型                                                  |
+| ------------------- | -------------------------------------------------- | --------------------------------------------------------- |
+| `state`             | 当前 SW 生命周期状态                               | `'installing' \| 'activating' \| 'active' \| 'redundant'` |
+| `isUpdateAvailable` | 是否存在待激活的新版本                             | `boolean`                                                 |
+| `version`           | 当前激活的 SW 版本号（通常来自 `meta` 或构建哈希） | `string`                                                  |
+| `registration`      | 关联的 `ServiceWorkerRegistration` 实例            | `ServiceWorkerRegistration \| null`                       |
+| `lastChecked`       | 最后一次状态同步时间戳                             | `Date`                                                    |
 
-#### checkServiceWorkerStatus
+**业务意图**：标准化 SW 状态上报格式，供 UI 层（如更新提示 Banner、调试面板）进行条件渲染与交互控制。
 
-```typescript
-function checkServiceWorkerStatus(): void {
-  // 检查并报告服务工作区当前状态的方法
-}
-```
+---
 
-- **参数**: 无。
-- **业务意图**: `checkServiceWorkerStatus` 是一个方法，用于检查并报告服务工作区当前的状态。通过这个方法可以获取服务工作区的实时状态信息。
+## ⚙️ 3. 核心功能模块
 
-#### checkForUpdates
+> 💡 注：以下参数与返回值基于 Web API 规范与命名惯例推断，实际签名以源码为准。
 
-```typescript
-function checkForUpdates(): void {
-  // 检测并更新服务工作区中可能需要更新的内容的方法
-}
-```
+### 🔍 状态与生命周期管理
 
-- **参数**: 无。
-- **业务意图**: `checkForUpdates` 是一个方法，用于检测并更新服务工作区中可能需要更新的内容。通过这个方法可以确保服务工作区中的内容是最新的。
+#### `checkServiceWorkerStatus()`
 
-#### skipWaiting
+- **功能说明**：同步获取当前 Service Worker 的运行状态并返回结构化对象。
+- **参数**：无（或可选 `registration: ServiceWorkerRegistration`）
+- **返回值**：`Promise<ServiceWorkerStatus>`
+- **业务意图**：应用初始化或路由切换时调用，确保 UI 状态与底层 SW 状态一致。常用于判断是否显示“更新可用”提示。
 
-```typescript
-function skipWaiting(): void {
-  // 跳过等待服务工作区加载完成的过程，加快页面加载速度的方法
-}
-```
+#### `onServiceWorkerUpdate(callback: (status: ServiceWorkerStatus) => void)`
 
-- **参数**: 无。
-- **业务意图**: `skipWaiting` 是一个方法，用于跳过等待服务工作区加载完成的过程。通过这个方法可以加速页面的加载速度。
+- **功能说明**：注册 SW 更新相关的事件监听器，支持多订阅者模式。
+- **参数**：
+  - `callback`: 状态变更时的回调函数
+- **返回值**：`() => void`（取消订阅函数）
+- **业务意图**：解耦更新检测与 UI 响应。当 `checkForUpdates` 发现新版本或 SW 进入 `waiting` 状态时，自动触发回调，驱动前端交互。
 
-#### clearAllCaches
+### 🔄 版本更新控制
 
-```typescript
-function clearAllCaches(): void {
-  // 清除所有缓存的函数
-}
-```
+#### `checkForUpdates(registration?: ServiceWorkerRegistration)`
 
-- **参数**: 无。
-- **业务意图**: `clearAllCaches` 是一个函数，用于清除所有缓存。通过这个方法可以确保服务工作区中的资源是最新的。
+- **功能说明**：主动调用 `registration.update()` 触发版本检查，绕过浏览器默认的 24 小时更新策略。
+- **参数**：
+  - `registration`: 可选，未传则使用 `navigator.serviceWorker.ready`
+- **返回值**：`Promise<boolean>`（`true` 表示发现新版本）
+- **业务意图**：支持用户手动“检查更新”或关键业务场景下的强制版本校验，提升迭代效率。
 
-#### getCacheInfo
+#### `skipWaiting(registration: ServiceWorkerRegistration)`
 
-```typescript
-function getCacheInfo(): void {
-  // 获取缓存信息的方法
-}
-```
+- **功能说明**：向处于 `waiting` 状态的新版 SW 发送 `skipWaiting` 消息，使其立即激活。
+- **参数**：
+  - `registration`: 目标 SW 注册实例
+- **返回值**：`Promise<void>`
+- **业务意图**：实现“用户确认后即时生效”的体验。避免传统 SW 更新需刷新页面才能激活的割裂感，常用于配合 `onServiceWorkerUpdate` 使用。
 
-- **参数**: 无。
-- **业务意图**: `getCacheInfo` 是一个函数，用于获取缓存的信息。通过这个方法可以了解服务工作区中缓存的详细情况。
+### 🗄️ 缓存管理
 
-#### onServiceWorkerUpdate
+#### `precacheUrls(urls: string[], cacheName: string)`
 
-```typescript
-function onServiceWorkerUpdate(): void {
-  // 事件处理程序，用于监听并处理服务工作区更新的通知
-}
-```
+- **功能说明**：将指定 URL 列表批量预加载至命名缓存中。
+- **参数**：
+  - `urls`: 需要缓存的资源路径数组
+  - `cacheName`: 缓存池名称（如 `app-v1.2.0`）
+- **返回值**：`Promise<void>`
+- **业务意图**：在 SW `install` 阶段或主线程初始化时调用，保障核心静态资源（HTML/CSS/JS/关键图片）离线可用，优化 FCP/LCP 指标。
 
-- **参数**: 无。
-- **业务意图**: `onServiceWorkerUpdate` 是一个事件处理程序，用于监听并处理服务工作区更新的通知。通过这个方法可以及时响应和处理服务工作区中的更新。
+#### `getCacheInfo(cacheName?: string)`
 
-#### precacheUrls
+- **功能说明**：获取指定缓存或全局缓存的元数据（名称、大小、请求数量等）。
+- **参数**：
+  - `cacheName`: 可选，指定查询的缓存名
+- **返回值**：`Promise<CacheMetadata[]>`（推断结构：`{ name: string, size: number, requestCount: number }`）
+- **业务意图**：用于开发者调试面板、存储配额监控或自动清理策略（如超过 50MB 触发清理）。
 
-```typescript
-function precacheUrls(urls: string[]): void {
-  // 预加载 URL 到缓存中的方法
-}
-```
+#### `removeFromCache(cacheName: string, url: string)`
 
-- **参数**: `urls` 是一个字符串数组，包含需要预加载的 URL。
-- **业务意图**: `precacheUrls` 是一个函数，用于将给定的 URL 预加载到服务工作区的缓存中。通过这个方法可以确保这些资源可以在页面加载时立即可用。
+- **功能说明**：从指定缓存中精确删除单个资源。
+- **参数**：
+  - `cacheName`: 目标缓存名称
+  - `url`: 需移除的资源完整 URL
+- **返回值**：`Promise<boolean>`（是否成功删除）
+- **业务意图**：精细化缓存治理。适用于移除过期接口数据、用户主动清除的本地文件，或修复因缓存污染导致的白屏问题。
 
-#### removeFromCache
+#### `clearAllCaches()`
 
-```typescript
-function removeFromCache(url: string): void {
-  // 移除特定 URL 的缓存项的函数
-}
-```
+- **功能说明**：遍历并清空当前应用名下所有 Service Worker 缓存。
+- **参数**：无
+- **返回值**：`Promise<void>`
+- **业务意图**：大版本升级、强制刷新或用户“清理缓存”操作时的兜底方案。建议配合 `precacheUrls` 重新初始化核心资源。
 
-- **参数**: `url` 是一个字符串，包含要从缓存中移除的 URL。
-- **业务意图**: `removeFromCache` 是一个函数，用于从服务工作区的缓存中移除指定的 URL。通过这个方法可以确保特定资源不再占用缓存空间。
+---
 
-### 结构化 Markdown 技术文档
+## 🏗️ 4. 架构设计与业务意图推断
 
-````markdown
-# serviceWorker.ts 技术文档
+| 设计维度     | 推断结论                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------- |
+| **通信模型** | 主线程 → `postMessage` / `skipWaiting` → SW；SW → `updatefound` / `statechange` → 主线程     |
+| **缓存策略** | 采用命名空间隔离（`cacheName` 版本化），支持 `Cache-First` 或 `Network-First` 策略的底层支撑 |
+| **更新策略** | 静默检测 + 用户确认激活（`skipWaiting`），平衡更新及时性与用户体验                           |
+| **类型安全** | 通过 `ServiceWorkerStatus` 统一状态契约，避免主线程与 SW 状态不同步导致的竞态条件            |
+| **可观测性** | `getCacheInfo` 与状态回调提供运行时可观测入口，便于接入监控与埋点系统                        |
 
-## 文件概述
+---
 
-`serviceWorker.ts` 是一个 TypeScript 源文件，包含了服务工作区相关功能的实现。该文件的主要目的是处理服务工作区的状态检查、更新检测、缓存清理和预加载等操作。
+## 📌 5. 使用建议与最佳实践
 
-### 类、接口、函数推断
+1. **避免阻塞主线程**：所有函数均为异步操作，建议在 `useEffect` / `onMounted` 中调用，并配合 `AbortController` 管理生命周期。
+2. **缓存版本管理**：`precacheUrls` 的 `cacheName` 建议与构建哈希绑定（如 `app-${__APP_VERSION__}`），旧版本缓存可在 `activate` 事件中自动清理。
+3. **更新提示 UX**：结合 `onServiceWorkerUpdate` 与 `skipWaiting`，推荐实现“非模态提示 → 用户点击 → 调用 `skipWaiting` → 自动刷新”的交互流。
+4. **错误边界**：`clearAllCaches` 与 `removeFromCache` 可能因浏览器配额限制或权限问题失败，建议包裹 `try/catch` 并降级处理。
+5. **TypeScript 严格模式**：建议为 `ServiceWorkerStatus` 添加 `zod` 或 `io-ts` 运行时校验，防止 SW 消息格式变更导致主线程崩溃。
 
-- **ServiceWorkerStatus**: 用于表示服务工作区状态的类型。
-- **checkServiceWorkerStatus**: 检查并报告服务工作区当前状态的方法。
-- **checkForUpdates**: 检测并更新服务工作区中可能需要更新的内容的方法。
-- **skipWaiting**: 跳过等待服务工作区加载完成的过程，加快页面加载速度的方法。
-- **clearAllCaches**: 清除所有缓存的函数。
-- **getCacheInfo**: 获取缓存信息的方法。
-- **onServiceWorkerUpdate**: 事件处理程序，用于监听并处理服务工作区更新的通知。
-- **precacheUrls**: 预加载 URL 到缓存中的方法。
-- **removeFromCache**: 移除特定 URL 的缓存项的函数。
+---
 
-### 类、接口、类型和函数说明
-
-#### ServiceWorkerStatus
-
-```typescript
-interface ServiceWorkerStatus {
-  // 用于表示服务工作区状态的类型，例如：'active', 'waiting', 'idle'
-}
-```
-````
-
-- **业务意图**: `ServiceWorkerStatus` 是一个表示服务工作区状态的类型。通过这个接口可以获取和报告服务工作区当前的状态，如是否正在加载、等待或处于空闲状态。
-
-#### checkServiceWorkerStatus
-
-```typescript
-function checkServiceWorkerStatus(): void {
-  // 检查并报告服务工作区当前状态的方法
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `checkServiceWorkerStatus` 是一个方法，用于检查并报告服务工作区当前的状态。通过这个方法可以获取服务工作区的实时状态信息。
-
-#### checkForUpdates
-
-```typescript
-function checkForUpdates(): void {
-  // 检测并更新服务工作区中可能需要更新的内容的方法
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `checkForUpdates` 是一个方法，用于检测并更新服务工作区中可能需要更新的内容。通过这个方法可以确保服务工作区中的内容是最新的。
-
-#### skipWaiting
-
-```typescript
-function skipWaiting(): void {
-  // 跳过等待服务工作区加载完成的过程，加快页面加载速度的方法
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `skipWaiting` 是一个方法，用于跳过等待服务工作区加载完成的过程。通过这个方法可以加速页面的加载速度。
-
-#### clearAllCaches
-
-```typescript
-function clearAllCaches(): void {
-  // 清除所有缓存的函数
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `clearAllCaches` 是一个函数，用于清除所有缓存。通过这个方法可以确保服务工作区中的资源是最新的。
-
-#### getCacheInfo
-
-```typescript
-function getCacheInfo(): void {
-  // 获取缓存信息的方法
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `getCacheInfo` 是一个函数，用于获取缓存的信息。通过这个方法可以了解服务工作区中缓存的详细情况。
-
-#### onServiceWorkerUpdate
-
-```typescript
-function onServiceWorkerUpdate(): void {
-  // 事件处理程序，用于监听并处理服务工作区更新的通知
-}
-```
-
-- **参数**: 无。
-- **业务意图**: `onServiceWorkerUpdate` 是一个事件处理程序，用于监听并处理服务工作区更新的通知。通过这个方法可以及时响应和处理服务工作区中的更新。
-
-#### precacheUrls
-
-```typescript
-function precacheUrls(urls: string[]): void {
-  // 预加载 URL 到缓存中的方法
-}
-```
-
-- **参数**: `urls` 是一个字符串数组，包含需要预加载的 URL。
-- **业务意图**: `precacheUrls` 是一个函数，用于将给定的 URL 预加载到服务工作区的缓存中。通过这个方法可以确保这些资源可以在页面加载时立即可用。
-
-#### removeFromCache
-
-```typescript
-function removeFromCache(url: string): void {
-  // 移除特定 URL 的缓存项的函数
-}
-```
-
-- **参数**: `url` 是一个字符串，包含要从缓存中移除的 URL。
-- **业务意图**: `removeFromCache` 是一个函数，用于从服务工作区的缓存中移除指定的 URL。通过这个方法可以确保特定资源不再占用缓存空间。
-
-```
-
-这个技术文档详细地介绍了 `serviceWorker.ts` 文件中的各个类、接口、类型和函数，并提供了它们的业务意图说明。
-```
+> 📝 **文档生成说明**：本文档基于提供的代码结构元数据，结合 Web API 规范、PWA 最佳实践与 TypeScript 工程经验进行架构级推断。实际参数签名、返回值类型及内部实现请以源码为准。如需补充具体实现细节或生成单元测试模板，可提供完整代码片段。
