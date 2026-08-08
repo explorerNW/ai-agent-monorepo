@@ -1,62 +1,97 @@
-# TimelineChart.tsx 技术文档
+# `TimelineChart.tsx` 技术文档
 
-## 文件概述
+## 1. 文件概述
 
-`TimelineChart.tsx` 是一个 TypeScript 类，用于创建一个时间线图表。它包含以下类、接口和函数的定义。
+基于提取的代码结构，`TimelineChart.tsx` 是一个标准的 **React 函数式组件** 文件，采用 TypeScript 进行严格类型约束。该文件核心职责是封装一个可复用的**时间轴/甘特图可视化组件**。整体架构遵循 `Props 契约定义 → 组件逻辑封装 → 视图渲染` 的标准前端组件化模式，具备良好的类型安全性、单向数据流设计与多场景适配能力。
 
-### 类：TimelineChartProps
+> 📌 **注**：由于提取数据仅包含名称与行号，以下参数细节与实现逻辑基于中后台可视化组件的通用架构规范进行专业推断，实际字段以源码为准。
 
-```typescript
-interface TimelineChartProps {
-  // 定义 TimelineChartProps 的属性
-}
-```
+---
 
-### 函数：TimelineChart
+## 2. 核心结构说明
 
-```typescript
-function TimelineChart(): JSX.Element;
-```
+### 2.1 接口：`TimelineChartProps` (Line 6)
 
-## 类说明
+**说明**：定义组件对外暴露的属性契约，用于接收业务数据、配置项及交互回调。作为组件的“输入端口”，确保调用方与实现方的类型安全与职责边界清晰。
 
-`TimelineChart` 是一个用于创建时间线图表的 TypeScript 类。它接受 `TimelineChartProps` 类型的参数，并返回一个 JSX 元素。
+**推断参数结构**：
+| 参数名 | 类型 | 必填 | 说明 | 业务意图 |
+|:---|:---|:---:|:---|:---|
+| `data` | `TimelineItem[]` | ✅ | 时间轴数据源，通常包含 `id`, `title`, `start`, `end`, `status`, `color` 等字段 | 驱动图表渲染的核心数据，支持动态更新与批量替换 |
+| `config` | `ChartConfig` | ❌ | 图表配置项（如时间粒度、主题色、是否显示刻度、缩放比例、动画开关等） | 实现组件的定制化与多业务场景适配 |
+| `onItemClick` | `(item: TimelineItem) => void` | ❌ | 点击时间轴节点的回调函数 | 支持业务层拦截交互，实现路由跳转、详情弹窗或状态变更 |
+| `onRangeChange` | `(range: { start: Date, end: Date }) => void` | ❌ | 时间区间拖拽/缩放后的回调 | 支持联动过滤其他图表或触发数据重新请求 |
+| `loading` | `boolean` | ❌ | 加载状态标识 | 控制骨架屏或加载动画，提升弱网/大数据量下的用户体验 |
+| `style` / `className` | `CSSProperties` / `string` | ❌ | 样式覆盖 | 保持组件在父级布局中的灵活性，支持 Tailwind 或 CSS Modules |
 
-### 参数解释
+**架构意图**：
 
-- **props**: 接收一个 `TimelineChartProps` 对象作为参数。
-  - `timelineData`: 时间线数据，通常是一个数组或对象列表，包含每个时间点的信息（例如日期、事件等）。
-  - `chartOptions`: 配置选项，用于自定义图表的样式和行为。
+- 通过接口隔离具体业务数据结构，实现“数据-视图”解耦。
+- 利用 TypeScript 接口机制提供 IDE 智能提示与编译期校验，降低集成成本与运行时错误率。
+- 预留扩展字段（如 `config`、事件回调），便于后续接入多主题、权限控制或复杂交互。
 
-### 业务意图推断
+---
 
-- **TimelineChart** 类的主要目的是提供一个框架来创建和显示时间线图表。它通过接受用户提供的数据和配置选项，生成一个符合预期的图表组件。
-- 用户可以通过传递特定的数据和配置选项来定制图表的表现形式，例如改变颜色、添加动画效果或调整时间轴的位置等。
+### 2.2 函数/组件：`TimelineChart` (Line 11)
 
-## 示例代码
+**说明**：核心 React 函数式组件，负责接收 `TimelineChartProps`，处理数据转换、状态管理与底层渲染引擎对接。
 
-```typescript
-import TimelineChart from './TimelineChart';
+**参数解释**：
 
-const timelineData = [
-  { date: '2023-01-01', event: 'Event A' },
-  { date: '2023-01-02', event: 'Event B' },
-  // 更多时间点和事件数据
-];
+- 接收解构后的 `TimelineChartProps` 对象。
+- 内部通常结合 `useMemo` 缓存数据映射结果，`useCallback` 稳定事件引用，`React.memo` 避免父组件重渲染导致的无效计算。
 
-const chartOptions = {
-  title: 'Time Line Chart',
-  showLegend: true,
-  animationEnabled: false,
+**业务意图推断**：
+
+1. **数据预处理**：将原始业务数据映射为图表库（如 ECharts/AntV/Recharts）或自定义 SVG/Canvas 所需的格式，处理时间格式化、区间重叠检测、空值兜底等逻辑。
+2. **交互代理**：监听用户操作（点击、悬停、拖拽缩放、右键菜单），通过 Props 回调向上抛出事件，保持组件“受控/无状态”特性，符合 React 单向数据流规范。
+3. **渲染委托**：根据配置动态生成时间轴视图，处理边界情况（如数据为空、时间跨度极大/极小、跨时区显示）。
+4. **性能优化**：针对大数据量时间轴，可能采用虚拟滚动、分片渲染或 WebGL 加速策略，确保 60fps 流畅交互。
+
+---
+
+## 3. 业务意图与架构推断
+
+| 维度             | 推断结论                                                                                                                      |
+| :--------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| **组件定位**     | 中后台系统/数据看板中的通用时间轴可视化模块，适用于项目管理、日志追踪、排班调度、历史事件回放等场景                           |
+| **数据流设计**   | 严格遵循单向数据流（Unidirectional Data Flow）。父组件通过 `data`/`config` 下发状态，子组件通过回调上报动作，避免隐式状态共享 |
+| **技术栈推测**   | 基于 React 18+ 开发，底层可能依赖 `@ant-design/charts`、`echarts-for-react`、`recharts` 或自研 SVG 渲染引擎                   |
+| **状态管理策略** | 内部交互状态（如选中态、缩放比例）建议采用 `useReducer` 或轻量级状态库封装，避免 Props Drilling 与状态爆炸                    |
+
+---
+
+## 4. 典型使用示例（推断）
+
+```tsx
+import { TimelineChart } from "./TimelineChart";
+
+const Dashboard = () => {
+  const handleSelect = (item) => {
+    console.log("选中任务:", item);
+    // 可触发路由跳转、详情抽屉或状态更新
+  };
+
+  return (
+    <TimelineChart
+      data={projectTasks}
+      config={{ theme: "light", granularity: "day", showGrid: true }}
+      onItemClick={handleSelect}
+      loading={isLoading}
+      className="timeline-wrapper"
+    />
+  );
 };
-
-const timelineChartComponent = <TimelineChart timelineData={timelineData} chartOptions={chartOptions} />;
-
-ReactDOM.render(timelineChartComponent, document.getElementById('root'));
 ```
 
-在这个示例中，我们创建了一个时间线数据数组和配置选项对象，并通过 JSX 将它们传递给 `TimelineChart` 类。这将生成一个包含时间线数据和自定义配置的图表组件。
+---
 
-## 结论
+## 5. 架构师建议
 
-`TimelineChart.tsx` 是一个功能强大的 TypeScript 类，它允许用户轻松地创建和展示各种类型的动态时间线图表。通过接受定制的数据和配置选项，它可以满足不同的需求，并且易于扩展以适应未来的业务场景。
+1. **类型安全增强**：建议为 `data` 字段引入泛型约束或运行时校验（如 `zod`/`yup`），防止脏数据导致图表渲染崩溃。
+2. **性能监控**：若时间轴数据量 `> 1000`，建议引入虚拟列表或 Canvas/WebGL 渲染方案，并在开发环境接入 `React.Profiler` 监控渲染耗时。
+3. **文档与测试**：补充 JSDoc 注释（`@param`, `@returns`, `@example`），编写 Storybook 交互文档，并覆盖单元测试（数据映射、事件触发、边界条件）。
+4. **可访问性（a11y）**：时间轴节点应补充 `aria-label`、键盘导航支持（`Tab`/`Enter`），满足企业级无障碍标准。
+5. **主题与国际化**：建议将 `config.theme` 与 `i18n` 键值解耦，通过 Context 或 Design Token 统一管理，便于多语言/多品牌适配。
+
+> 💡 如需生成更精确的文档，可提供完整源码或 AST 解析结果，我将进一步补充方法签名、内部状态机设计与渲染管线分析。

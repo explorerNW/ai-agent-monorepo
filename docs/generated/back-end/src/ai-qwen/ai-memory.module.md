@@ -1,65 +1,57 @@
-# ai-memory.module.ts 技术文档
+```markdown
+# AiMemoryModule
 
-## 文件概述
+## Overview
 
-`ai-memory.module.ts` 是一个 TypeScript 模块文件，用于管理与 AI 记忆相关的配置和初始化逻辑。该模块包含以下类、接口、函数的定义：
+`AiMemoryModule` 是一个 TypeScript 类，用于配置和管理 AI 内存模块。它提供了一个异步的根配置方法 `forRootAsync` 和一个配置方法 `configure`。
 
-### 类：AiMemoryModule
+## Class: AiMemoryModule
 
-- **描述**：这个类负责整个 `ai-memory` 系统的初始化和配置。
-- **参数**：
-  - `options`: 配置对象，用于传递系统需要的各种设置。
+### Description
 
-### 函数/方法：forRootAsync, configure
+`AiMemoryModule` 类是主模块类，负责初始化和配置 AI 内存相关的服务和功能。
 
-- **forRootAsync**
-  - **描述**：异步初始化模块的方法。这个方法将调用其他相关模块的初始化逻辑，并返回一个 Promise。
-  - **参数**：
-    - `options`: 配置对象，用于传递系统需要的各种设置。
+### Methods
 
-- **configure**
-  - **描述**：配置模块的方法。这个方法会根据传入的配置对象进行各种操作，如数据库连接、日志记录等。
-  - **参数**：
-    - `options`: 配置对象，用于传递系统需要的各种设置。
+#### forRootAsync
 
-## 使用说明
+##### Description
 
-在使用 `ai-memory.module.ts` 文件时，你需要确保以下几点：
+`forRootAsync` 是一个异步方法，用于异步配置 `AiMemoryModule`。它接受一个选项对象，并返回一个 `ModuleMetadata` 对象，该对象包含模块的配置信息。
 
-1. 确保你已经安装了 TypeScript 编译器和相关的依赖库（如 Apollo Client、React 等）。
-2. 在你的项目中导入并使用 `@apollo/client` 和 `react` 模块。
-3. 根据需要配置模块的初始化逻辑，例如设置数据库连接信息、日志记录等。
+##### Parameters
 
-## 示例代码
+- **options**: `AiMemoryOptions`
+- **description**: 配置选项对象。
+- **type**: `AiMemoryOptions`
 
-```typescript
-import { configure, forRootAsync } from "ai-memory.module";
+##### Return Value
 
-const options = {
-  // 这里是你的配置对象
-};
+- **Type**: `Promise<ModuleMetadata>`
+- **Description**: 返回一个 Promise，解析为一个包含模块元数据的对象。
 
-async function initialize() {
-  return await forRootAsync(options);
-}
+##### Business Intent
 
-// 使用示例
-initialize().then((result) => {
-  console.log("初始化成功:", result);
-});
+`forRootAsync` 方法用于异步加载和配置 AI 内存模块，确保在应用程序启动时正确初始化所有必要的服务和资源。
+
+#### configure
+
+##### Description
+
+`configure` 是一个同步方法，用于配置 `AiMemoryModule`。它接受一个选项对象，并根据这些选项进行相应的配置。
+
+##### Parameters
+
+- **options**: `AiMemoryOptions`
+- **description**: 配置选项对象。
+- **type**: `AiMemoryOptions`
+
+##### Return Value
+
+- **Type**: `void`
+- **Description**: 返回 void，不返回任何值。
+
+##### Business Intent
+
+`configure` 方法用于同步配置 `AiMemoryModule`，确保在应用程序启动时正确初始化所有必要的服务和资源。
 ```
-
-## 结论
-
-`ai-memory.module.ts` 文件提供了一个系统化的模块化设计，确保了整个 `ai-memory` 系统的稳定性和可维护性。通过异步和配置方法，它简化了系统的初始化过程，并提供了灵活的扩展能力。
-
-### 代码结构总结
-
-- **类**：`AiMemoryModule`
-  - 方法：`forRootAsync`, `configure`
-
-- **函数/方法**：
-  - `forRootAsync`: 异步初始化模块的方法。
-  - `configure`: 配置模块的方法。
-
-通过这些工具和方法，你可以轻松地管理和配置你的 AI 记忆系统。

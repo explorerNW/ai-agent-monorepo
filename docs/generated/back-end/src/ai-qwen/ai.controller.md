@@ -1,73 +1,43 @@
-# ai.controller.ts 技术文档
+```markdown
+# AI Controller Documentation
 
-## 文件概述
+## Overview
 
-`ai.controller.ts` 是一个 TypeScript 模块，用于处理与 AI 相关的控制器逻辑。以下是该文件中提取的类、接口、类型和函数的结构化技术文档。
+The `AiController` class is a central component in the application, handling various interactions with an AI service. It includes methods for chat and weather-related queries.
 
-### 类：ChatDto
+## Interfaces
 
-```typescript
-interface ChatDto {
-  // 定义 ChatDto 类型
-}
+### ChatDto
+
+- **Description**: Data Transfer Object (DTO) used to encapsulate data related to a chat request.
+- **Properties**:
+- `message`: A string representing the user's message.
+
+## Classes
+
+### AiController
+
+- **Description**: The main controller class responsible for handling AI-related operations.
+- **Constructor**:
+- **Parameters**:
+  - `private readonly aiService: IAiService`: An instance of the AI service used to process requests.
+- **Business Intent**: Initializes the controller with a reference to the AI service.
+
+## Functions/Methods
+
+### chat
+
+- **Description**: Handles incoming chat requests and processes them using the AI service.
+- **Parameters**:
+- `@Body() dto: ChatDto`: The DTO containing the user's message.
+- **Returns**: A promise resolving to an object with a `message` property containing the AI's response.
+- **Business Intent**: Processes a chat request by sending it to the AI service and returning the response.
+
+### aiWeather
+
+- **Description**: Handles requests for weather information using the AI service.
+- **Parameters**:
+- `@Query() city: string`: The name of the city for which weather information is requested.
+- **Returns**: A promise resolving to an object with a `weather` property containing the weather data.
+- **Business Intent**: Fetches and returns weather information for a specified city using the AI service.
 ```
-
-#### 参数解释：
-
-- `ChatDto` 是一个用于表示 AI 控制器请求或响应的数据结构。它可能包含用户输入、AI 输出或其他必要的信息。
-
-#### 业务意图推断：
-
-该接口定义了数据交换的格式，确保不同部分之间能够正确传递和处理数据。
-
-### 类：AiController
-
-```typescript
-class AiController {
-  // 定义 AiController 类
-}
-```
-
-#### 参数解释：
-
-- `AiController` 是一个用于处理与 AI 相关操作的控制器类。它可能包含方法来接收请求、执行任务并返回结果。
-
-#### 业务意图推断：
-
-该类的主要目的是提供一个框架，使得开发者可以轻松地添加新的功能或修改现有功能。
-
-### 函数：constructor
-
-```typescript
-constructor() {
-  // 定义构造函数
-}
-```
-
-#### 参数解释：
-
-- `constructor` 是一个用于初始化对象的方法。在 TypeScript 中，它通常与类一起使用来创建新实例。
-
-#### 业务意图推断：
-
-该方法的主要目的是设置控制器的初始状态或参数。
-
-### 函数：chat
-
-```typescript
-chat() {
-  // 定义 chat 方法
-}
-```
-
-#### 参数解释：
-
-- `chat` 是一个用于执行 AI 控制器任务的方法。它可能涉及调用其他函数、处理输入数据并返回结果。
-
-#### 业务意图推断：
-
-该方法的主要目的是响应用户请求，通过与 AI 的交互来生成或提供所需的信息。
-
-### 结论
-
-`ai.controller.ts` 文件包含了一个控制器类和一个接口类型，以及两个主要的函数：构造函数和 chat 方法。这些元素共同构成了一个基本框架，用于处理与 AI 相关的操作，并确保数据的有效传递和处理。
