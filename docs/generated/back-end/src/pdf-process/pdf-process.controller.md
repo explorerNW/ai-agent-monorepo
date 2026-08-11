@@ -1,89 +1,123 @@
-# PDFProcessController 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/pdf-process/pdf-process.controller.ts`
+- **模块职责**: PDF 文档处理与数据管理核心组件（支持异步上传、格式转换及知识库集成）
+- **关联模块**: [pdf-process.service, pdf-model]
 
-`pdf-process.controller.ts` 是一个 TypeScript 类，主要用于处理 PDF 文件的读取和转换。该类包含多个方法来实现文件上传、文件处理和数据集管理等功能。
+### 📦 API 知识条目
 
-## 类结构
+#### MulterFile 成员全限定名
 
-### MulterFile 接口
+- **语义标签**: `文件流`, `用户认证`, `Token刷新`
+- **完整签名**: ```typescript
+  interface MulterFile {
+  file: File; // 必填，Blob对象或Buffer
+  content?: string | Buffer; // 可选：内容存储方式（字符串/二进制）
+  }
 
-```typescript
-interface MulterFile {
-  // 定义接口中的字段类型
-}
-```
+````
+- **设计意图**: 定义文件流接口，支持异步上传与数据持久化。解决用户认证时自动携带 Token刷新机制的问题。
+- **参数/属性契约**:
 
-### PDFProcessController 类
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| file | File | ✅ | `File`对象（Buffer） | 文件流，支持异步上传与存储。 |
+| content | string | ❌ | `null` | 内容字段，用于二进制数据或文本描述。 |
 
-```typescript
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 线程安全、调用顺序由 Controller 控制（如文件流需异步处理）；异常抛出时捕获并记录日志。
+- **Code Review 检查点**:
+1. `file`字段是否明确指定为 Buffer对象而非 File 接口，避免类型错误
+2. `content`是否为可选字符串/Buffer，防止空值导致数据丢失
+
+#### PDFProcessController 成员全限定名
+- **语义标签**: `异步处理`, `文档流管理`, `知识库集成`
+- **完整签名**: ```typescript
 class PDFProcessController {
-  constructor() {}
+    constructor(private readonly pdfModel: MulterFile, private readonly logger: Logger) {} // 初始化逻辑，支持文件上传与存储
 
-  processFile(file: MulterFile): void {
-    // 实现文件处理逻辑
-  }
+    processFile(file: File): Promise<void> { // 处理异步文档流
+        return this.pdfModel.processAsync(file);
+    }
 
-  addFileToDataset(file: MulterFile, datasetId: string): void {
-    // 将文件添加到数据集中
-  }
+    addFileToDataset(data: any[]): void; // 将数据添加到知识库中（如 PDF）
 }
+````
+
+- **设计意图**: 实现文件上传与存储逻辑，支持多格式转换及自动归档。解决文档流管理中的异步处理问题。
+- **参数/属性契约**:
+
+| 名称     | 类型       | 可选 | 约束/默认值 | 语义说明                        |
+| -------- | ---------- | ---- | ----------- | ------------------------------- |
+| pdfModel | MulterFile | ✅   | `null`      | PDF模型，负责文件流处理与存储。 |
+| logger   | Logger     | ❌   | null        | 日志记录器，用于异常追踪。      |
+
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 线程安全、调用顺序由 Controller 控制；异步操作需捕获 Promise 错误并记录日志。
+- **Code Review 检查点**:
+
+1. `processFile`是否明确指定为异步处理，避免阻塞主流程
+2. `addFileToDataset`参数类型是否与 PDFModel 的 MulterFile 接口兼容
+
+#### Constructor 成员全限定名（PDFProcessController）
+
+- **语义标签**: `初始化`, `文件流管理`, `知识库集成`
+- **完整签名**: ```typescript
+  constructor(private readonly pdfModel: MulterFile, private readonly logger: Logger) {} // 初始化逻辑，支持文件上传与存储
+
+````
+- **设计意图**: 定义 Controller 构造函数，负责处理异步文档流及数据持久化。解决用户认证时自动携带 Token刷新机制的问题。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| pdfModel | MulterFile | ✅ | `null` | PDF模型，负责文件流处理与存储。 |
+| logger | Logger | ❌ | null | 日志记录器，用于异常追踪。 |
+
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 线程安全、调用顺序由 Controller 控制；异步操作需捕获 Promise 错误并记录日志。
+- **Code Review 检查点**:
+1. `pdfModel`是否明确指定为 MulterFile，避免类型错误
+2. `logger`是否为可选 Logger，防止空值导致数据丢失
+
+#### processFile 成员全限定名（PDFProcessController）
+- **语义标签**: `异步处理`, `文档流管理`, `知识库集成`
+- **完整签名**: ```typescript
+processFile(file: File): Promise<void> { // 处理异步文档流，返回文件存储结果 }
+````
+
+- **设计意图**: 实现文件上传与存储逻辑，支持多格式转换及自动归档。解决文档流管理中的异步处理问题。
+- **参数/属性契约**:
+
+| 名称    | 类型   | 可选 | 约束/默认值          | 语义说明                             |
+| ------- | ------ | ---- | -------------------- | ------------------------------------ |
+| file    | File   | ✅   | `File`对象（Buffer） | 文件流，支持异步上传与存储。         |
+| content | string | ❌   | `null`               | 内容字段，用于二进制数据或文本描述。 |
+
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 线程安全、调用顺序由 Controller 控制；异步操作需捕获 Promise 错误并记录日志。
+- **Code Review 检查点**:
+
+1. `processFile`是否明确指定为异步处理，避免阻塞主流程
+2. `content`是否为可选字符串/Buffer，防止空值导致数据丢失
+
+#### addFileToDataset 成员全限定名（PDFProcessController）
+
+- **语义标签**: `知识库集成`, `文档流管理`, `用户认证`
+- **完整签名**: ```typescript
+  addFileToDataset(data: any[]): void; // 将数据添加到知识库中，如 PDF | JSON格式存储 }
+
 ```
+- **设计意图**: 实现文件上传与存储逻辑，支持多格式转换及自动归档。解决文档流管理中的异步处理问题。
+- **参数/属性契约**:
 
-### processFile 方法
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| data | any[] | ✅ | `null` | 数据数组，用于存储 PDF、JSON等格式内容。 |
 
-```typescript
-processFile(file: MulterFile) {
-  // 文件处理逻辑，例如读取、转换等
-}
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 线程安全、调用顺序由 Controller 控制；异步操作需捕获 Promise 错误并记录日志。
+- **Code Review 检查点**:
+1. `data`是否为数组，避免类型错误
+2. `addFileToDataset`是否明确指定为知识库集成接口，防止数据丢失
 ```
-
-### addFileToDataset 方法
-
-```typescript
-addFileToDataset(file: MulterFile, datasetId: string) {
-  // 将文件添加到数据集中
-}
-```
-
-## 类说明
-
-### PDFProcessController 类
-
-`PDFProcessController` 是一个用于处理 PDF 文件的控制器类。它包含两个主要方法：
-
-- `processFile(file: MulterFile): void`: 这个方法接收一个 `MulterFile` 对象，并执行文件处理逻辑。
-- `addFileToDataset(file: MulterFile, datasetId: string): void`: 这个方法将一个 `MulterFile` 对象添加到指定的数据集。
-
-### processFile 方法
-
-该方法的主要职责是读取和转换 PDF 文件。它接收一个 `MulterFile` 对象作为参数，并执行相应的处理逻辑。具体实现细节需要根据实际需求进行编写。
-
-### addFileToDataset 方法
-
-这个方法负责将文件对象添加到数据集中。它接受两个参数：一个 `MulterFile` 对象和一个数据集 ID（datasetId）。通过调用 `addFileToDataset` 方法，可以将文件成功地添加到指定的数据集中。
-
-## 参数解释
-
-### MulterFile 类型
-
-`MulterFile` 是一个接口类型，用于表示上传的文件。它可能包含文件的相关信息，如文件名、大小等。具体字段和方法需要根据实际需求进行定义。
-
-### 文件参数
-
-- `file`: 传入的 `MulterFile` 对象。
-- `datasetId`: 数据集 ID（字符串）。
-
-## 业务意图推断
-
-### processFile 方法
-
-该方法的主要目的是处理 PDF 文件，例如读取、转换等。它通过调用文件处理逻辑来实现这一目标。具体实现细节需要根据实际需求进行编写。
-
-### addFileToDataset 方法
-
-这个方法的主要职责是将文件添加到数据集中。它接受两个参数：一个 `MulterFile` 对象和一个数据集 ID（datasetId）。通过调用 `addFileToDataset` 方法，可以将文件成功地添加到指定的数据集中。
-
-## 结论
-
-`pdf-process.controller.ts` 是一个用于处理 PDF 文件的控制器类。它包含两个主要方法：`processFile` 和 `addFileToDataset`。这些方法分别负责执行文件处理逻辑和将文件添加到数据集，从而实现对 PDF 文件的有效管理和处理。

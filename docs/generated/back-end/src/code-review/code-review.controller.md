@@ -1,69 +1,218 @@
-# CodeReviewController 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/code-review/code-review.controller.ts`
+- **模块职责**: Code Review Controller 处理 GitHub Webhook、Git Commit Hook 及用户认证相关逻辑
+- **关联模块**: [未提供，因代码中无其他依赖]
 
-`code-review.controller.ts` 是一个 TypeScript 模块，主要负责处理代码审查相关的控制器逻辑。以下是该模块的详细技术文档。
+### 📦 API 知识条目
 
-### 类概览
+#### CodeReviewController constructor
 
-#### Class: `CodeReviewController`
-
-- **描述**: 这个类用于处理代码审查相关的请求和响应。
-- **参数**: 无
-- **业务意图**: 负责接收来自前端或后端的代码审查请求，执行相应的处理逻辑，并将结果返回给客户端。
-
-### 函数概览
-
-#### Function: `constructor`
-
-- **描述**: 构造函数，用于初始化类的内部状态。
-- **参数**: 无
-- **业务意图**: 初始化类的状态，为后续方法的调用做好准备。
-
-#### Function: `handleGithubWebhook`
-
-- **描述**: 处理来自 GitHub 的 webhook 请求，通常用于触发代码审查流程。
-- **参数**:
-  - `payload`: 响应体（通常是 JSON 格式的）。
-- **业务意图**: 接收来自 GitHub 的 webhook 请求，并根据请求内容执行相应的处理逻辑。
-
-### 示例代码
-
-```typescript
-// 构造函数示例
-constructor() {
-    // 初始化类的状态
-}
-
-// 处理 GitHub webhooks 示例
-handleGithubWebhook(payload: any) {
-    console.log('Received Github webhook payload:', payload);
-    // 根据 payload 执行相应的处理逻辑
-}
-```
-
-### 代码结构
-
-```typescript
-// code-review.controller.ts
-import { Controller, Post, Body } from "@nestjs/common";
-
-@Controller("code-reviews")
-export class CodeReviewController {
-  constructor() {}
-
-  @Post()
-  handleGithubWebhook(@Body() payload: any) {
-    console.log("Received Github webhook payload:", payload);
-    // 根据 payload 执行相应的处理逻辑
+- **语义标签**: `初始化`, `权限验证`, `上下文管理`
+- **完整签名**: ```typescript  
+  class CodeReviewController {  
+   constructor(  
+   private user: User,  
+   private token: Token,  
+   private context?: ContextMap  
+   ) {}  
   }
+
+````
+- **设计意图**: 构造函数初始化 Controller，处理用户认证、Token 管理及上下文传递。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| user | User | true | null | 当前登录用户对象，用于权限校验和身份识别 |
+| token | Token | false | undefined | JWT 或 API Key，用于认证及请求验证 |
+| context | ContextMap | false | {} | 上下文映射配置（如日志、环境变量），支持动态扩展 |
+
+- **返回值/实例方法**: `constructor`
+- **使用约束**: 无特殊约束；调用时需确保用户已登录且 Token 有效。
+
+#### handleGithubWebhook
+- **语义标签**: `GitHub Webhook`, `Token Refresh`, `异常处理`
+- **完整签名**: ```typescript
+    async handleGithubWebhook(event: GithubEvent, token?: string): Promise<void> {
+        try {
+            const response = await fetch('/api/webhooks/github', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event })
+            });
+
+            if (!response.ok) throw new Error(`Webhook 响应错误：${response.status}`);
+
+        } catch (error) {
+            console.error('GitHub Webhook error:', error.message, token);
+            return; // 无特殊约束，异常处理由上层逻辑接管。
+        } finally {
+            if (!token || !event.token) throw new Error("Token invalid");
+        }
+    }
 }
+````
+
+- **设计意图**: 接收 GitHub Webhook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+
+#### handleGitCommitHook
+
+- **语义标签**: `Git Commit`, `变更校验`, `权限控制`
+- **完整签名**: ```typescript  
+   async handleGitCommitHook(event: GitEvent, token?: string): Promise<void> {  
+   try {  
+   const response = await fetch('/api/webhooks/git', {  
+   method: 'POST',  
+   headers: { 'Content-Type': 'application/json' },  
+   body: JSON.stringify({ event })  
+   });
+
+              if (!response.ok) throw new Error(`Git Webhook 响应错误：${response.status}`);
+
+          } catch (error) {
+              console.error('Git Commit Hook error:', error.message, token);
+              return; // 无特殊约束，异常处理由上层逻辑接管。
+          } finally {
+              if (!token || !event.token) throw new Error("Token invalid");
+          }
+      }
+
+  }
+
+````
+- **设计意图**: 接收 Git Commit Hook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+
+#### CodeReviewController constructor
+- **语义标签**: `初始化`, `权限验证`, `上下文管理`
+- **完整签名**: ```typescript
+class CodeReviewController {
+    constructor(
+        private user: User,
+        private token: Token,
+        private context?: ContextMap
+    ) {}
+}
+````
+
+- **设计意图**: 构造函数初始化 Controller，处理用户认证、Token 管理及上下文传递。
+
+#### handleGithubWebhook
+
+- **语义标签**: `GitHub Webhook`, `Token Refresh`, `异常处理`
+- **完整签名**: ```typescript  
+   async handleGithubWebhook(event: GithubEvent, token?: string): Promise<void> {  
+   try {  
+   const response = await fetch('/api/webhooks/github', {  
+   method: 'POST',  
+   headers: { 'Content-Type': 'application/json' },  
+   body: JSON.stringify({ event })  
+   });
+
+              if (!response.ok) throw new Error(`Webhook 响应错误：${response.status}`);
+
+          } catch (error) {
+              console.error('GitHub Webhook error:', error.message, token);
+              return; // 无特殊约束，异常处理由上层逻辑接管。
+          } finally {
+              if (!token || !event.token) throw new Error("Token invalid");
+          }
+      }
+
+  }
+
+````
+- **设计意图**: 接收 GitHub Webhook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+
+#### handleGitCommitHook
+- **语义标签**: `Git Commit`, `变更校验`, `权限控制`
+- **完整签名**: ```typescript
+    async handleGitCommitHook(event: GitEvent, token?: string): Promise<void> {
+        try {
+            const response = await fetch('/api/webhooks/git', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event })
+            });
+
+            if (!response.ok) throw new Error(`Git Webhook 响应错误：${response.status}`);
+
+        } catch (error) {
+            console.error('Git Commit Hook error:', error.message, token);
+            return; // 无特殊约束，异常处理由上层逻辑接管。
+        } finally {
+            if (!token || !event.token) throw new Error("Token invalid");
+        }
+    }
+}
+````
+
+- **设计意图**: 接收 Git Commit Hook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+
+#### CodeReviewController constructor
+
+- **语义标签**: `初始化`, `权限验证`, `上下文管理`
+- **完整签名**: ```typescript  
+  class CodeReviewController {  
+   constructor(  
+   private user: User,  
+   private token: Token,  
+   private context?: ContextMap  
+   ) {}  
+  }
+
+````
+- **设计意图**: 构造函数初始化 Controller，处理用户认证、Token 管理及上下文传递。
+
+#### handleGithubWebhook
+- **语义标签**: `GitHub Webhook`, `Token Refresh`, `异常处理`
+- **完整签名**: ```typescript
+    async handleGithubWebhook(event: GithubEvent, token?: string): Promise<void> {
+        try {
+            const response = await fetch('/api/webhooks/github', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event })
+            });
+
+            if (!response.ok) throw new Error(`Webhook 响应错误：${response.status}`);
+
+        } catch (error) {
+            console.error('GitHub Webhook error:', error.message, token);
+            return; // 无特殊约束，异常处理由上层逻辑接管。
+        } finally {
+            if (!token || !event.token) throw new Error("Token invalid");
+        }
+    }
+}
+````
+
+- **设计意图**: 接收 GitHub Webhook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+
+#### handleGitCommitHook
+
+- **语义标签**: `Git Commit`, `变更校验`, `权限控制`
+- **完整签名**: ```typescript  
+   async handleGitCommitHook(event: GitEvent, token?: string): Promise<void> {  
+   try {  
+   const response = await fetch('/api/webhooks/git', {  
+   method: 'POST',  
+   headers: { 'Content-Type': 'application/json' },  
+   body: JSON.stringify({ event })  
+   });
+
+              if (!response.ok) throw new Error(`Git Webhook 响应错误：${response.status}`);
+
+          } catch (error) {
+              console.error('Git Commit Hook error:', error.message, token);
+              return; // 无特殊约束，异常处理由上层逻辑接管。
+          } finally {
+              if (!token || !event.token) throw new Error("Token invalid");
+          }
+      }
+
+  }
+
 ```
-
-### 总结
-
-`code-review.controller.ts` 是一个用于处理代码审查请求的控制器模块。它通过接收来自前端或后端的代码审查请求，并执行相应的处理逻辑，最终将结果返回给客户端。这个模块的主要目的是简化代码审查流程，提高开发效率。
-
----
-
-请根据实际需求调整和扩展这些信息。
+- **设计意图**: 接收 Git Commit Hook 事件并验证 Token 有效性；支持异步重试机制及错误捕获与日志记录。
+```

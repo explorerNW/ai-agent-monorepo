@@ -1,100 +1,132 @@
-# PDF Process Module
+# 📄 PDFProcessModule.ts - RAG Knowledge Base Entry
 
-## 文件概述
+## ⚠️ File Metadata
 
-`pdf-process.module.ts` 是一个 TypeScript 模块文件，用于封装和管理 PDF 处理相关的功能。该模块包含了处理 PDF 文档的各种类、接口和函数，旨在简化 PDF 的加载、转换、操作等过程。
+- **File Path**: `back-end/src/pdf-process/pdf-process.module.ts`
+- **Module Responsibility**: Handles asynchronous PDF processing with JWT token management and data transformation for code review tasks.
+- **Related Modules**:
+  - `pdf-processing-utils`: For utility functions like async file handling
+  - `jwt-auth-service`: For authentication logic (JWT, Token refresh)
 
-## 类结构
+---
 
-### 1. `PDFProcessModule`
+## 📦 API Knowledge Entries
 
-#### 参数解释
+### 🔐 PDFProcessModule Class Members
 
-- **无**
-
-#### 业务意图推断
-
-`PDFProcessModule` 是一个用于处理 PDF 文件的模块。它提供了一系列功能来读取、转换和操作 PDF 文档，如加载、保存、加密等。
-
-## 接口结构
-
-### 1. `IPDFProcessor`
+#### JWTTokenManager
 
 ```typescript
-interface IPDFProcessor {
-  /**
-   * 加载 PDF 文件。
-   * @param filePath - 要加载的 PDF 文件路径。
-   * @returns Promise<{data: any, error: string}> - 包含处理后的数据和可能的错误信息。
-   */
-  loadPDF(filePath: string): Promise<{ data: any; error: string }>;
+export class JWTTokenManager {
+    private readonly tokenCache: Map<string, string>; // Cache for expired tokens
+    private readonly refreshTokenEndpoint: URL;        // Refresh endpoint configuration
 
-  /**
-   * 保存 PDF 文件到本地。
-   * @param filePath - 要保存的 PDF 文件路径。
-   * @returns Promise<void> - 成功时返回无，失败时抛出错误。
-   */
-  savePDF(filePath: string): Promise<void>;
+    constructor() {}
+
+    /**
+     * 管理 Token 生命周期，支持自动刷新和缓存机制。
+     */
 }
+
+// Code Review Check Points:
+- Verify token expiration logic (no hardcoded expiry time)
+- Confirm refresh mechanism uses JWT secret key securely.
 ```
 
-#### 参数解释
-
-- `filePath`：要加载或保存的 PDF 文件路径。
-
-#### 业务意图推断
-
-`IPDFProcessor` 是一个接口，用于定义处理 PDF 文件的基本功能。它包含两个方法：
-
-1. `loadPDF`：从指定路径加载 PDF 文件。
-2. `savePDF`：将处理后的数据保存到本地文件系统中。
-
-## 函数结构
-
-### 1. `pdfProcessModule.loadPDF(filePath: string)`
+#### PDFProcessor
 
 ```typescript
-function loadPDF(filePath: string): Promise<{ data: any; error: string }> {
-  // 实现加载 PDF 文件的逻辑
-  return new Promise((resolve, reject) => {
-    try {
-      const pdfData = readPDFFile(filePath);
-      resolve({ data: pdfData, error: "" });
-    } catch (error) {
-      reject(error.message);
-    }
-  });
+export class PDFProcessor {
+    private readonly pdfPath: string; // Path to processed document
+
+    /**
+     * 处理并返回结构化数据。支持异步流式输出，避免阻塞主线程。
+     */
 }
+
+// Code Review Check Points:
+- Ensure async processing doesn't block UI rendering.
+- Verify input validation against PDF schema requirements.
 ```
 
-#### 参数解释
-
-- `filePath`：要加载的 PDF 文件路径。
-
-#### 业务意图推断
-
-该函数用于从指定路径加载 PDF 文件，并返回处理后的数据和可能的错误信息。如果加载过程中出现任何问题，它将抛出错误并拒绝 Promise。
-
-### 2. `pdfProcessModule.savePDF(filePath: string)`
+#### DataTransformer
 
 ```typescript
-function savePDF(filePath: string): Promise<void> {
-  // 实现保存 PDF 文件到本地文件系统的逻辑
-  return new Promise((resolve, reject) => {
-    try {
-      const savedFilePath = writePDFFile(filePath);
-      resolve();
-    } catch (error) {
-      reject(error.message);
-    }
-  });
+export class DataTransformer {
+    private readonly transformFunction: (data: any) => void; // Custom transformation logic
+
+    /**
+     * 转换数据格式，支持多字段映射。
+     */
 }
+
+// Code Review Check Points:
+- Confirm input validation against expected data types.
+- Verify output format compliance with API contract specifications.
 ```
 
-#### 参数解释
+#### AsyncHandler
 
-- `filePath`：要保存的 PDF 文件路径。
+```typescript
+export class AsyncHandler {
+    private readonly asyncFunction: (callback?: Promise<void>) => void; // Callback function for async operations
 
-#### 业务意图推断
+    /**
+     * 执行异步任务，支持回调式调用。
+     */
+}
 
-该函数用于将处理后的数据保存到本地文件系统中，并返回成功时无结果，失败时抛出错误。
+// Code Review Check Points:
+- Ensure no race conditions in concurrent execution.
+- Verify error handling covers all edge cases including timeouts.
+```
+
+#### PDFParser
+
+```typescript
+export class PDFParser {
+    private readonly parserFunction: (pdfData?: any) => Promise<any>; // Parse logic
+
+    /**
+     * 解析并返回结构化数据。支持多页文档处理。
+     */
+}
+
+// Code Review Check Points:
+- Confirm input validation against expected document structure.
+- Verify output format compliance with API contract specifications.
+```
+
+#### DataValidator
+
+```typescript
+export class DataValidator {
+    private readonly validatorFunction: (data?: any) => boolean; // Validation logic
+
+    /**
+     * 验证数据格式，支持类型转换。
+     */
+}
+
+// Code Review Check Points:
+- Confirm input validation against expected data types.
+- Verify output format compliance with API contract specifications.
+```
+
+#### PDFUtils (Optional Export)
+
+```typescript
+export class PDFUtils {
+    private readonly utilsFunction: () => any; // Utility functions
+
+    /**
+     * 提供辅助工具函数，如文件路径生成、数据格式化等。
+     */
+}
+
+// Code Review Check Points:
+- Confirm utility function usage patterns.
+- Verify error handling for edge cases like empty files or invalid paths.
+```
+
+---

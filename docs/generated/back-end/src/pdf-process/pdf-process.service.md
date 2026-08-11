@@ -1,75 +1,94 @@
-# PDF Process Service
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/pdf-process/pdf-process.service.ts`
+- **模块职责**: PDF OCR 与压缩处理服务（支持文本识别、PDF 解析及内容优化）
+- **关联模块**: [无]
 
-`pdf-process.service.ts` 是一个 TypeScript 模块，用于处理 PDF 文档的转换和分析。该模块包含以下类、接口、函数：
+---
 
-- `PDFProcessService`
-- `constructor()`
-- `compressPDF()`
-- `ocrPDF()`
+### 📦 API 知识条目
 
-这些组件共同协作以实现对 PDF 文件的压缩和 OCR（光学字符识别）处理。
+#### PDFProcessService constructor
 
-## 类：PDFProcessService
+````typescript
+constructor(
+    private readonly pdfPath: string,
+    private readonly contentType?: 'text' | 'image',
+    private readonly compressionLevel?: number
+) { }
+- **语义标签**: 构造函数，PDF 处理初始化
+- **完整签名**: `export class PDFProcessService` (无具体类型定义)
+- **设计意图**: 服务类用于管理 PDF OCR、压缩及内容预处理逻辑
+- **参数/属性契约**:
 
-### 描述
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| pdfPath | string | true | 'back-end/src/pdf-process' | PDF 文件路径配置项 |
+| contentType | string | false | 'text' | OCR 内容类型标识 (文本或图像) |
+| compressionLevel | number | false | 1-5 | 压缩级别参数，默认值：2 |
 
-`PDFProcessService` 是一个用于处理 PDF 文档的类。它包含以下方法：
+- **返回值/实例方法**: `compressPDF()` / `ocrPDF()`: PDF 处理函数
+- **使用约束**:
+  - compressPDF: 需确保输入为有效 PDF 对象并配置正确路径
+  - ocrPDF: 依赖 OCR 模型，默认值：'text', 'image' (文本识别优先)
+  - 线程安全：无特殊要求（同步执行）
+- **Code Review 检查点**:
+  1. `pdfPath` 必须为真实文件路径且包含扩展名验证；
+  2. `contentType` 需明确指定内容类型，避免误处理非文本数据。
 
-#### 方法：constructor()
+---
 
-- 接收无参数。
-- 初始化该服务，可能包含初始化逻辑或配置设置。
+#### compressPDF (压缩 PDF)
+```typescript
+export function compressPDF(pdf: string, contentType?: 'text' | 'image', compressionLevel?: number): Promise<string> { }
+- **语义标签**: 异步函数，文件压缩与优化
+- **完整签名**: `compressPDF` (无具体类型定义)
+- **设计意图**: 处理 PDF 内容并应用预设压缩策略（如去除多余页、调整大小）
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| pdfPath | string | true | 'back-end/src/pdf-process' | PDF 文件路径配置项 |
+| contentType | string | false | 'text' | OCR 内容类型标识 (文本或图像) |
+| compressionLevel | number | false | 1-5 | 压缩级别参数，默认值：2 |
+
+- **返回值/实例方法**: `compressPDF()` / `ocrPDF()`: PDF 处理函数
+- **使用约束**:
+  - compressPDF: 需确保输入为有效 PDF 对象并配置正确路径；
+  - ocrPDF: 依赖 OCR 模型，默认值：'text', 'image' (文本识别优先)
+- **Code Review 检查点**:
+  1. `pdfPath` 必须包含扩展名验证（如 .docx）；
+  2. `contentType` 需明确指定内容类型以匹配预期处理逻辑。
+
+---
+
+#### ocrPDF (OCR PDF)
+```typescript
+export function ocrPDF(pdf: string, contentType?: 'text' | 'image'): Promise<string> { }
+- **语义标签**: OCR 文本识别，支持多格式转换
+- **完整签名**: `ocrPDF` (无具体类型定义)
+- **设计意图**: 将 PDF 内容转换为可解析的文本形式（如表格、公式等）
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| pdfPath | string | true | 'back-end/src/pdf-process' | PDF 文件路径配置项 |
+| contentType | string | false | 'text', 'image' | OCR 内容类型标识 (文本或图像)
+- **返回值/实例方法**: `ocrPDF()` / `compressPDF()`: PDF 处理函数
+- **使用约束**:
+  - ocrPDF: 依赖 OCR 模型，默认值：'text', 'image'；
+  - compressPDF: 需确保输入为有效 PDF 对象并配置正确路径。
+
+---
+
+#### Code Review Checkpoints Summary (API Design Intent)
+| API | Key Focus Areas for Reviewer |
+|-----|-------------------------------|
+| `compressPDF` | Path validity, content type consistency，compression level selection |
+| `ocrPDF` | OCR model configuration accuracy，text extraction fidelity |
 
 ```typescript
-constructor() {
-  // 初始化逻辑
-}
-```
-
-#### 方法：compressPDF()
-
-- 接收 `inputFile` 参数（类型为 `string`）。
-- 处理 PDF 文件的压缩任务。这通常涉及读取文件、进行压缩操作并保存结果到新的文件或流。
-
-```typescript
-compressPDF(inputFile: string): Promise<void> {
-  // 实现压缩逻辑
-}
-```
-
-#### 方法：ocrPDF()
-
-- 接收 `inputFile` 参数（类型为 `string`）。
-- 使用 OCR 技术对 PDF 文件进行分析，提取文本内容。这通常涉及读取文件、应用 OCR 算法并返回处理后的结果。
-
-```typescript
-ocrPDF(inputFile: string): Promise<string[]> {
-  // 实现 OCR 处理逻辑
-}
-```
-
-## 接口：无
-
-### 描述
-
-该模块没有接口，但包含以下方法：
-
-- `constructor()`
-- `compressPDF()`
-- `ocrPDF()`
-
-这些方法是通过类实现的。
-
-## 函数：无
-
-### 描述
-
-该模块没有函数，但包含以下方法：
-
-- `constructor()`
-- `compressPDF()`
-- `ocrPDF()`
-
-这些方法是通过类实现的。
+// 示例调用验证点：
+const result = compressPDF('test.pdf', 'image');
+if (result === null) throw new Error("压缩失败"); // 检查返回值类型与预期行为
+````

@@ -1,216 +1,107 @@
-# ParallelTaskService 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/parallel-task/parallel-task.service.ts`
+- **模块职责**: 并行任务执行与异步处理服务核心逻辑实现
+- **关联模块**: `back-end/src/utils/task-manager.ts`, `back-end/src/services/cpucores-service.ts`
 
-`parallel-task.service.ts` 是一个 TypeScript 类，用于处理并行任务的执行。它定义了如何获取 CPU 核心数、计算最优并发度以及执行并行任务。
+### 📦 API 知识条目
 
-### 类：ParallelTaskOptions
+#### ParallelTaskOptions 成员全限定名
 
-```typescript
-interface ParallelTaskOptions {
-  // 推断属性和方法
-}
-```
+- **语义标签**: [用户认证, JWT令牌管理，异步任务调度]
+- **完整签名**: ```typescript  
+  interface ParallelTaskOptions {  
+   id: string;  
+   taskName?: string;  
+  }
 
-### 类：TaskResult
+````
+**设计意图**: 定义并行任务的初始配置参数，确保调用方在发起请求前明确资源需求。
 
-```typescript
+#### TaskResult 成员全限定名
+- **语义标签**: [任务执行结果, 状态流转]
+- **完整签名**: ```typescript
 interface TaskResult {
-  // 推断属性和方法
+    id: string;
+    status: 'pending' | 'running' | 'completed';
 }
-```
-
-### 类：ParallelExecutionResult
-
-```typescript
-interface ParallelExecutionResult {
-  // 推断属性和方法
-}
-```
-
-### 类：ParallelTaskService
-
-```typescript
-class ParallelTaskService {
-  // 推断构造函数、方法和属性
-}
-
-// 方法和属性的详细说明将在此处列出。
-```
-
-### 函数/方法：getCPUCores
-
-```typescript
-function getCPUCores(): number;
-```
-
-- **业务意图**：获取可用 CPU 核心数，用于计算并行任务的数量。
-
-### 函数/方法：calculateOptimalConcurrency
-
-```typescript
-function calculateOptimalConcurrency(tasks: TaskResult[]): number;
-```
-
-- **参数说明**：
-  - `tasks`：一个包含任务结果的数组。
-- **业务意图**：根据任务数量和执行时间计算最优并发度，以确保任务在合理的时间内完成。
-
-### 函数/方法：executeParallel
-
-```typescript
-function executeParallel(tasks: TaskResult[]): ParallelExecutionResult;
-```
-
-- **参数说明**：
-  - `tasks`：一个包含任务结果的数组。
-- **业务意图**：执行并行任务，返回并行任务的结果。
-
-### 函数/方法：processItems
-
-```typescript
-function processItems(items: any[], options: ParallelTaskOptions): TaskResult[];
-```
-
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：将数据分批处理并返回任务结果。
-
-### 函数/方法：executeWithProgress
-
-```typescript
-function executeWithProgress(
-  items: any[],
-  options: ParallelTaskOptions,
-): TaskResult[];
-```
-
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：执行并行任务，并在每个任务完成后显示进度条。
-
-### 函数/方法：withTimeout
-
-```typescript
-function withTimeout(items: any[], options: ParallelTaskOptions): TaskResult[];
-```
-
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：执行并行任务，并在指定时间内完成任务。如果超时，则返回错误结果。
-
-## 结构化 Markdown 技术文档
-
-````markdown
-# ParallelTaskService 技术文档
-
-## 文件概述
-
-`parallel-task.service.ts` 是一个 TypeScript 类，用于处理并行任务的执行。它定义了如何获取 CPU 核心数、计算最优并发度以及执行并行任务。
-
-### 类：ParallelTaskOptions
-
-```typescript
-interface ParallelTaskOptions {
-  // 推断属性和方法
-}
-```
 ````
 
-### 类：TaskResult
+**设计意图**: 记录并行任务的最终状态，便于后续追踪与异常处理。
 
-```typescript
-interface TaskResult {
-  // 推断属性和方法
-}
-```
+#### ParallelExecutionResult 成员全限定名
 
-### 类：ParallelExecutionResult
+- **语义标签**: [执行结果, 资源分配]
+- **完整签名**: ```typescript  
+  interface ParallelExecutionResult {  
+   id: string;  
+   cpuCoresUsed?: number;  
+  }
 
-```typescript
-interface ParallelExecutionResult {
-  // 推断属性和方法
-}
-```
+````
+**设计意图**: 记录并行任务中实际使用的 CPU 核心数，支持性能监控。
 
-### 类：ParallelTaskService
-
-```typescript
+#### ParallelTaskService 成员全限定名
+- **语义标签**: [并发控制, 异步执行]
+- **完整签名**: ```typescript
 class ParallelTaskService {
-  // 推断构造函数、方法和属性
+    constructor(private taskManager: TaskManager) {}
 }
+````
 
-// 方法和属性的详细说明将在此处列出。
-```
+**设计意图**: 提供统一的并行任务管理服务，支持多实例调度。
 
-### 函数/方法：getCPUCores
+#### getCPUCores 成员全限定名
 
-```typescript
-function getCPUCores(): number;
-```
+- **语义标签**: [CPU核心获取, 资源分配]
+- **完整签名**: ```typescript  
+  function getCpuCores(): number;
 
-- **业务意图**：获取可用 CPU 核心数，用于计算并行任务的数量。
+````
+**设计意图**: 返回当前可用的 CPU 核心数量，用于任务执行时的并发控制。
 
-### 函数/方法：calculateOptimalConcurrency
+#### calculateOptimalConcurrency 成员全限定名
+- **语义标签**: [优化策略, 资源调度]
+- **完整签名**: ```typescript
+function calculateOptimalConcurrency(): number;
+````
 
-```typescript
-function calculateOptimalConcurrency(tasks: TaskResult[]): number;
-```
+**设计意图**: 计算最优并发数以平衡性能与稳定性，避免 CPU过载或任务阻塞。
 
-- **参数说明**：
-  - `tasks`：一个包含任务结果的数组。
-- **业务意图**：根据任务数量和执行时间计算最优并发度，以确保任务在合理的时间内完成。
+#### executeParallel 成员全限定名
 
-### 函数/方法：executeParallel
+- **语义标签**: [并行执行, 异步处理]
+- **完整签名**: ```typescript  
+  function executeParallel(items: ParallelTaskOptions[]): Promise<TaskResult[]>;
 
-```typescript
-function executeParallel(tasks: TaskResult[]): ParallelExecutionResult;
-```
+````
+**设计意图**: 将多个独立任务合并为单线程并发执行，支持批量资源调度。
 
-- **参数说明**：
-  - `tasks`：一个包含任务结果的数组。
-- **业务意图**：执行并行任务，返回并行任务的结果。
+#### processItems 成员全限定名
+- **语义标签**: [数据处理, 并行处理]
+- **完整签名**: ```typescript
+function processItems(items: ParallelTaskOptions[]): Promise<TaskResult[]>;
+````
 
-### 函数/方法：processItems
+**设计意图**: 对任务列表进行预处理与分发，支持多实例并发执行。
 
-```typescript
-function processItems(items: any[], options: ParallelTaskOptions): TaskResult[];
-```
+#### executeWithProgress 成员全限定名
 
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：将数据分批处理并返回任务结果。
+- **语义标签**: [进度追踪, 异步处理]
+- **完整签名**: ```typescript  
+  function withTimeout(timeout: number): Promise<TaskResult>;
 
-### 函数/方法：executeWithProgress
+````
+**设计意图**: 提供超时控制机制，确保任务在合理时间内完成并返回状态。
 
-```typescript
-function executeWithProgress(
-  items: any[],
-  options: ParallelTaskOptions,
-): TaskResult[];
-```
+#### withTimeout 成员全限定名
+- **语义标签**: [异常处理, 资源释放]
+- **完整签名**: ```typescript
+function withTimeout(timeout: number): Promise<TaskResult>;
+````
 
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：执行并行任务，并在每个任务完成后显示进度条。
+**设计意图**: 提供超时控制机制，确保任务在合理时间内完成并返回状态。
 
-### 函数/方法：withTimeout
+### 📥 输入代码结构
 
-```typescript
-function withTimeout(items: any[], options: ParallelTaskOptions): TaskResult[];
-```
-
-- **参数说明**：
-  - `items`：一个包含待处理数据的数组。
-  - `options`：ParallelTaskOptions 类的一个实例，用于获取 CPU 核心数等信息。
-- **业务意图**：执行并行任务，并在指定时间内完成任务。如果超时，则返回错误结果。
-
-```
-
-这个技术文档提供了对 `parallel-task.service.ts` 文件的详细说明和结构化解释，帮助开发者更好地理解和使用该类。
-```
+[{"type":"Interface","name":"ParallelTaskOptions","line":4,"is_export":true},{"type":"Interface","name":"TaskResult","line":21,"is_export":true},{"type":"Interface","name":"ParallelExecutionResult","line":28,"is_export":true},{"type":"Class","name":"ParallelTaskService","line":40,"is_export":true},{"type":"Function/Method","name":"getCPUCores","line":46,"is_export":true},{"type":"Function/Method","name":"calculateOptimalConcurrency","line":54,"is_export":true},{"type":"Function/Method","name":"executeParallel","line":71,"is_export":true},{"type":"Function/Method","name":"processItems","line":158,"is_export":true},{"type":"Function/Method","name":"executeWithProgress","line":175,"is_export":true},{"type":"Function/Method","name":"withTimeout","line":262,"is_export":true}]

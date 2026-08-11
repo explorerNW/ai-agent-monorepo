@@ -1,51 +1,77 @@
-# TimeLocationService 类
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/mcp/time-location/time-location.service.ts`
+- **模块职责**: 时间位置管理、API 调用与工具执行服务（含异步处理）
+- **关联模块**: [无外部依赖，仅依赖自身类结构]
 
-`TimeLocationService.ts` 是一个 TypeScript 模块，包含了一个名为 `TimeLocationService` 的服务类。这个类主要用于处理时间与位置相关的业务逻辑。
+### 📦 API 知识条目
 
-### 类说明
+#### TimeLocationService 成员全限定名 - RequestHandler
 
 ```typescript
-// 时间和位置相关业务逻辑的实现
-export class TimeLocationService {
-  // 简单的构造函数
-  constructor() {}
-
-  // 处理请求的方法
-  handleRequest(): void {
-    console.log("处理请求");
-  }
-
-  // 执行工具的方法
-  executeTool(toolName: string): void {
-    console.log(`执行工具 ${toolName}`);
-  }
-
-  // 处理通知的方法
-  handleNotification(
-    notificationType: string,
-    notificationMessage: string,
-  ): void {
-    console.log(
-      `处理通知类型：${notificationType}，消息：${notificationMessage}`,
-    );
-  }
+class TimeLocationRequestHandler {
+    constructor(private time: string, private locationId?: number) {}
 }
+- **语义标签**: [时间位置管理，API 调用，异步处理]
+- **完整签名**: `TimeLocationRequestHandler(time = "2024", locationId = null)`
+- **设计意图**: 封装请求参数与响应结构，支持状态机控制流程（如超时、异常）
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| time | string | true | "YYYY-MM-DD HH:mm:ss" | 请求时间戳，用于定位事件窗口 |
+| locationId | number? | false | null | 关联的地理位置 ID（可选） |
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: [线程安全：异步处理中需确保非阻塞调用顺序；异常抛出时捕获并记录日志]
+- **Code Review 检查点**: [1. 是否提供错误状态码？2. 参数验证逻辑是否存在边界风险？3. 是否有超时机制保障服务稳定性?]
 ```
 
-### 参数解释
+#### TimeLocationService executeTool 成员全限定名 - ToolExecutionHandler
 
-- `handleRequest()`: 这个方法用于处理请求。它在类的构造函数中被调用，并打印一条简单的日志信息。
-- `executeTool(toolName: string)`: 这个方法接受一个工具名称作为参数，然后打印出执行该工具的消息。
+```typescript
+class ToolExecutionHandler {
+    constructor(private toolId: string, private parameters?: Record<string, any>) {}
+}
+- **语义标签**: [工具调用，参数传递]
+- **完整签名**: `executeTool(toolId = "tool1", parameters = {})`
+- **设计意图**: 支持自定义工具执行流程（如数据转换、API 请求）并返回处理结果
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| toolId | string | true | "tool1" | 工具唯一标识符，用于路由执行 |
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: [线程安全：异步调用需确保非阻塞；异常抛出时捕获并记录日志]
+- **Code Review 检查点**: [1. 是否提供错误状态码？2. 参数验证逻辑是否存在边界风险？3. 是否有超时机制保障服务稳定性?]
+```
 
-- `handleNotification(notificationType: string, notificationMessage: string)`: 这个方法接收通知类型和消息两个参数，并在控制台中打印一条包含这些信息的日志条目。
+#### TimeLocationService handleNotification 成员全限定名 - NotificationHandler
 
-### 业务意图推断
+```typescript
+class NotificationHandler {
+    constructor(private userId: string, private message?: string) {}
+}
+- **语义标签**: [通知处理，用户消息]
+- **完整签名**: `handleNotification(userId = "user1", message = null)`
+- **设计意图**: 支持异步通知流程（如邮件、短信），确保非阻塞调用顺序与状态管理
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| userId | string | true | "user1" | 通知用户唯一标识符，用于路由发送消息 |
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: [线程安全：异步调用需确保非阻塞；异常抛出时捕获并记录日志]
+- **Code Review 检查点**: [1. 是否提供错误状态码？2. 参数验证逻辑是否存在边界风险？3. 是否有超时机制保障服务稳定性?]
+```
 
-这个服务类的主要目的是提供一个通用的时间与位置相关的处理逻辑。它通过不同的方法来处理请求、执行工具以及处理通知，确保了系统的灵活性和可扩展性。例如：
+### 📥 输入代码结构解析（基于 JSON）
 
-- `handleRequest()` 方法可以被任何需要处理请求的组件调用，而不需要知道具体是哪个组件。
-- `executeTool(toolName: string)` 方法允许添加新的工具功能，而无需修改现有的代码。
+| 成员类型        | 名称                | line | is_export |
+| --------------- | ------------------- | ---- | --------- |
+| Class           | TimeLocationService | 4    | true      |
+| Function/Method | handleRequest       | 21   | true      |
+| Function/Method | executeTool         | 62   | true      |
+| Function/Method | handleNotification  | 73   | true      |
 
-- `handleNotification(notificationType: string, notificationMessage: string)` 方法使得系统能够轻松地集成新的通知机制，从而提高系统的响应能力和用户满意度。
+### ✅ 输出结构验证要点：
+
+- **语义自包含性**：每个条目独立可理解，无外部依赖
+- **检索友好性**：标签、签名完整覆盖核心业务逻辑（如时间戳、工具调用）
+- **机器可读性**：参数契约表格清晰标注类型与约束值；Code Review 检查点基于设计意图提出审查建议

@@ -1,85 +1,88 @@
-````markdown
-# WeatherAgentService 技术文档
+### 📄 文件元信息
 
-## 概述
+- **文件路径**: `back-end/src/ai-qwen/agents/weather.agent.service.ts`
+- **模块职责**: [Weather Agent Service: 负责天气数据查询与生成服务，支持异步请求、参数校验及异常处理]
+- **关联模块**: [`weather.data`, `api-client`]
 
-`weather.agent.service.ts` 文件中定义了一个 `WeatherAgentService` 类，该类用于处理天气数据的获取和处理。同时，还定义了一个接口 `GetLonLat` 用于经纬度信息的获取。
+### 📦 API 知识条目
 
-## 接口
+#### GetLonLat
 
-### GetLonLat
-
-- **描述**: 定义了获取经纬度信息的方法。
-- **参数**:
-- 无
-- **返回值**:
-- 类型: `Promise<{ lon: number; lat: number }>`
-- 描述: 返回一个包含经度和纬度的对象的 Promise。
-
-## 类
-
-### WeatherAgentService
-
-- **描述**: 主要用于处理天气数据的获取和处理。
-- **构造函数**
-
-```typescript
-constructor(private readonly config: Config, private readonly logger: Logger) {}
-```
+````typescript
+interface GetLonLat {
+    lat?: number; // 可选：纬度坐标
+    lon?: number;   // 可选：经度坐标
+}
+- **语义标签**: [地理定位, 经纬度，数据源]
+- **完整签名**: ```typescript
+export interface GetLonLat {
+    lat: number | null;
+    lon: number | null;
+}
 ````
 
-- **参数**:
-  - `config`: 配置对象，类型为 `Config`。
-  - `logger`: 日志记录器，类型为 `Logger`。
+#### WeatherAgentService
 
-- **方法**
+```typescript
+class WeatherAgentService {
+  constructor(
+    private readonly weatherDataSource, // 天气数据源配置项，如 API Key、URL 等
+    private readonly logger = new Logger(), // 日志记录器（可选）
+    private readonly errorHandler: ErrorHandler, // 错误处理机制
+  ) {}
 
-  #### buildAgent
-
-  ```typescript
-  buildAgent(agentId: string): Agent {
-    // 构建并返回一个 Agent 对象
+  async buildAgent(): Promise<WeatherAgent> {
+    return new WeatherAgent(this.weatherDataSource, this.logger);
   }
-  ```
 
-  - **参数**:
-    - `agentId`: 代理 ID，类型为 `string`。
-  - **返回值**:
-    - 类型: `Agent`
-    - 描述: 返回一个构建好的 `Agent` 对象。
-
-  #### fetchLonLat
-
-  ```typescript
-  async fetchLonLat(address: string): Promise<{ lon: number; lat: number }> {
-    // 根据地址获取经纬度信息
+  fetchLonLat(lat?: number | null, lon?: number | null): GetLonLat {
+    const result = this.getLonLat(lat || 0, lon || 0); // 调用数据源获取经纬度信息
+    return result;
   }
-  ```
 
-  - **参数**:
-    - `address`: 地址字符串，类型为 `string`。
-  - **返回值**:
-    - 类型: `Promise<{ lon: number; lat: number }>`
-    - 描述: 返回一个包含经度和纬度的对象的 Promise。
-
-  #### getWeather
-
-  ```typescript
-  async getWeather(location: { lon: number; lat: number }): Promise<WeatherData> {
-    // 获取指定位置的天气数据
+  getWeather(location: string): WeatherResponse {
+    return new WeatherAgent(this.weatherDataSource).getWeather(location);
   }
-  ```
-
-  - **参数**:
-    - `location`: 包含经度和纬度的对象，类型为 `{ lon: number; lat: number }`。
-  - **返回值**:
-    - 类型: `Promise<WeatherData>`
-    - 描述: 返回一个包含天气数据的 Promise。
-
-## 总结
-
-`WeatherAgentService` 类提供了构建代理、获取经纬度信息和获取天气数据的功能。通过接口 `GetLonLat`，可以方便地获取经纬度信息，并在类中使用这些信息来获取相应的天气数据。
-
+}
 ```
 
-```
+#### Constructor (初始化服务)
+
+- **设计意图**: [初始化天气 Agent 实例，配置数据源、日志及错误处理机制]
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | weatherDataSource | WeatherDataSourceConfig // API Key, URL, etc. | [ ] | null | 天气数据源配置项，如 API Key、URL 等 |
+  | logger = new Logger() // 日志记录器（可选） | undefined | true | { level: 'info', format: '%d %p' } | 用于记录服务运行状态及异常信息 |
+
+#### buildAgent (构建 Agent)
+
+- **设计意图**: [初始化 WeatherAgent，配置数据源、错误处理机制]
+- **返回值/实例方法**: `WeatherAgent`（返回天气查询结果）
+
+#### fetchLonLat (获取经纬度)
+
+````typescript
+fetchLonLat(lat?: number | null, lon?: number | null): GetLonLat {
+    const result = this.getLonLat(lat || 0, lon || 0); // 调用数据源获取经纬度信息
+    return result;
+}
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| lat     | number | [ ]   | null        | 纬度坐标（可选） |
+| lon     | number | [ ]   | null        | 经度坐标（可选） |
+
+#### getWeather (获取天气)
+```typescript
+getWeather(location: string): WeatherResponse {
+    return new WeatherAgent(this.weatherDataSource).getWeather(location); // 调用数据源查询当前位置的天气信息
+}
+- **返回值/实例方法**: `WeatherResponse`（返回天气详情）
+- **使用约束**: [线程安全：异步请求，无特殊约束]
+
+#### Code Review 检查点:
+1. ✅ 参数类型是否完整且符合预期（如经纬度坐标是否为数字或字符串）；
+2. ✅ 数据源配置项是否正确初始化及可访问性验证；
+3. ✅ `fetchLonLat` 方法中未包含错误处理机制，需补充异常捕获逻辑。
+````

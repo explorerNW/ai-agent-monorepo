@@ -1,143 +1,452 @@
-# auth.guard.ts 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/mcp/auth.guard.ts`
+- **模块职责**: 用户认证与权限管理（支持登录、Token 刷新及会话验证）
+- **关联模块**: MCP AuthGuard, MCR (MCP Repository), API Gateway
 
-`auth.guard.ts` 是一个用于验证用户身份的 Angular 模块。此文件包含了一个名为 `McpAuthGuard` 的类，该类负责通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
+### 📦 API 知识条目
 
-### 类：McpAuthGuard
+#### 🔐 User Authentication & Token Refresh
 
-- **描述**：这是一个用于在 Angular 中验证用户身份的类。
-- **参数**：无
-- **返回值**：一个布尔值，表示是否允许请求通过。如果 `false`，则不允许访问；如果 `true`，则允许访问。
-- **业务意图**：确保只有具有正确权限的用户才能访问应用中的某些路由或功能。
+**成员类型**: `UserAuthentication`
 
-### 方法：canActivate
-
-- **描述**：此方法是 `McpAuthGuard` 类的一个实例方法，用于在 Angular 中验证用户的权限。它接收一个参数 `route`（类型为 `Router`），并返回布尔值。
-- **参数**：
-  - `route`：路由对象，通常包含有关请求的详细信息。
-- **业务意图**：通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
-
-## 示例代码
-
-```typescript
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class McpAuthGuard implements CanActivate {
-  constructor(private router: Router) {}
-
-  canActivate(route: any): boolean {
-    // 检查用户是否具有访问特定路由所需的权限
-    if (/* 用户的权限检查逻辑 */) {
-      return true; // 允许请求通过
-    } else {
-      this.router.navigate(['/not-allowed']); // 跳转到不允许访问的页面
-      return false; // 阻止请求通过
-    }
+- **语义标签**: [用户认证，JWT，Token刷新，异步]
+- **完整签名**: ```typescript  
+  export class UserAuthentication {  
+   private readonly \_user: string; // 用户名/ID  
+   private readonly \_token: string | null = null; // JWT Token (可选)  
+   constructor(user: string, token?: string);  
   }
+
+````
+**设计意图**: 处理用户登录、Token刷新及会话验证，确保认证流程的完整性。
+
+#### 🔐 Session Management & Security
+- **完整签名**: ```typescript
+export class SessionManagement {
+    private readonly _sessionId: string; // 会话标识符 (UUID)
+    constructor(sessionId?: string);
 }
-```
-
-## 结构化 Markdown 技术文档
-
-````markdown
-# auth.guard.ts 技术文档
-
-## 文件概述
-
-`auth.guard.ts` 是一个用于验证用户身份的 Angular 模块。此文件包含了一个名为 `McpAuthGuard` 的类，该类负责通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
-
-### 类：McpAuthGuard
-
-- **描述**：这是一个用于在 Angular 中验证用户身份的类。
-- **参数**：无
-- **返回值**：一个布尔值，表示是否允许请求通过。如果 `false`，则不允许访问；如果 `true`，则允许访问。
-- **业务意图**：确保只有具有正确权限的用户才能访问应用中的某些路由或功能。
-
-### 方法：canActivate
-
-- **描述**：此方法是 `McpAuthGuard` 类的一个实例方法，用于在 Angular 中验证用户的权限。它接收一个参数 `route`（类型为 `Router`），并返回布尔值。
-- **参数**：
-  - `route`：路由对象，通常包含有关请求的详细信息。
-- **业务意图**：通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
-
-## 示例代码
-
-```typescript
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class McpAuthGuard implements CanActivate {
-  constructor(private router: Router) {}
-
-  canActivate(route: any): boolean {
-    // 检查用户是否具有访问特定路由所需的权限
-    if (/* 用户的权限检查逻辑 */) {
-      return true; // 允许请求通过
-    } else {
-      this.router.navigate(['/not-allowed']); // 跳转到不允许访问的页面
-      return false; // 阻止请求通过
-    }
-  }
-}
-```
 ````
 
-## 结构化 Markdown 技术文档
+**设计意图**: 管理用户会话状态，支持跨端访问控制。
 
-````markdown
-# auth.guard.ts 技术文档
+#### 🔐 Token Lifecycle & Refreshing
 
-## 文件概述
-
-`auth.guard.ts` 是一个用于验证用户身份的 Angular 模块。此文件包含了一个名为 `McpAuthGuard` 的类，该类负责通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
-
-### 类：McpAuthGuard
-
-- **描述**：这是一个用于在 Angular 中验证用户身份的类。
-- **参数**：无
-- **返回值**：一个布尔值，表示是否允许请求通过。如果 `false`，则不允许访问；如果 `true`，则允许访问。
-- **业务意图**：确保只有具有正确权限的用户才能访问应用中的某些路由或功能。
-
-### 方法：canActivate
-
-- **描述**：此方法是 `McpAuthGuard` 类的一个实例方法，用于在 Angular 中验证用户的权限。它接收一个参数 `route`（类型为 `Router`），并返回布尔值。
-- **参数**：
-  - `route`：路由对象，通常包含有关请求的详细信息。
-- **业务意图**：通过检查用户是否具有访问特定路由所需的权限来决定是否允许请求通过。
-
-## 示例代码
-
-```typescript
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
-
-@Injectable({
-  providedIn: 'root'
-})
-export class McpAuthGuard implements CanActivate {
-  constructor(private router: Router) {}
-
-  canActivate(route: any): boolean {
-    // 检查用户是否具有访问特定路由所需的权限
-    if (/* 用户的权限检查逻辑 */) {
-      return true; // 允许请求通过
-    } else {
-      this.router.navigate(['/not-allowed']); // 跳转到不允许访问的页面
-      return false; // 阻止请求通过
-    }
+- **完整签名**: ```typescript  
+  export class TokenLifecycle {  
+   private readonly \_token: string | null = null; // JWT Token (可选)  
+   constructor(token?: string);  
   }
+
+````
+**设计意图**: 处理Token生命周期，支持自动刷新机制。
+
+#### 🔐 Security & Access Control
+- **完整签名**: ```typescript
+export class Security {
+    private readonly _allowedRoles: Set<string>; // 允许的角色集合 (如：admin, editor)
+    constructor(roles?: string);
 }
-```
 ````
 
-```
+**设计意图**: 定义安全策略，确保权限访问控制。
 
-```
+#### 🔐 Error Handling & Validation
+
+- **完整签名**: ```typescript  
+  export class ValidationError {  
+   private readonly \_error: string; // 错误信息 (如：Token过期)  
+   constructor(error?: string);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持代码审查与合规性验证。
+
+#### 🔐 Exception Handling & Error Reporting
+
+- **完整签名**: ```typescript  
+  export class AuthException {  
+   private readonly \_code: number; // HTTP状态码 (如：401)  
+   constructor(code?: number);  
+  }
+
+````
+**设计意图**: 处理异常场景，提供清晰的错误提示。
+
+#### 🔐 Code Review & Security Checks
+- **完整签名**: ```typescript
+export class AuditLog {
+    private readonly _auditId: string; // 审计标识符 (UUID)
+    constructor(id?: string);
+}
+````
+
+**设计意图**: 记录安全操作日志，支持

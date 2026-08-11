@@ -1,102 +1,145 @@
-# MCP Module 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/mcp/mcp.module.ts`
+- **模块职责**: MCP（Model Context Protocol）封装的 API 调用与上下文管理接口，支持代码审查、模型集成及异步任务处理等核心业务逻辑。
+- **关联模块**: `src/contexts/context-manager`, `src/utils/request-handler`, `back-end/src/mcp/api.ts`
 
-`mcp.module.ts` 是一个 TypeScript 模块文件，主要用于定义和管理模块的配置。此文件包含了一个名为 `McpModule` 的类。
+### 📦 API 知识条目
 
-### 类推断
-
-- **名称**: `McpModule`
-  - 类型: 类
-  - 描述: 定义和管理模块的配置。
-
-## 文件结构说明
-
-### 模块概述
-
-该模块主要负责：
-
-1. **定义模块配置**：通过配置文件（如 JSON、YAML 等）来描述模块的功能、依赖关系等信息。
-2. **加载配置文件**：从指定路径读取配置文件，并根据其内容进行解析和应用。
-3. **处理配置变更**：当配置文件发生变化时，自动更新模块的配置状态。
-
-### 类推断
-
-- **名称**: `McpModule`
-  - 类型: 类
-  - 描述: 定义和管理模块的配置。
-
-## 类、接口、函数说明
-
-### MCPModule 类
+#### MCPModule成员类全限定名
 
 ```typescript
-// mcp.module.ts
-import { Config } from "./config"; // 假设 config 是一个已定义的配置类
-
-export class McpModule {
-  constructor(configPath: string) {
-    this.config = new Config();
-    this.loadConfig(configPath);
-  }
-
-  private config: Config;
-  private loaded: boolean;
-
-  loadConfig(configPath: string): void {
-    // 从指定路径加载配置文件
-    if (this.loaded) return; // 防止重复加载
-
-    this.config.read(configPath); // 假设 Config 类有 read 方法
-    this.loaded = true;
-  }
+class MCPModule {
+  constructor() {} // 构造函数，初始化状态管理
 }
 ```
 
-### 参数解释
+- **语义标签**: [认证机制, Token刷新, 异步处理]
+- **完整签名**: ```typescript
+  export class MCPModule extends BaseContextManager {
+  private \_state: State = new State();
+  public async init(): Promise<void> {} // 初始化状态管理，确保上下文一致性
+  }
 
-- **configPath**: `string`
-  - 描述: 指定配置文件的路径。
+````
+- **设计意图**: 封装基础 Context Manager 类，提供初始化和配置控制。
+- **参数/属性契约**:
 
-### 业务意图推断
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| _state | State | true | { id: string, status: 'active' } | 上下文状态管理，支持异步操作与持久化存储。 |
 
-1. **定义模块配置**：通过构造函数接收配置文件路径，然后调用 `loadConfig` 方法加载配置。
-2. **处理配置变更**：当配置文件发生变化时，自动更新模块的配置状态。这可以通过在 `loadConfig` 方法中检查 `loaded` 属性来实现。
+- **返回值/实例方法**: `init()` → 初始化配置；`updateState(id)` → 更新当前状态（如用户认证）。
+- **使用约束**: [线程安全、异常处理]
+- **Code Review 检查点**:
+1. 是否包含错误捕获机制，确保异步操作无数据丢失。
+2. 参数校验逻辑是否符合业务规则（例如：`id`是否为必填字段）。
 
-### 代码块
-
+#### Token刷新接口成员类全限定名
 ```typescript
-// mcp.module.ts
-import { Config } from "./config"; // 假设 config 是一个已定义的配置类
-
-export class McpModule {
-  constructor(configPath: string) {
-    this.config = new Config();
-    this.loadConfig(configPath);
-  }
-
-  private config: Config;
-  private loaded: boolean;
-
-  loadConfig(configPath: string): void {
-    // 从指定路径加载配置文件
-    if (this.loaded) return; // 防止重复加载
-
-    this.config.read(configPath); // 假设 Config 类有 read 方法
-    this.loaded = true;
-  }
+class MCPModule {
+    private _token: string = ''; // token存储配置项
 }
-```
+````
 
-### 示例使用
+- **语义标签**: [Token管理, JWT]
+- **完整签名**: ```typescript
+  export class MCPModule extends BaseContextManager {
+  public async refreshToken(): Promise<string> {} // 刷新 Token，返回新令牌。
+  }
 
+````
+- **设计意图**: 支持动态更新认证状态与权限控制逻辑。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| _token | string | true | { expires: number, scope: 'admin' } | Token存储配置项，支持过期与刷新管理。 |
+
+- **返回值/实例方法**: `refreshToken()` → 返回新令牌；`updateState(id)` → 更新当前状态（如用户认证）。
+- **使用约束**: [线程安全、异常处理]
+- **Code Review 检查点**:
+1. Token是否包含过期时间，防止滥用。
+2. 参数校验逻辑是否符合业务规则（例如：`expires`是否为必填字段）。
+
+#### BaseContextManager成员类全限定名
 ```typescript
-// 使用示例
-const configPath = "./config.json";
-const module = new McpModule(configPath);
-module.loadConfig(configPath); // 加载配置文件并更新模块状态
+class BaseContextManager {
+    private _state: State = new State(); // 基础状态管理
+}
+````
+
+- **语义标签**: [上下文管理, Token刷新]
+- **完整签名**: ```typescript
+  export class BaseContextManager extends MCPModule {
+  public async init(): Promise<void> {}
+  }
+
+````
+- **设计意图**: 提供通用 Context Manager，支持基础状态管理与配置控制。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| _state | State | true | { id: string, status: 'active' } | 基础状态管理，支持异步操作与持久化存储。 |
+
+- **返回值/实例方法**: `init()` → 初始化配置；`updateState(id)` → 更新当前状态（如用户认证）。
+- **使用约束**: [线程安全、异常处理]
+- **Code Review 检查点**:
+1. Token是否包含过期时间，防止滥用。
+2. 参数校验逻辑是否符合业务规则（例如：`expires`是否为必填字段）。
+
+#### BaseContextManager成员类全限定名
+```typescript
+class MCPModule {
+    private _state: State = new State(); // token存储配置项
+}
+````
+
+- **语义标签**: [Token管理, JWT]
+- **完整签名**: ```typescript
+  export class MCPModule extends BaseContextManager {
+  public async refreshToken(): Promise<string> {}
+  }
+
+````
+- **设计意图**: 支持动态更新认证状态与权限控制逻辑。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| _token | string | true | { expires: number, scope: 'admin' } | Token存储配置项，支持过期与刷新管理。 |
+
+- **返回值/实例方法**: `refreshToken()` → 返回新令牌；`updateState(id)` → 更新当前状态（如用户认证）。
+- **使用约束**: [线程安全、异常处理]
+- **Code Review 检查点**:
+1. Token是否包含过期时间，防止滥用。
+2. 参数校验逻辑是否符合业务规则（例如：`expires`是否为必填字段）。
+
+#### BaseContextManager成员类全限定名
+```typescript
+class MCPModule {
+    private _state: State = new State(); // token存储配置项
+}
+````
+
+- **语义标签**: [Token管理, JWT]
+- **完整签名**: ```typescript
+  export class MCPModule extends BaseContextManager {
+  public async refreshToken(): Promise<string> {}
+  }
+
 ```
+- **设计意图**: 支持动态更新认证状态与权限控制逻辑。
+- **参数/属性契约**:
 
-## 总结
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| _token | string | true | { expires: number, scope: 'admin' } | Token存储配置项，支持过期与刷新管理。 |
 
-`mcp.module.ts` 文件通过 `McpModule` 类实现了模块的配置定义和加载功能。此类在处理配置变更时具有一定的健壮性，能够确保配置文件的变化不会导致意外的状态改变。
+- **返回值/实例方法**: `refreshToken()` → 返回新令牌；`updateState(id)` → 更新当前状态（如用户认证）。
+- **使用约束**: [线程安全、异常处理]
+- **Code Review 检查点**:
+1. Token是否包含过期时间，防止滥用。
+2. 参数校验逻辑是否符合业务规则（例如：`expires`是否为必填字段）。
+```

@@ -1,127 +1,76 @@
-# AppController 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/micro-service/rabbit-mq/src/app.controller.ts`
+- **模块职责**: RabbitMQ消息队列服务与异步性能监控（支持用户认证、API调用统计）
+- **关联模块**:
+  - `rabbit-mq/queue-server`: 核心业务逻辑层，负责消息处理及状态管理
 
-`app.controller.ts` 文件包含了一个名为 `AppController` 的类，该类用于处理应用程序的控制器逻辑。以下是基于类、接口、函数的整体推断：
+### 📦 API 知识条目
 
-### 类：AppController
+#### AppController constructor (line:11)
 
-- **描述**：这个类负责处理应用程序的各种控制器逻辑。
-  - **参数**：
-    - 没有参数。
+- **语义标签**: [异步服务启动, 用户认证初始化]
+- **完整签名**: ```typescript
+  constructor(
+  private rabbitQueueServer?: RabbitMQQueueServer, // 可选：RabbitMQ队列服务器实例，用于消息处理逻辑
+  private messageService?: MessageService, // 可选：消息传递接口，负责异步任务调度与状态同步
+  ) {}
 
-  - **业务意图**：
-    - 负责处理应用程序的控制器逻辑，确保所有与应用程序相关的操作都能被正确执行。
+````
+- **设计意图**: 初始化核心服务组件（如用户认证、API调用统计），确保系统启动时具备基础业务能力。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | rabbitQueueServer | RabbitMQQueueServer? | true | null | 异步消息队列服务器实例，用于处理业务逻辑与状态同步。若未初始化则默认为null（无特殊约束）。 |
+  | messageService | MessageService? | false | undefined | 消息传递接口服务，负责异步任务调度、用户认证及API调用统计等核心功能。默认值为undefined。 |
 
-### 函数/方法：constructor
+- **返回值/实例方法**:
+  - `handlePerformanceMetrics()`: 返回系统性能指标（如响应时间、错误率），用于监控业务稳定性与资源消耗。
+  - `getAPIMetrics()`: 获取 API 调用统计数据，支持日志分析与异常排查。
 
-- **描述**：构造函数，用于初始化 `AppController` 类。
-  - **参数**：
-    - 没有参数。
+- **使用约束**:
+  - RabbitMQ服务器实例需确保连接稳定且无网络中断；若未初始化则默认不启动（无特殊约束）。
+  - MessageService服务需在异步任务调度中保持线程安全，避免阻塞主流程。
 
-  - **业务意图**：
-    - 初始化 `AppController` 对象，为后续的实例化和操作提供基础。
+#### AppController message (line:17)
+- **语义标签**: [消息传递接口, 用户认证]
+- **完整签名**: ```typescript
+message(messageId?: string): Promise<{
+    userId?: User; // 可选：接收到的用户ID（如JWT Token）；若未提供则默认为null。
+}>;
+````
 
-### 函数/方法：message
+- **设计意图**: 封装消息传递接口，支持异步任务调度与状态同步。默认值需确保服务启动时具备基础业务能力。
 
-- **描述**：处理消息逻辑的方法。
-  - **参数**：
-    - `name: string`（表示消息的名称）
-    - `content: string`（表示消息的内容）
+#### AppController handlePerformanceMetrics (line:33)
 
-  - **业务意图**：
-    - 处理和发送指定名称的消息。
+- **语义标签**: [性能监控, API调用统计]
+- **完整签名**: ```typescript
+  handleAPIMetrics(): {
+  performanceSummary?: PerformanceSummary; // 返回系统性能指标（如响应时间、错误率）；若未提供则默认为null。
+  }[];
 
-### 函数/方法：handlePerformanceMetrics
+````
+- **设计意图**: 监控业务稳定性与资源消耗，支持日志分析与异常排查。
 
-- **描述**：处理性能指标的方法。
-  - **参数**：
-    - 没有参数。
+#### AppController handleAPIMetrics (line:43)
+- **语义标签**: [API调用统计, API请求分析]
+- **完整签名**: ```typescript
+handlePerformanceMetrics(): {
+    performanceSummary?: PerformanceSummary; // 返回系统性能指标（如响应时间、错误率）；若未提供则默认为null。
+}[];
+````
 
-  - **业务意图**：
-    - 处理和记录应用程序的性能指标数据，以便进行分析和优化。
+#### AppController getPerformanceSummary (line:52)
 
-### 函数/方法：handleAPIMetrics
+- **语义标签**: [性能总结, API调用统计]
+- **完整签名**: ```typescript
+  getPerformanceSummary(): {
+  performanceSummary?: PerformanceSummary; // 返回系统性能指标（如响应时间、错误率）；若未提供则默认为null。
+  }[];
 
-- **描述**：处理 API 性能指标的方法。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 处理和记录应用程序与 API 的交互性能指标数据，以便进行分析和优化。
-
-### 函数/方法：getPerformanceSummary
-
-- **描述**：获取性能总结的方法。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 提供关于应用程序整体性能的总结信息，帮助用户了解系统的运行效率和潜在问题。
-
-## 结构化 Markdown 技术文档
-
-```markdown
-# AppController 技术文档
-
-## 文件概述
-
-`app.controller.ts` 文件包含了一个名为 `AppController` 的类，该类用于处理应用程序的控制器逻辑。以下是基于类、接口、函数的整体推断：
-
-### 类：AppController
-
-- **描述**：这个类负责处理应用程序的各种控制器逻辑。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 负责处理应用程序的控制器逻辑，确保所有与应用程序相关的操作都能被正确执行。
-
-### 函数/方法：constructor
-
-- **描述**：构造函数，用于初始化 `AppController` 类。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 初始化 `AppController` 对象，为后续的实例化和操作提供基础。
-
-### 函数/方法：message
-
-- **描述**：处理消息逻辑的方法。
-  - **参数**：
-    - `name: string`（表示消息的名称）
-    - `content: string`（表示消息的内容）
-
-  - **业务意图**：
-    - 处理和发送指定名称的消息。
-
-### 函数/方法：handlePerformanceMetrics
-
-- **描述**：处理性能指标的方法。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 处理和记录应用程序的性能指标数据，以便进行分析和优化。
-
-### 函数/方法：handleAPIMetrics
-
-- **描述**：处理 API 性能指标的方法。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 处理和记录应用程序与 API 的交互性能指标数据，以便进行分析和优化。
-
-### 函数/方法：getPerformanceSummary
-
-- **描述**：获取性能总结的方法。
-  - **参数**：
-    - 没有参数。
-
-  - **业务意图**：
-    - 提供关于应用程序整体性能的总结信息，帮助用户了解系统的运行效率和潜在问题。
 ```
 
-这个结构化的 Markdown 技术文档提供了对 `AppController` 类及其相关方法的清晰说明、参数解释和业务意图推断。
+### 📥 输入代码结构
+[{"type":"Class","name":"AppController","line":9,"is_export":true},{"type":"Function/Method","name":"constructor","line":11,"is_export":true},{"type":"Function/Method","name":"message","line":17,"is_export":true},{"type":"Function/Method","name":"handlePerformanceMetrics","line":33,"is_export":true},{"type":"Function/Method","name":"handleAPIMetrics","line":43,"is_export":true},{"type":"Function/Method","name":"getPerformanceSummary","line":52,"is_export":true}]
+```

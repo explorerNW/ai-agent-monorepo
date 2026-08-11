@@ -1,86 +1,68 @@
-# `mcp-response.dto.ts` 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/mcp/dto/mcp-response.dto.ts`
+- **模块职责**: MCP 响应 DTO 定义，封装 API 调用与业务状态管理逻辑（含认证、Token 刷新等）
+- **关联模块**: [需根据实际导入导出关系补充其他相关接口/服务文件]
 
-### 类：McpResponse
+### 📦 API 知识条目
 
-- **描述**：这是一个用于封装成功响应的类。
-- **参数**：
-  - `data`: 数据对象，包含请求结果的数据。
-  - `message`: 提示信息，通常表示操作成功的理由。
-
-### 接口：McpSuccessResult
-
-- **描述**：这是一个接口，用于定义成功响应的结果类型。
-- **参数**：
-  - `result`: 成功处理后的数据。
-  - `status`: 响应状态码（例如：200, 400等）。
-
-## 类和接口说明
-
-### MCPResponse 类
+#### McpResponse
 
 ```typescript
-import { McpSuccessResult } from "./mcp-success-result";
-
-export class McpResponse {
-  data: any; // 数据对象，包含请求结果的数据。
-  message: string; // 提示信息，通常表示操作成功的理由。
-
-  constructor(data?: any, message?: string) {
-    this.data = data;
-    this.message = message || "";
-  }
+export interface McpResponse {
+  // ... (具体字段)
 }
 ```
 
-### MCPSuccessResult 接口
-
-```typescript
-export interface McpSuccessResult {
-  result: any; // 成功处理后的数据。
-  status: number; // 响应状态码（例如：200, 400等）。
+**语义标签**: `认证`, `Token刷新`, `异步`  
+**完整签名**: ```typescript
+interface McpResponse<T extends Record<string, any>> {
+id: string;
+status: 'success' | 'error';
+data?: T; // 可选数据对象，如用户信息、操作结果等
 }
 
-// 示例实现
-const successResult = new McpSuccessResult({
-  result: { key: "value" },
-  status: 200,
-});
+````
+- **设计意图**: 定义 API 响应结构体，用于代码审查时验证调用方是否遵循标准格式。
+**参数/属性契约**:
 
-console.log(successResult); // 输出：{ result: { key: 'value' }, status: 200 }
-```
+| 名称   | 类型     | 可选 | 约束/默认值      | 语义说明                  |
+|--------|----------|------|------------------|---------------------------|
+| id    | string   | -    | `required`       | API 唯一标识符              |
+| status | 'success' | -    | `'error'`        | 响应状态码                |
+| data  | T      | ?    | `{}`             | 业务数据对象，如用户信息、操作结果等 |
 
-### 参数解释
+- **返回值/实例方法**: `data?: T; // 可选参数，返回业务相关数据结构。若为 null，则无额外字段；否则需处理空值校验逻辑`
+**使用约束**: [异步调用时需注意线程安全（避免阻塞主流程）]
 
-- **data**: 数据对象，包含请求结果的数据。
-- **message**: 提示信息，通常表示操作成功的理由。
-
-### 业务意图推断
-
-- `McpResponse` 类用于封装成功响应的结构，便于在后端处理和前端展示时使用。
-- `McpSuccessResult` 接口定义了成功响应的结果类型，包括成功处理后的数据和响应状态码。这有助于简化错误处理逻辑，并提供清晰的反馈信息。
-
-### 示例代码
-
+#### McpSuccessResult
 ```typescript
-// 使用 MCPResponse 和 McpSuccessResult 的示例
-const response = new McpResponse({
-  data: { key: "value" },
-  message: "Operation successful.",
-});
+export interface McpSuccessResult<T> {
+  // ... (具体字段)
+}
+````
 
-console.log(response); // 输出：McpResponse { data: { key: 'value' }, message: 'Operation successful.' }
+- **设计意图**: 封装成功响应结果，用于代码生成任务中验证 API 返回的完整性与一致性。  
+  **参数/属性契约**:
 
-// 使用 McpSuccessResult 实现的示例
-const success = new McpSuccessResult({
-  result: { key: "value" },
-  status: 200,
-});
+| 名称   | 类型      | 可选 | 约束/默认值 | 语义说明                             |
+| ------ | --------- | ---- | ----------- | ------------------------------------ |
+| id     | string    | -    | `required`  | API 唯一标识符                       |
+| status | 'success' | ?    | `'error'`   | 响应状态码                           |
+| data   | T         | ?    | `{}`        | 业务数据对象，如用户信息、操作结果等 |
 
-console.log(success); // 输出：McpSuccessResult { result: { key: 'value' }, status: 200 }
+- **返回值/实例方法**: `data?: T; // 可选参数，返回业务相关数据结构。若为 null，则无额外字段；否则需处理空值校验逻辑`  
+  **使用约束**: [异步调用时需注意线程安全（避免阻塞主流程）]
+
+### 📥 输入代码结构
+
+```json
+{
+    "type": "Interface",
+    "name": "McpResponse",
+    "line": 1,
+    "is_export": true
+}
+
+{"type":"Interface","name":"McpSuccessResult","line":12,"is_export":true}
 ```
-
-### 总结
-
-`mcp-response.dto.ts` 文件包含两个主要类和一个接口，分别用于封装成功响应的结构和定义成功响应的结果类型。这些工具可以帮助开发者简化错误处理逻辑，并提供清晰的反馈信息。

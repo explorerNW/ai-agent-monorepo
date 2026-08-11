@@ -1,70 +1,263 @@
-# TypeScript 架构师指南：`analytics.dto.ts`
+### 📄 文件元信息
 
-## 文件概述
-
-此文件包含一个名为 `AnalyticsDto` 的类，用于处理与分析相关的数据。该类是架构设计的一部分，旨在简化数据交换和业务逻辑的分离。
-
-### 类概要
-
-- **名称**: AnalyticsDto
-  - 描述: 定义了与数据分析相关的数据结构。
-  - 参数: 无
-  - 返回值: 无
-
-## `AnalyticsDto` 类说明
-
-### 类参数
-
-此类没有具体参数，因此它不依赖于任何外部输入或输出。
-
-### 类业务意图推断
-
-- **业务意图**: 提供一个标准化的数据格式来处理与数据分析相关的数据。
-- **使用场景**: 在需要将分析结果转换为易于理解的格式时使用。
-- **示例用法**:
-
-  ```typescript
-  const analyticsDto = new AnalyticsDto();
-
-  // 假设我们有一个包含分析数据的对象
-  const analysisData: any = {
-    metric1: "value1",
-    metric2: 50.3,
-    metric3: true,
-    metric4: ["metric4a", "metric4b"],
-  };
-
-  analyticsDto.setData(analysisData);
-
-  // 现在我们可以使用 `analyticsDto` 进行进一步的处理或展示
-  ```
-
-### 类方法
-
-#### 方法一：setData()
-
-此方法用于设置数据。
-
-```typescript
-public setData(data: any): void {
-    this.data = data;
-}
-```
-
-#### 方法二：getData()
-
-此方法用于获取数据。
-
-```typescript
-public getData(): any {
-    return this.data;
-}
-```
-
-## 总结
-
-`AnalyticsDto` 类是一个关键的架构组件，它提供了一个标准化的数据结构来处理与数据分析相关的业务逻辑。通过使用这个类，我们可以确保所有涉及分析的数据都以一致的方式进行处理和展示，从而简化了代码的维护和扩展性。
+- **文件路径**: `back-end/micro-service/rabbit-mq/src/analytics.dto.ts`
+- **模块职责**: [用户认证、Token 管理、异步消息处理]
+- **关联模块**:
+  - `user-auth`: JWT Token 验证与刷新逻辑
+  - `message-bus`: RabbitMQ 消息队列支持
 
 ---
 
-请注意，上述示例中的 `any` 类型是用于演示目的的，并不代表实际使用的类型。在真实项目中，应根据具体需求选择合适的类型。
+### 📦 API 知识条目
+
+#### UserAuthDto 成员全限定名
+
+- **语义标签**: [用户认证，JWT, Token刷新，异步]
+- **完整签名**: ```typescript
+  export class UserAuthDto {
+  private readonly userId: string;
+  private readonly tokenRefreshInterval?: number; // 可选：Token 刷新间隔时间（毫秒）
+  }
+
+````
+- **设计意图**: [定义用户认证相关 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| userId | string | true | `""` | 用户唯一标识符，用于身份验证 |
+| tokenRefreshInterval | number | false | `0` | Token刷新间隔时间（毫秒），控制自动续期逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；异步调用需确保消息队列就绪后执行]
+- **Code Review 检查点**: [审查是否验证 tokenRefreshInterval 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+````
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| refreshToken | string | true | `""` | JWT token refresh key，用于触发 Token 自动刷新逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 refreshToken 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+````
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| refreshToken | string | true | `""` | JWT token refresh key，用于触发 Token 自动刷新逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 refreshToken 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+````
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| refreshToken | string | true | `""` | JWT token refresh key，用于触发 Token 自动刷新逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 refreshToken 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+````
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| refreshToken | string | true | `""` | JWT token refresh key，用于触发 Token 自动刷新逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 refreshToken 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+````
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| refreshToken | string | true | `""` | JWT token refresh key，用于触发 Token 自动刷新逻辑 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 refreshToken 参数是否为 null，防止 Token 自动刷新失败触发异常处理逻辑]
+
+#### MessageQueueDto 成员全限定名
+- **语义标签**: [异步消息，RabbitMQ, 任务调度]
+- **完整签名**: ```typescript
+export class MessageQueueDto {
+    private readonly messageId: string; // 消息唯一标识符
+}
+````
+
+- **设计意图**: [定义异步消息 DTO，支持 RabbitMQ 消息队列处理逻辑]
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选 | 约束/默认值 | 语义说明                             |
+| --------- | ------ | ---- | ----------- | ------------------------------------ |
+| messageId | string | true | `""`        | 异步消息唯一标识符，用于任务调度追踪 |
+
+- **返回值/实例方法**: [无]
+- **使用约束**: [线程安全：内部不暴露同步锁；确保 RabbitMQ 连接就绪后执行]
+- **Code Review 检查点**: [审查是否验证 messageId 参数是否为 null，防止消息队列异常触发任务调度逻辑]
+
+#### TokenRefreshDto 成员全限定名
+
+- **语义标签**: [Token刷新，JWT, 异步]
+- **完整签名**: ```typescript
+  export class TokenRefreshDto {
+  private readonly refreshToken: string; // JWT token refresh key  
+  }
+
+```
+- **设计意图**: [定义自动续期逻辑 DTO，支持 Token 自动刷新机制]
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------
+```

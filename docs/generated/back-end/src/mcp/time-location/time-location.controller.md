@@ -1,64 +1,221 @@
-# TimeLocationController 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/mcp/time-location/time-location.controller.ts`
+- **模块职责**: 时间位置管理接口控制器，负责处理 MCP 请求并返回地理位置状态数据
+- **关联模块**: [time-location.service, time-location.dto]
 
-`time-location.controller.ts` 是一个 TypeScript 模块，包含了一个名为 `TimeLocationController` 的类。该类的主要功能是处理与时间地点相关的请求。
+### 📦 API 知识条目
 
-### 类概览
+#### TimeLocationController 成员全限定名
 
-- **名称**: `TimeLocationController`
-  - 类名：表示控制器的名称。
-  - 描述：负责处理与时间地点相关联的操作。
+- **语义标签**: `MCP`, `TimePosition`, `RequestHandler`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
 
-## Class: TimeLocationController
+handleMcpRequest(req: Request): Promise<{time: string}> => ...
 
-### 参数解释
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+| req | Request | false | {} | HTTP请求对象，包含用户身份、地理位置等必要信息。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+- **使用约束**: 线程安全（依赖时间服务异步执行），异常抛出需捕获并记录日志。
 
-无
-
-### 方法描述
-
-1. **constructor**
-   - **参数**: 无
-   - **业务意图**: 初始化 `TimeLocationController` 对象。通常用于设置类属性或执行其他初始化操作。
-2. **handleMcpRequest**
-   - **参数**:
-     - `req`: Express 请求对象，包含客户端请求信息。
-     - `res`: Express 响应对象，用于返回响应数据。
-     - `next`: Express 中的下一个调用（用于处理多个中间件）。
-   - **业务意图**: 处理来自 MCP (可能是指定的模块或服务) 的请求。该方法通常会根据请求信息执行相应的操作，并将结果传递给客户端。
-
-## 使用说明
-
-1. 在使用 `TimeLocationController` 类之前，确保已正确导入和配置了相关依赖。
-2. 调用 `handleMcpRequest` 方法时，传入正确的 Express 请求、响应对象以及下一个调用（如果存在）。
-3. 根据请求处理逻辑执行相应的业务操作，并返回结果。
-
-## 示例代码
-
-```typescript
-import express from "express";
-import { TimeLocationController } from "./time-location.controller";
-
-const app = express();
-
-app.use("/api/time-locations", new TimeLocationController());
-
-export default app;
-```
-
-在 `TimeLocationController` 类的构造函数中，可以进行必要的初始化操作。例如：
-
-```typescript
-constructor() {
-  // 初始化类属性或执行其他初始化操作
+#### TimeLocationService 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationService {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
 }
-```
+````
 
-## 总结
+- **设计意图**: 提供时间位置状态查询服务，支持异步处理 MCP 请求并返回地理位置数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
 
-`time-location.controller.ts` 文件中的 `TimeLocationController` 类负责处理与时间地点相关的请求，并通过 `handleMcpRequest` 方法来处理来自 MCP 的请求。此类的实现应根据具体业务需求进行扩展和定制。
+#### TimeLocationController 成员全限定名
 
----
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
 
-请注意，上述示例代码仅为演示目的提供了一个基本框架。实际使用时，请根据具体场景和需求调整相关部分。
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
+
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
+
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
+
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
+
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
+
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
+
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
+
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
+
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
+
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+  class TimeLocationController {
+  constructor(protected \_config: McpConfig, private timeProvider: TimeLocationService) {}
+  }
+
+````
+- **设计意图**: 封装时间位置相关接口，支持异步处理 MCP 请求并返回地理位置状态数据。解决复杂业务逻辑的并发问题。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| config | McpConfig | true | { time: string, location: Location } | MCP 配置项，用于传递时间位置相关参数。 |
+- **返回值/实例方法**: `handleMcpRequest` 返回 Promise<{time: string}>，表示处理完请求后获取的时间状态数据。
+
+#### TimeLocationController 成员全限定名
+- **语义标签**: `TimePosition`, `McpConfig`
+- **完整签名**: ```typescript
+class TimeLocationController {
+    constructor(protected _config: McpConfig, private timeProvider: TimeLocationService) {}
+}
+````
