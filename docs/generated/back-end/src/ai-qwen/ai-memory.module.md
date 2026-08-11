@@ -1,57 +1,44 @@
-```markdown
-# AiMemoryModule
+### 📄 文件元信息
 
-## Overview
+- **文件路径**: `back-end/src/ai-qwen/ai-memory.module.ts`
+- **模块职责**: 管理异步请求处理逻辑及 JWT Token 生命周期控制（含用户认证、Token刷新等核心业务）
+- **关联模块**: [未明确导出成员，需通过 import/export 关系推断其他文件引用]
 
-`AiMemoryModule` 是一个 TypeScript 类，用于配置和管理 AI 内存模块。它提供了一个异步的根配置方法 `forRootAsync` 和一个配置方法 `configure`。
+### 📦 API 知识条目
 
-## Class: AiMemoryModule
+#### AiMemoryModule 类成员全限定名
 
-### Description
+- **语义标签**: `异步请求处理`, `JWT Token`管理, `用户认证`, `Token刷新`, `异常捕获`
+- **完整签名**: ```typescript
+  class AiMemoryModule {
+  constructor() {} // 初始化时未定义，需通过 forRootAsync 调用
+  }
 
-`AiMemoryModule` 类是主模块类，负责初始化和配置 AI 内存相关的服务和功能。
+forRootAsync: async function(): Promise<void> { ... }
+configure: (config) => void;
 
-### Methods
+````
+- **设计意图**: `AiMemoryModule`类负责管理异步请求处理逻辑及 JWT Token生命周期控制（含用户认证、Token刷新等核心业务），确保代码可维护性与安全性。
 
-#### forRootAsync
+#### forRootAsync 成员全限定名
+- **语义标签**: `异步请求`, `JWT Token`管理, `异常捕获`, `线程安全`
+- **完整签名**: ```typescript
+forRootAsync: async function(): Promise<void> { ... } // 返回 void，无特殊约束
+````
 
-##### Description
+- **设计意图**: `forRootAsync`方法负责处理异步请求逻辑及 JWT Token生命周期控制（含用户认证、Token刷新等核心业务），确保代码可维护性与安全性。
 
-`forRootAsync` 是一个异步方法，用于异步配置 `AiMemoryModule`。它接受一个选项对象，并返回一个 `ModuleMetadata` 对象，该对象包含模块的配置信息。
+#### configure 成员全限定名
 
-##### Parameters
+- **语义标签**: `配置管理`, `JWT Token`管理, `异常捕获`, `线程安全`
+- **完整签名**: ```typescript
+  configure: (config) => void; // 无特殊约束，需验证参数传递逻辑
 
-- **options**: `AiMemoryOptions`
-- **description**: 配置选项对象。
-- **type**: `AiMemoryOptions`
+```
+- **设计意图**: `configure`方法负责处理异步请求逻辑及 JWT Token生命周期控制（含用户认证、Token刷新等核心业务），确保代码可维护性与安全性。
 
-##### Return Value
-
-- **Type**: `Promise<ModuleMetadata>`
-- **Description**: 返回一个 Promise，解析为一个包含模块元数据的对象。
-
-##### Business Intent
-
-`forRootAsync` 方法用于异步加载和配置 AI 内存模块，确保在应用程序启动时正确初始化所有必要的服务和资源。
-
-#### configure
-
-##### Description
-
-`configure` 是一个同步方法，用于配置 `AiMemoryModule`。它接受一个选项对象，并根据这些选项进行相应的配置。
-
-##### Parameters
-
-- **options**: `AiMemoryOptions`
-- **description**: 配置选项对象。
-- **type**: `AiMemoryOptions`
-
-##### Return Value
-
-- **Type**: `void`
-- **Description**: 返回 void，不返回任何值。
-
-##### Business Intent
-
-`configure` 方法用于同步配置 `AiMemoryModule`，确保在应用程序启动时正确初始化所有必要的服务和资源。
+#### Code Review 检查点总结：
+1. **类初始化**：确认构造函数是否定义，避免未初始化的状态导致异常抛出。
+2. **配置参数验证**: `configure`方法接收的参数必须包含必要字段（如用户认证信息、Token刷新策略等），确保传递逻辑正确。
+3. **异步请求处理**: 检查调用方代码中是否存在对 `forRootAsync`方法的直接引用，避免未定义或错误抛出异常。
 ```

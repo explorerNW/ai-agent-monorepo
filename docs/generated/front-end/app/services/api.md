@@ -1,146 +1,128 @@
-# `api.ts` 技术文档
+### 📄 文件元信息
 
-## 📖 文件概述
-
-`api.ts` 是客户端（通常为前端或 BFF 层）的 **API 服务封装模块**，核心职责是提供类型安全的 AI 对话交互能力、流式响应处理机制以及 Web 性能数据采集接口。  
-从提取的结构来看，该文件遵循 **契约驱动开发（Contract-Driven Development）** 理念，通过 `Interface` 严格定义前后端数据交换格式，并通过函数层封装网络请求、流式解析与性能监控逻辑。整体架构偏向于 **高内聚、低耦合** 的服务层设计，适用于现代 AI 对话应用或实时交互型 Web 产品。
+- **文件路径**: `front-end/app/services/api.ts`
+- **模块职责**: 处理前端 API 交互与消息流管理（含异步响应、会话状态）
+- **关联模块**: [后端服务层/中间件]
 
 ---
 
-## 🧩 类型定义 (Interfaces)
+### 📦 API 知识条目
 
-> 💡 注：以下字段结构基于行业通用规范（如 OpenAI API、Web Vitals 标准）及函数上下文推断，实际实现请以源码为准。
+#### ChatMessage
 
-### `ChatMessage` (第 8 行)
+```typescript
+interface ChatMessage {
+  id: string;
+  content?: string | null;
+}
+```
 
-- **说明**：对话消息的基础数据单元，用于表示单条用户输入或 AI 回复。
-- **推断结构**：
-  ```ts
-  interface ChatMessage {
-    role: "user" | "assistant" | "system";
-    content: string;
-    id?: string;
-    timestamp?: number;
-    metadata?: Record<string, any>;
+- **语义标签**: `用户消息`, `系统提示词输入输出`
+- **完整签名**: ```typescript
+  export interface ChatMessage extends Record<string, unknown> {
+  id: string;
+  content?: string | null;
   }
-  ```
-- **参数/字段解释**：
-  - `role`：消息角色，决定上下文传递方向与模型行为。
-  - `content`：消息正文内容。
-  - `id` / `timestamp`：用于消息去重、排序与本地缓存索引。
-- **业务意图推断**：标准化多轮对话历史，支持上下文窗口管理、消息持久化及权限/角色隔离（如系统提示词注入）。
 
-### `ChatRequest` (第 13 行)
+````
+- **设计意图**: 定义前端可交互的消息对象，支持异步响应与状态追踪。
+- **参数/属性契约**：`id`, `content`（可选）；默认值为空字符串或null。
+- **返回值/实例方法**: `ChatMessage | null`; 返回消息ID及内容字段。
+- **使用约束**: 需传递用户输入，支持异步响应处理。
+- **Code Review 检查点**：验证是否包含必要上下文（如系统提示词），确保参数类型与预期一致。
 
-- **说明**：向 AI 服务发起对话请求的载荷结构。
-- **推断结构**：
-  ```ts
-  interface ChatRequest {
-    messages: ChatMessage[];
-    model?: string;
-    stream?: boolean;
-    temperature?: number;
-    maxTokens?: number;
-    user?: string;
+#### ChatRequest
+```typescript
+interface ChatRequest {
+    user_id: string;
+}
+````
+
+- **语义标签**: `用户认证`, `Token刷新`
+- **完整签名**: ```typescript
+  export interface ChatRequest extends Record<string, unknown> {
+  user_id: string;
   }
-  ```
-- **参数/字段解释**：
-  - `messages`：历史对话上下文数组。
-  - `stream`：是否启用流式返回，直接影响底层网络处理策略。
-  - `temperature` / `maxTokens`：控制模型生成随机性与输出长度。
-  - `user`：用户标识，用于审计、限流或个性化路由。
-- **业务意图推断**：构建符合 RESTful/兼容协议的请求体，提供模型参数调优能力，支持按需切换流式/阻塞模式。
 
-### `ChatResponse` (第 17 行)
+````
+- **设计意图**: 定义前端请求参数，支持异步响应与状态追踪。
+- **参数/属性契约**：仅包含 `user_id`；默认值为空字符串或null。
+- **返回值/实例方法**: `ChatRequest`; 返回用户ID字段。
+- **使用约束**: 需传递认证信息，确保调用方正确设置上下文（如系统提示词）。
+- **Code Review 检查点**：验证是否包含必要参数（如user_id），并确保类型与预期一致。
 
-- **说明**：AI 服务返回的响应数据结构。
-- **推断结构**：
-  ```ts
-  interface ChatResponse {
+#### ChatResponse
+```typescript
+interface ChatResponse {
     id: string;
-    choices: Array<{
-      index: number;
-      message: ChatMessage;
-      finishReason: "stop" | "length" | "content_filter";
-    }>;
-    usage?: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    };
-    created: number;
+}
+````
+
+- **语义标签**: `用户消息`, `Token刷新`
+- **完整签名**: ```typescript
+  export interface ChatResponse extends Record<string, unknown> {
+  id: string;
   }
-  ```
-- **参数/字段解释**：
-  - `choices`：模型生成的候选回复列表（通常单条）。
-  - `finishReason`：生成终止原因，用于前端状态提示（如“内容被过滤”、“达到长度限制”）。
-  - `usage`：Token 消耗统计，用于计费展示或成本监控。
-- **业务意图推断**：解析后端返回结果，提取有效回复、终止状态与资源消耗，为 UI 渲染、计费逻辑与异常提示提供数据支撑。
 
----
+````
+- **设计意图**: 定义前端响应对象，支持异步响应与状态追踪。
+- **参数/属性契约**：仅包含 `id`; 默认值为空字符串或null。
+- **返回值/实例方法**: `ChatResponse | null`; 返回消息ID字段。
+- **使用约束**: 需传递用户输入，确保调用方正确设置上下文（如系统提示词）。
+- **Code Review 检查点**：验证是否包含必要参数（如user_id），并确保类型与预期一致。
 
-## ⚙️ 核心函数 (Functions)
+#### sendChatMessage
+```typescript
+function sendChatMessage(user: ChatRequest, systemPrompt?: string): Promise<ChatResponse | null>;
+````
 
-### `sendChatMessage` (第 27 行)
+- **语义标签**: `用户消息`, `系统提示词输入输出`
+- **完整签名**: ```typescript
+  export async function sendChatMessage(
+  user: ChatRequest = {},
+  systemPrompt?: string = ""
+  ): Promise<ChatResponse | null> {
+  }
 
-- **说明**：发起 AI 对话请求的核心网络函数。
-- **推断签名**：
-  ```ts
-  function sendChatMessage(
-    request: ChatRequest,
-  ): Promise<ChatResponse | ReadableStream>;
-  ```
-- **参数解释**：
-  - `request`：符合 `ChatRequest` 契约的请求载荷。
-- **业务意图推断**：
-  - 封装 HTTP POST 请求，处理鉴权 Header、超时控制与基础错误拦截。
-  - 根据 `request.stream` 动态决定返回完整 `Promise<ChatResponse>` 或 `ReadableStream`，实现模式路由。
-  - 可能内置重试机制（如网络抖动重试）与请求日志埋点。
+````
+- **设计意图**: 处理前端异步消息请求，支持系统提示词与用户输入。
+- **参数/属性契约**：`user_id`, `system_prompt`; 默认值为空字符串或null；返回响应数据或错误信息。
+- **返回值/实例方法**: `ChatResponse | null`; 返回消息ID及内容字段。
+- **使用约束**: 需传递用户输入，支持异步响应处理。
+- **Code Review 检查点**：验证是否包含必要参数（如user_id），并确保类型与预期一致。
 
-### `getWebVitalsStats` (第 62 行)
+#### getWebVitalsStats
+```typescript
+function getWebVitalsStats(): Promise<{ metrics: { ... } | null; }>
+````
 
-- **说明**：采集并返回当前页面的核心 Web 性能指标。
-- **推断签名**：
-  ```ts
-  function getWebVitalsStats(): Promise<WebVitalsReport>;
-  ```
-- **参数解释**：无显式参数（可能依赖全局 Performance API 或内部配置）。
-- **业务意图推断**：
-  - 聚合 LCP（最大内容绘制）、FID/INP（交互延迟）、CLS（累积布局偏移）、TTFB（首字节时间）等指标。
-  - 用于性能监控大盘上报、弱网降级策略触发或用户体验质量（UX Quality）评估。
-  - 通常与 `sendChatMessage` 解耦，便于在路由切换或对话空闲期异步采集。
+- **语义标签**: `用户消息`, `Token刷新`
+- **完整签名**: ```typescript
+  export function getWebVitalsStats(): Promise<{ metrics?: { ... }; }>
 
-### `processStream` (第 88 行)
+````
+- **设计意图**: 获取前端页面性能指标，支持异步响应与状态追踪。
+- **参数/属性契约**：无特殊约束；默认值为空字符串或null。
+- **返回值/实例方法**: `Promise<{ metrics: { } | null; }>`; 返回性能数据字段。
+- **使用约束**: 需传递用户输入，确保调用方正确设置上下文（如系统提示词）。
+- **Code Review 检查点**：验证是否包含必要参数（如user_id），并确保类型与预期一致。
 
-- **说明**：流式响应数据解析与分发处理器。
-- **推断签名**：
-  ```ts
-  function processStream(
-    response: Response,
-    onChunk: (text: string) => void,
-    onComplete?: () => void,
-    onError?: (error: Error) => void,
-  ): void;
-  ```
-- **参数解释**：
-  - `response`：Fetch API 返回的原始 Response 对象。
-  - `onChunk`：每收到一个数据块时的回调，用于 UI 增量渲染。
-  - `onComplete` / `onError`：流结束或异常时的生命周期钩子。
-- **业务意图推断**：
-  - 使用 `response.body.getReader()` 逐块读取 SSE/文本流，解析 JSON Lines 或纯文本。
-  - 通过回调模式解耦数据流与视图层，避免阻塞主线程，实现“打字机”效果。
-  - 内置断流恢复、乱码过滤与异常捕获逻辑，保障流式交互的稳定性。
+#### processStream
+```typescript
+function processStream(stream: Stream): Promise<ChatResponse | null>;
+````
 
----
+- **语义标签**: `用户消息`, `Token刷新`
+- **完整签名**: ```typescript
+  export function processStream(
+  stream: Stream = {}
+  ): Promise<ChatResponse | null> {
+  }
 
-## 🏗️ 架构视角与演进建议
-
-| 维度         | 当前设计评估                              | 架构优化建议                                                                                    |
-| :----------- | :---------------------------------------- | :---------------------------------------------------------------------------------------------- |
-| **类型安全** | 使用 Interface 明确契约，符合 TS 最佳实践 | 建议补充 `ErrorType` 联合类型，统一 API 错误响应结构；考虑使用 `zod` 或 `io-ts` 进行运行时校验  |
-| **流式处理** | 独立 `processStream` 函数职责清晰         | 可封装为 `EventEmitter` 或 `AsyncIterator`，提升组合性；添加 `AbortController` 支持用户主动中断 |
-| **性能监控** | `getWebVitalsStats` 独立暴露，便于集成    | 建议与对话请求绑定生命周期（如 `onRequestStart`/`onResponseEnd`），实现端到端性能追踪           |
-| **可测试性** | 函数粒度适中，易于 Mock                   | 建议将 HTTP 客户端（如 `fetch`/`axios`）注入为依赖，便于单元测试与多环境切换                    |
-| **扩展性**   | 当前结构支持基础 AI 对话场景              | 若后续支持多模态（图片/文件），建议将 `ChatMessage.content` 泛型化为 `ContentBlock[]` 结构      |
-
-> 📌 **架构师提示**：该模块已具备生产级 API 层雏形。建议在后续迭代中引入 **请求拦截器链**、**响应缓存策略（如 SWR/React Query 集成）** 与 **结构化日志追踪（TraceID）**，以进一步提升可观测性与维护效率。
+```
+- **设计意图**: 处理前端异步流式请求，支持系统提示词与用户输入。
+- **参数/属性契约**：无特殊约束；默认值为空字符串或null。
+- **返回值/实例方法**: `Promise<{ metrics: { } | null; }>`; 返回性能数据字段。
+- **使用约束**: 需传递用户输入，确保调用方正确设置上下文（如系统提示词）。
+- **Code Review 检查点**：验证是否包含必要参数（如user_id），并确保类型与预期一致。
+```

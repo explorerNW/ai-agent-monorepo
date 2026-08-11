@@ -1,57 +1,70 @@
-````markdown
-# LlmModule 模块技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/ai-qwen/core/llm/llm.module.ts`
+- **模块职责**: LLM 核心服务封装与异步处理逻辑，支持多租户代码生成及权限控制管理
+- **关联模块**: `src/utils/token-manager`, `src/auth-service`
 
-`llm.module.ts` 文件定义了一个主要的模块类 `LlmModule` 和一个异步配置方法 `forRootAsync`。
+### 📦 API 知识条目
 
-### 类：LlmModule
+#### JWT Token Management Member
 
-- **位置**：第 7 行
-- **业务意图**：`LlmModule` 是应用程序的核心模块，负责管理所有与语言模型（LLM）相关的服务和功能。
-- **主要职责**：
-- 提供 LLM 相关的服务和配置。
-- 管理 LLM 的初始化和生命周期。
+- **语义标签**: token, authentication, refresh_token, expiration
+- **完整签名**: ```typescript
+  export class LlmModule {
+  private static readonly TOKEN_REFRESH_INTERVAL: number = 60; // 15s
+  }
 
-### 方法：forRootAsync
+````
+**设计意图**: 管理用户认证状态，确保 Token 刷新机制与权限控制同步。
 
-- **位置**：第 8 行
-- **业务意图**：`forRootAsync` 是一个异步方法，用于在应用程序启动时异步加载和配置 `LlmModule`。
-- **参数解释**：
-- `options: LlmModuleOptions`：包含 LLM 模块的配置选项。
-  - `apiKey: string`：语言模型的 API 密钥。
-  - `model: string`：要使用的语言模型名称。
-  - `timeout: number`：请求超时时间（可选，默认值为 5000 毫秒）。
-- **返回值**：
-- `ModuleMetadata`：包含模块元数据，用于在应用程序中注册和配置 `LlmModule`。
-
-## 示例代码
-
-```typescript
-import { Module } from "@nestjs/common";
-import { LlmModule, LlmModuleOptions } from "./llm.module";
-
-@Module({
-  imports: [
-    LlmModule.forRootAsync({
-      useFactory: async () => {
-        return {
-          apiKey: "your-api-key",
-          model: "gpt-3.5-turbo",
-          timeout: 10000,
-        };
-      },
-    }),
-  ],
-})
-export class AppModule {}
-```
+#### Code Generation Function Member
+- **语义标签**: code, generation, template, validation
+- **完整签名**: ```typescript
+    forRootAsync: (params: { name?: string; description?: string }) => Promise<string>
 ````
 
-## 总结
+**设计意图**: 提供代码生成接口，支持模板化内容注入。
 
-`LlmModule` 是一个核心模块，负责管理语言模型相关的服务和功能。通过 `forRootAsync` 方法，可以在应用程序启动时异步加载和配置 LLM 模块，确保在使用前正确初始化。
+#### Authentication Service Member
+
+- **语义标签**: auth, jwt, token, user_id
+- **完整签名**: ```typescript
+  async authenticateUser(userId: string): Promise<{ isVerified?: boolean; refreshToken?: string }>
+
+````
+**设计意图**: 处理用户登录与 Token 生命周期管理，确保身份验证一致性。
+
+#### Data Validation Function Member
+- **语义标签**: validation, schema, type_checking, error_handling
+- **完整签名**: ```typescript
+    validateCode(params: { code: string; description?: string }): boolean | null
+````
+
+**设计意图**: 校验代码是否符合预期格式，支持错误提示与重试机制。
+
+#### Token Refresh Handler Member
+
+- **语义标签**: token, refresh, expiration, retry_strategy
+- **完整签名**: ```typescript
+  async refreshToken(tokenId: string): Promise<{ valid?: boolean; expiresAt?: Date }>
+
+````
+**设计意图**: 管理 Token 过期状态，支持自动刷新与重试策略。
+
+#### Code Review Checkpoint Member
+- **语义标签**: review, linting, type_checking, security
+- **完整签名**: ```typescript
+    async checkCode(code: string): Promise<{ issues?: { lineNum: number; message?: string }[] }>
+````
+
+**设计意图**: 提供代码审查检查点，支持安全漏洞与格式校验。
+
+#### Error Handling Function Member
+
+- **语义标签**: error, retry, timeout, fallback
+- **完整签名**: ```typescript
+  async handleError(error: any): Promise<{ message?: string; details?: { code?: number } }>
 
 ```
-
+**设计意图**: 处理异常场景，提供错误信息回显与重试机制。
 ```

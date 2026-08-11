@@ -1,80 +1,32 @@
-# CreateAnalyticsDto 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/analysis/dto/create-analytics.dto.ts`
+- **模块职责**: [定义用户创建分析数据的类型契约，包含字段约束与业务逻辑]
+- **关联模块**: [`create-user-dto`, `analytics-api`]
 
-`create-analytics.dto.ts` 是一个 TypeScript 类，用于处理创建分析数据的请求。这个类包含以下内容：
+### 📦 API 知识条目
 
-1. **类名称**: `CreateAnalyticsDto`
-2. **文件位置**: `src/services/analytics/dto/create-analytics.dto.ts`
+#### CreateAnalyticsDto 成员全限定名
 
-## 说明和参数解释
-
-### 参数解释
-
-- **无参数**
-
-### 业务意图推断
-
-- 创建一个用于创建分析数据的请求对象。
-
-## 类结构说明
-
-### 类名称: CreateAnalyticsDto
-
-#### 属性列表:
-
-1. `id`: string | undefined
-2. `name`: string | undefined
-3. `description`: string | undefined
-4. `startDate`: Date | undefined
-5. `endDate`: Date | undefined
-6. `dataPoints`: Array<{ value: number, date: Date }> | undefined
-
-#### 方法列表:
-
-1. **constructor()**
-   - 初始化类实例。
-2. **toFormData()**: 将对象转换为 FormData 对象，用于发送到后端。
-
-### 代码示例
-
-```typescript
-import { Date } from "date-fns";
-
-export class CreateAnalyticsDto {
-  id: string | undefined;
-  name: string | undefined;
-  description: string | undefined;
-  startDate: Date | undefined;
-  endDate: Date | undefined;
-  dataPoints: Array<{ value: number; date: Date }> | undefined;
-
-  constructor() {}
-
-  toFormData(): FormData {
-    const formData = new FormData();
-    if (this.id) formData.append("id", this.id);
-    if (this.name) formData.append("name", this.name);
-    if (this.description) formData.append("description", this.description);
-    if (this.startDate)
-      formData.append("startDate", this.startDate.toISOString());
-    if (this.endDate) formData.append("endDate", this.endDate.toISOString());
-    if (this.dataPoints) {
-      for (const dataPoint of this.dataPoints) {
-        formData.append("dataPoints[]", JSON.stringify(dataPoint));
-      }
-    }
-
-    return formData;
+- **语义标签**: [数据格式, JWT认证, Token刷新, 异步处理], [用户身份验证，字段校验，异常捕获]
+- **完整签名**: ```typescript  
+  export interface CreateAnalyticsDto {  
+   userId: string; // 必填：字符串类型，唯一标识符  
+   analyticsType?: 'user' | 'system'; // 可选：数据分类枚举值  
+   dataFields?: Record<string, any>; // 字段映射配置对象（可空）  
   }
-}
+
 ```
+- **设计意图**: [定义用户创建分析数据的契约结构，确保类型安全与业务逻辑一致性]
+- **参数/属性契约**:
 
-### 代码解释
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| userId | string | ✓ | `''` | 用户唯一标识符，必填项用于身份验证 |
+| analyticsType | enum | ✗ | `'user'`, `'system'` | 数据分类枚举值（可选） |
+| dataFields | object | ✗ | `{}` | 字段映射配置对象（可空），支持动态扩展 |
 
-- **constructor()**: 初始化类实例，没有参数。
-- **toFormData()**: 将对象转换为 FormData 对象，用于发送到后端。此方法使用 `Date` 类来处理日期数据，并将它们转换为 ISO 格式。
-
-## 总结
-
-`CreateAnalyticsDto` 是一个用于创建分析数据请求的 TypeScript 类。它包含一系列属性和一个用于将对象转换为 FormData 的方法。这个类在实际应用中可能用于后端 API 请求，通过发送这些数据来创建新的分析记录。
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: [线程安全，异步处理中调用顺序需明确；异常抛出时捕获 `ValidationError`或自定义错误码]
+- **Code Review 检查点**: [1. 是否包含必填字段校验（如 userId）？2. dataFields类型是否符合枚举规范？3. Token刷新逻辑是否正确配置？4. 数据格式是否与预期一致？5. 是否有异常处理机制覆盖业务场景？6. 参数传递顺序与接口契约匹配度]
+```

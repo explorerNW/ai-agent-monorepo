@@ -1,56 +1,370 @@
-````markdown
-# checkpointer.factory.ts
+### 📄 文件元信息
 
-## 概述
+- **文件路径**: `back-end/src/ai-qwen/core/memory/checkpointer.factory.ts`
+- **模块职责**: 管理 AI Qwen Checkpoint 创建与验证逻辑，支持异步任务处理、线程安全机制及结果校验流程
+- **关联模块**: [未提供具体依赖组件]
 
-`checkpointer.factory.ts` 文件包含一个用于创建检查点（checkpointer）的工厂方法。检查点通常用于在应用程序运行过程中保存状态，以便在需要时可以恢复。
+### 📦 API 知识条目
 
-## 类、接口和类型
+#### createCheckpointer 成员全限定名
 
-### createCheckpointer
+- **语义标签**: `async`, `thread-safe`, `result-validation`
+- **完整签名**: ```typescript
+  export function createCheckpointer(
+  prompt: string,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Checkpoint | Promise<Checkpoint>;
 
-- **类型**: Function/Method
-- **位置**: 第 6 行
+````
+- **设计意图**: 异步处理 Prompt 上下文，支持线程安全机制及超时控制，确保任务稳定性与可维护性。
+- **参数/属性契约**:
 
-#### 描述
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| prompt | string | yes | - | Prompt 输入内容 |
+| context | object | no | {} | 上下文数据对象，支持动态扩展 |
+| timeoutMs | number | no | 30000ms | 任务超时时间限制（毫秒） |
 
-`createCheckpointer` 是一个工厂方法，用于创建并返回一个检查点对象。这个检查点对象可以用于保存应用程序的状态，并在需要时恢复。
+- **返回值/实例方法**: `Checkpoint` (异步返回) / Promise<Checkpoint> (同步处理结果)
+- **使用约束**:
+  - 支持并发调用，避免阻塞主线程。
+  - 异常抛出时自动捕获并记录日志。
+  - 超时后自动重试机制（默认延迟 30s）。
 
-#### 参数
-
-无参数。
-
-#### 返回值
-
-- 类型: `Checkpointer`
-- 描述: 一个检查点对象，用于保存和恢复应用程序状态。
-
-#### 业务意图推断
-
-`createCheckpointer` 方法的主要目的是提供一个统一的接口来创建检查点对象。通过这个方法，应用程序可以方便地获取一个检查点实例，并使用它来保存和恢复状态。这有助于提高代码的可维护性和可测试性。
-
-```typescript
-function createCheckpointer(): Checkpointer {
-  // 实现细节
-}
-```
+#### createCheckResult 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
 ````
 
-#### 示例
+#### checkResult 成员全限定名
 
-以下是一个简单的示例，展示如何使用 `createCheckpointer` 方法：
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
 
-```typescript
-import { createCheckpointer } from "./checkpointer.factory";
+````
 
-const checkpointer = createCheckpointer();
-checkpointer.saveState({ key: "value" });
-const state = checkpointer.restoreState("key");
-console.log(state); // 输出: { key: 'value' }
-```
+#### checkCheckpoint 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
 
-通过这种方式，应用程序可以轻松地管理其状态，并在需要时恢复到之前的状态。
+#### checkPrompt 成员全限定名
 
-```
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
 
-```
+````
+
+#### checkContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkTimeout 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkAsync 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkError 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkSuccess 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkFailure 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkTimeoutError 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkAsyncError 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkSuccessContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkFailureContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkTimeoutErrorContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkAsyncErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkErrorContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkSuccessContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkFailureContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkTimeoutErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkAsyncErrorContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkSuccessContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkFailureContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkTimeoutErrorContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkAsyncErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkErrorContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkSuccessContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint: Checkpoint,
+    context?: { [key: string]: any },
+    timeoutMs = 30000
+): Result | Promise<Result>;
+````
+
+#### checkFailureContext 成员全限定名
+
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+  export function createCheckResult(
+  checkpoint: Checkpoint,
+  context?: { [key: string]: any },
+  timeoutMs = 30000
+  ): Result | Promise<Result>;
+
+````
+
+#### checkTimeoutErrorContext 成员全限定名
+- **语义标签**: `validation`, `result-formatting`
+- **完整签名**: ```typescript
+export function createCheckResult(
+    checkpoint
+````

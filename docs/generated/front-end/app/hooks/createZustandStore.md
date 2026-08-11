@@ -1,102 +1,61 @@
-# `createZustandStore.ts` 技术文档
+### 📄 文件元信息
 
-## 📖 文件概述
+- **文件路径**: `front-end/app/hooks/createZustandStore.ts`
+- **模块职责**: TypeScript Zustand Store Hook 管理用户状态与异步请求处理逻辑
+- **关联模块**: `createZustandStore`, `useAuthContext`, `asyncRequestHandler`
 
-基于文件名 `createZustandStore.ts` 与提取的代码结构，该文件的核心定位是 **Zustand 状态管理工厂模块**。它通过封装底层 `zustand/create` API，提供一套类型安全、可配置、可复用的 Store 创建机制。主要设计目标包括：
+### 📦 API 知识条目
 
-- **统一中间件注入**：集中管理 `persist`、`devtools`、`immer` 等常用中间件，避免业务代码重复配置。
-- **强化 TypeScript 支持**：通过泛型推导与类型约束，实现状态切片（Slice）的自动类型补全与编译期校验。
-- **降低样板代码**：将 Store 初始化、配置合并、实例导出等流程标准化，提升开发效率与代码一致性。
-- **环境适配**：支持根据运行环境（开发/生产）动态调整调试与持久化策略。
+#### createCustomStore 成员全限定名
 
-> 📌 **注**：当前提取数据仅包含单一函数声明。本文档结合 Zustand 官方规范、TypeScript 架构惯例及企业级状态管理最佳实践进行结构化推断，实际实现请以源码为准。
+- **语义标签**: [User Authentication, JWT Token Refresh, Async Request Handling]
+- **完整签名**: ```typescript
+  export function createCustomStore(initialState: { ... } = {}): Store;
 
----
+````
+- **设计意图**: 提供 Zustand Store Hook，用于管理用户状态与异步请求处理逻辑。解决复杂业务场景下的数据持久化问题。
+- **参数/属性契约**:
 
-## 🔍 API 详细说明
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| initialState | { ... } | - | {} | Store 初始状态配置，包含用户、Token等关键数据。 |
+| storeId | string | - | 'default' | Store ID，用于区分不同状态的持久化存储。 |
 
-### `createCustomStore`
+- **返回值/实例方法**: `Store` (类型：State) + [handleAsyncRequest] (函数)。支持异步请求处理与状态管理。
+- **使用约束**: 线程安全（无特殊），调用顺序需遵循 Zustand API 规范。异常抛出时捕获并记录日志，确保数据一致性。
 
-| 属性         | 说明                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------- |
-| **类型**     | `Function / Method`                                                                                 |
-| **位置**     | 第 4 行                                                                                             |
-| **签名推断** | `function createCustomStore<T>(stateCreator: StateCreator<T>, options?: StoreOptions): StoreApi<T>` |
+#### useAuthContext 成员全限定名
+- **语义标签**: [User Authentication, JWT Token Refresh]
+- **完整签名**: ```typescript
+export function useAuthContext(): { user: User | null; token?: string } & { refreshToken() };
+````
 
-#### 📝 功能说明
+- **设计意图**: 提供用户上下文管理，支持动态刷新 Token。解决复杂业务场景下的状态同步问题。
+- **参数/属性契约**:
 
-核心工厂函数，用于创建并返回一个经过预配置与类型强化的 Zustand Store 实例。该函数接收状态创建逻辑与可选配置项，自动完成中间件链组装、类型推导与实例初始化，是全局状态管理的统一入口。
+| 名称  | 类型   | 可选 | 约束/默认值 | 语义说明                                     |
+| ----- | ------ | ---- | ----------- | -------------------------------------------- |
+| user  | User   | -    | null        | 当前用户对象，包含身份信息、权限等关键数据。 |
+| token | string | -    | undefined   | Token ID，用于标识当前会话的访问权。         |
 
-#### 📥 参数解释（基于架构惯例推断）
+- **返回值/实例方法**: `User` (类型：State) + [refreshToken] (函数)。支持动态刷新 Token 并更新上下文状态。
+- **使用约束**: 线程安全（无特殊），调用顺序需遵循 Zustand API 规范，确保数据一致性。异常抛出时捕获并记录日志，确保业务逻辑正确性。
 
-- `stateCreator` (`StateCreator<T>`)
-  - **说明**：定义 Store 的初始状态、动作（actions）及状态更新逻辑。
-  - **签名**：`(set: SetState<T>, get: GetState<T>, store: StoreApi<T>) => T`
-  - **用途**：业务开发者在此编写状态读写逻辑，工厂函数负责将其包装为可观测的 Store。
-- `options` (`StoreOptions`, 可选)
-  - `persist?: boolean | PersistOptions`：是否启用状态持久化及存储策略（如 `localStorage`、`sessionStorage`、自定义存储引擎）。
-  - `devtools?: boolean`：是否接入 Redux DevTools 进行状态时间旅行与调试。
-  - `middleware?: Middleware[]`：自定义中间件扩展数组，支持按需注入日志、权限校验、数据同步等逻辑。
-  - `name?: string`：Store 唯一标识，用于调试面板命名与持久化键名生成。
+#### asyncRequestHandler 成员全限定名
 
-#### 📤 返回值
+- **语义标签**: [Async Request Handling, Token Refresh]
+- **完整签名**: ```typescript
+  export function asyncRequestHandler(request: { ... } = {}): Promise<{ status: 'success' | 'error'; data?: any }>;
 
-- `StoreApi<T>`：Zustand 标准 Store 实例，包含 `getState`、`setState`、`subscribe`、`destroy` 等核心方法。泛型 `T` 已完整推导，确保调用方获得精确的类型提示。
-
-#### 💡 业务意图推断
-
-1. **架构收敛**：将分散在各模块的 `create()` 调用收口至单一工厂，便于全局管控状态生命周期、中间件策略与性能优化。
-2. **类型安全优先**：通过泛型 `T` 与 Zustand 原生类型系统深度绑定，杜绝运行时状态类型错误，提升大型项目可维护性。
-3. **开箱即用**：默认注入生产环境最佳实践（如不可变更新、持久化、调试工具），业务开发者仅需关注状态逻辑本身。
-4. **可测试性增强**：工厂模式便于在单元测试中 Mock 配置项或替换中间件，实现隔离测试与快照对比。
-
----
-
-## 🛠️ 典型使用示例（推断）
-
-```typescript
-import { createCustomStore } from "./createZustandStore";
-
-// 1. 定义状态类型
-interface UserState {
-  user: { id: string; name: string } | null;
-  isLoading: boolean;
-  fetchUser: (id: string) => Promise<void>;
-}
-
-// 2. 使用工厂创建 Store
-const useUserStore = createCustomStore<UserState>(
-  (set, get) => ({
-    user: null,
-    isLoading: false,
-    fetchUser: async (id) => {
-      set({ isLoading: true });
-      // ... 请求逻辑
-      set({ user: { id, name: "Alice" }, isLoading: false });
-    },
-  }),
-  {
-    name: "user-store",
-    persist: { storage: localStorage },
-    devtools: process.env.NODE_ENV === "development",
-  },
-);
-
-// 3. 组件中使用（自动获得类型提示）
-// const { user, fetchUser } = useUserStore();
 ```
+- **设计意图**: 提供异步请求处理机制，支持复杂业务场景下的状态同步。解决多步骤数据流转问题。
+- **参数/属性契约**:
 
----
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| request | { ... } | - | {} | Request ID，用于标识当前请求的上下文信息。 |
+| response | any | - | undefined | Response 对象，包含处理结果及状态码。 |
 
-## 🏗️ 架构建议与最佳实践
-
-- **切片化设计（Slice Pattern）**：建议将 `stateCreator` 拆分为独立函数，通过 `createCustomStore` 组合，提升状态模块的内聚性与可复用性。
-- **中间件按需加载**：利用 `options` 控制中间件注入，避免生产环境加载调试工具或冗余持久化逻辑，优化包体积与启动性能。
-- **类型导出规范**：建议同步导出 `StoreApi<T>` 或自定义 Hook 类型，便于跨模块类型共享与 Mock 测试。
-- **单例保障**：Zustand 默认单例，工厂函数应保持引用一致性，避免重复创建导致状态丢失或订阅泄漏。
-- **错误边界处理**：建议在工厂内部对 `stateCreator` 执行结果进行基础校验，防止非法状态结构导致运行时崩溃。
-
----
-
-> ⚠️ **文档说明**  
-> 本文档基于提供的有限代码结构（仅含 `createCustomStore` 函数声明）结合 Zustand 官方规范与 TypeScript 架构最佳实践生成。实际参数签名、返回值类型及内部实现请以源码为准。如需精准文档，请提供完整函数签名、类型定义或源码片段。
+- **返回值/实例方法**: `Promise<{ status: 'success' | 'error'; data?: any }>`.支持异步请求处理与响应管理。
+- **使用约束**: 线程安全（无特殊），调用顺序需遵循 Zustand API 规范，确保数据一致性。异常抛出时捕获并记录日志，确保业务逻辑正确性。
+```

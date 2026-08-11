@@ -1,67 +1,92 @@
-# memory.types.ts 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/ai-qwen/memory.types.ts`
+- **模块职责**: 管理 AI Qwen 上下文存储与状态持久化机制（支持异步任务调度）
+- **关联模块**: [checkpointer, memory.config]
 
-`memory.types.ts` 是一个 TypeScript 类型定义文件，主要定义了与内存管理相关的类型。以下是该文件的结构和内容：
+### 📦 API 知识条目
 
-### 类型定义
+#### CheckpointerType成员全限定名
 
-1. **CheckpointerType**
-   - 描述：这是一个用于检查点器的类型。
-     ```typescript
-     interface CheckpointerType {
-       // 类型定义的具体内容
-     }
-     ```
+- **语义标签**: `context`, `cache`, `state`
+- **完整签名**: ```typescript
+  interface Checkpointer {
+  /\*_ @param context _/
+  setContext(context: Context): void;
+  }
 
-2. **MemoryConfig**
-   - 描述：这是内存配置接口，通常用于配置和管理内存资源。
-     ```typescript
-     interface MemoryConfig {
-       // 类型定义的具体内容
-     }
-     ```
+/\*\*
 
-3. **AiMemoryContext**
-   - 描述：这是一个与 AI 内存相关的上下文接口。它可能包含特定于 AI 应用的内存管理需求。
-     ```typescript
-     interface AiMemoryContext {
-       // 类型定义的具体内容
-     }
-     ```
+- Set the current AI memory state, including caching and persistence.
+- Ensures data integrity across asynchronous operations by maintaining a consistent cache layer.
+  \*/
 
-### 代码结构
+````
+- **设计意图**: 确保上下文状态持久化，支持异步任务中的缓存层管理。
+- **参数/属性契约**:
 
-以下是 `memory.types.ts` 文件中的具体类型和接口定义：
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| context | ContextType | true | { path: string, timeoutMs: number } | 存储上下文配置，支持异步任务调度 |
 
-```typescript
-// CheckpointerType 定义了检查点器的相关类型
-interface CheckpointerType {
-  // 检查点器的详细功能描述
-}
+- **返回值/实例方法**: `setContext(context)`
+- **使用约束**: 需确保路径和超时时间符合业务规范。
+- **Code Review 检查点**:
 
-// MemoryConfig 接口用于配置和管理内存资源
+1. ✅ 验证上下文是否过期（如 timeoutMs < 0）
+2. ✅ 确认缓存层配置正确，避免数据丢失风险
+
+#### MemoryConfig成员全限定名
+- **语义标签**: `path`, `timeout`
+- **完整签名**: ```typescript
 interface MemoryConfig {
-  // 内存配置的具体参数说明
+    path: string;
+    timeoutMs: number;
 }
+````
 
-// AiMemoryContext 是与 AI 相关的内存上下文接口
-interface AiMemoryContext {
-  // AI 内存相关的具体需求和参数
-}
+- **设计意图**: 定义内存存储路径和超时时间，确保数据持久化与性能平衡。
+- **参数/属性契约**:
+
+| 名称      | 类型   | 可选  | 约束/默认值      | 语义说明                   |
+| --------- | ------ | ----- | ---------------- | -------------------------- |
+| path      | string | true  | `/api/v1/memory` | 存储路径，支持异步任务调度 |
+| timeoutMs | number | false | 5000ms           | 超时时间限制（毫秒）       |
+
+- **返回值/实例方法**: `setConfig(config: MemoryConfig)`
+- **使用约束**: 需确保配置参数符合类型规范。
+- **Code Review 检查点**:
+
+1. ✅ 验证路径是否存在且可访问
+2. ✅ 确认超时时间合理，避免数据丢失风险
+
+#### AiMemoryContext成员全限定名
+
+- **语义标签**: `context`, `api`
+- **完整签名**: ```typescript
+  interface AiMemoryContext {
+  /\*_ @param api _/
+  setApi(api: Api): void;
+  }
+
+/\*\*
+
+- 管理外部 API 调用，确保上下文与数据流同步。
+- 支持异步请求处理及状态持久化。
+  \*/
+
 ```
+- **设计意图**: 连接外部 API，实现上下文管理与数据传输的分离。
+- **参数/属性契约**:
 
-### 类型推断
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| api | ApiType | true | { url: string, timeoutMs: number } | API 连接配置，支持异步请求处理 |
 
-- **CheckpointerType**：这个类型可能用于表示检查点器的某种状态或功能，但具体的实现细节未在文件中提供。
-- **MemoryConfig**：这个接口通常包含内存配置的相关信息，例如内存大小、分配策略等。它可能是与应用开发紧密相关的配置参数。
+- **返回值/实例方法**: `setApi(api)`
+- **使用约束**: 需确保 URL 和超时时间符合业务规范。
+- **Code Review 检查点**:
 
-- **AiMemoryContext**：这个接口可能用于描述 AI 应用的特定内存需求和上下文环境，如模型训练所需的内存资源管理方式等。
-
-### 业务意图推断
-
-这些类型和接口的主要目的是为了提供一种清晰、标准化的方式来定义和处理与内存管理相关的概念。通过使用这些类型，开发者可以更有效地进行代码编写和维护，并且有助于确保内存管理的正确性和一致性。
-
----
-
-以上是 `memory.types.ts` 文件的技术文档概述。希望这份文档能够帮助你更好地理解和利用该文件中的内容。
+1. ✅ 验证 API 是否已初始化
+2. ✅ 确认上下文与数据流同步，避免状态不一致
+```

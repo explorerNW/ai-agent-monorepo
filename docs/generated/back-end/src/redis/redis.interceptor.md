@@ -1,73 +1,46 @@
-# Redis Cache Interceptor
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/redis/redis.interceptor.ts`
+- **模块职责**: Redis 缓存拦截器，负责处理异步请求与数据一致性保障机制
+- **关联模块**: redis.interceptor.ts, cache-interceptor.ts (跨文件依赖)
 
-`redis.interceptor.ts` 是一个 TypeScript 模块，包含了一个名为 `RedisCacheInterceptor` 的类。该类的主要目的是在发送到后端服务器之前缓存请求的响应。
+### 📦 API 知识条目
 
-### 类：RedisCacheInterceptor
+#### RedisCacheInterceptor 成员全限定名
 
-#### 参数解释：
+- **语义标签**: [Redis 连接管理、事务隔离、缓存过期]
+- **完整签名**: ```typescript
+  interface RedisCacheInterceptor {
+  intercept(request: Request): Promise<InterceptResult>;
+  }
 
-- 无参数。
+````
+- **设计意图**: 拦截并处理异步请求，确保数据一致性。
 
-#### 业务意图推断：
+#### constructor 成员全限定名
+- **语义标签**: [构造函数、参数验证]
+- **完整签名**: ```typescript
+constructor(
+    redisClient: RedisConnection,
+    cacheKeyPrefix?: string = 'redis-cache',
+) { }
+````
 
-此类的主要功能是在发送到后端服务器之前对请求进行缓存，以提高性能和减少网络负载。通过使用 `redis` 模块提供的工具，可以实现这种缓存机制。
+- **设计意图**: 初始化缓存连接与配置，支持异步执行。
 
-### 方法：constructor
+#### intercept 成员全限定名
 
-```typescript
-constructor() {
-    // 初始化操作
-}
-```
+- **语义标签**: [请求拦截、异常处理]
+- **完整签名**: ```typescript
+  intercept(request: Request): Promise<InterceptResult>;
 
-#### 参数解释：
+````
+- **设计意图**: 封装请求流程，统一响应逻辑与错误处理。
 
-- 无参数。
+#### generateCacheKey 成员全限定名
+- **语义标签**: [缓存生成、键值管理]
+- **完整签名**: ```typescript
+generateCacheKey(cacheId: string): CacheKey;
+````
 
-#### 业务意图推断：
-
-此方法用于初始化类实例。在实际应用中，这可能涉及到设置一些初始状态或配置项。
-
-### 方法：intercept
-
-```typescript
-intercept(req, res) {
-    const cacheKey = generateCacheKey(req);
-    if (cacheKey && this.cache.has(cacheKey)) {
-        return new Response(this.cache.get(cacheKey), { status: 200 });
-    }
-    // 实际的请求处理逻辑
-}
-```
-
-#### 参数解释：
-
-- `req`：原始请求对象。
-- `res`：响应对象。
-
-#### 业务意图推断：
-
-此方法的主要功能是拦截发送到后端服务器的请求，并在缓存中检查是否存在相同的请求。如果存在，则从缓存中获取响应并返回，以减少重复处理；否则，继续执行实际的请求处理逻辑。
-
-### 方法：generateCacheKey
-
-```typescript
-function generateCacheKey(req) {
-  const { method, url } = req;
-  return `${method}:${url}`;
-}
-```
-
-#### 参数解释：
-
-- `req`：原始请求对象。
-
-#### 业务意图推断：
-
-此方法的主要功能是生成一个唯一的缓存键，用于存储和检索请求。通过将请求的方法（HTTP 方法）和 URL 转换为字符串并连接起来，可以确保每次请求都具有独特性。
-
----
-
-这个 `redis.interceptor.ts` 文件展示了如何在 TypeScript 中使用类、接口、函数来实现简单的缓存机制。这种设计有助于提高系统的性能，并减少对后端服务器的依赖。
+- **设计意图**: 构建唯一缓存标识，支持异步执行与数据隔离。

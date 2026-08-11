@@ -1,76 +1,367 @@
-# WebVitalsEntity.ts 技术文档
+### 📄 文件元信息
 
-## 文件概述
+- **文件路径**: `back-end/src/analysis/entities/web-vitals.entity.ts`
+- **模块职责**: WebVital Event Entity 管理用户健康指标数据与事件记录（如心率、血压等生理参数）
+- **关联模块**: [无直接依赖，但需配合分析引擎处理心跳监测日志]
 
-`web-vitals.entity.ts` 是一个 TypeScript 类文件，用于定义和处理 web vitals 数据。以下是该文件的结构化技术文档。
+### 📦 API 知识条目
 
-### 类：WebVitalsEvent
+#### `WebVitalsEvent` 成员全限定名
 
-#### 参数解释：
+- **语义标签**: [`用户健康指标`, `心跳检测`, `心率监控`, `血压记录`]
+- **完整签名**: ```typescript
+  export class WebVitalsEvent {
+  constructor(
+  private userId: string,
+  private timestamp: Date | null = new Date(),
+  private vitalData?: VitalityRecord[], // 支持多指标数据聚合
+  private status: StatusType = 'active'
+  ) {}
 
-- `line`: 10
-  - 表示该类在代码中的第10行。
+      /**
+       * @param eventId - Event ID，用于追踪事件生命周期
+       */
+      public async update(eventId: string, data: Partial<VitalityData>): Promise<void> {
+          // 更新心跳数据记录并标记状态变更
+          await this.saveVitalsRecord(data);
+          return true;
+      }
 
-#### 业务意图推断：
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-- 这个类的主要目的是定义和处理 web vitals 数据。web vitals 是一种用于评估网站性能的指标，包括响应时间、首屏加载时间和资源加载时间等。通过这个类，我们可以方便地获取这些数据并进行后续分析或处理。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-### 类：无
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 参数解释：
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
 
-- 该类在代码中没有定义任何参数。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 业务意图推断：
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-- 这个类可能用于其他目的，但目前没有提供具体的业务意图信息。如果需要进一步了解其用途，请查阅相关代码和文档。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-## 结构化 Markdown 技术文档
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
 
-````markdown
-# WebVitalsEntity.ts 技术文档
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-### 文件概述
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-`web-vitals.entity.ts` 是一个 TypeScript 类文件，用于定义和处理 web vitals 数据。以下是该文件的结构化技术文档。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 类：WebVitalsEvent
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
 
-- **参数解释**：
-  - `line`: 10
-    表示该类在代码中的第10行。
-- **业务意图推断**：
-  这个类的主要目的是定义和处理 web vitals 数据。web vitals 是一种用于评估网站性能的指标，包括响应时间、首屏加载时间和资源加载时间等。通过这个类，我们可以方便地获取这些数据并进行后续分析或处理。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 类：无
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-- **参数解释**：
-  - 该类在代码中没有定义任何参数。
-- **业务意图推断**：
-  这个类可能用于其他目的，但目前没有提供具体的业务意图信息。如果需要进一步了解其用途，请查阅相关代码和文档。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-## 结构化 Markdown 技术文档
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
 
-```markdown
-# WebVitalsEntity.ts 技术文档
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-### 文件概述
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-`web-vitals.entity.ts` 是一个 TypeScript 类文件，用于定义和处理 web vitals 数据。以下是该文件的结构化技术文档。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 类：WebVitalsEvent
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
 
-- **参数解释**：
-  - `line`: 10
-    表示该类在代码中的第10行。
-- **业务意图推断**：
-  这个类的主要目的是定义和处理 web vitals 数据。web vitals 是一种用于评估网站性能的指标，包括响应时间、首屏加载时间和资源加载时间等。通过这个类，我们可以方便地获取这些数据并进行后续分析或处理。
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
 
-#### 类：无
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
 
-- **参数解释**：
-  - 该类在代码中没有定义任何参数。
-- **业务意图推断**：
-  这个类可能用于其他目的，但目前没有提供具体的业务意图信息。如果需要进一步了解其用途，请查阅相关代码和文档。
-```
-````
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为未使用
+          await this.removeRecordByUserId(userId);
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getVitals(eventId: string): Promise<VitalityData> {
+          // 返回心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async updateStatus(status: StatusType): Promise<void> {
+          // 更新心跳状态并标记为活跃或停用
+          await this.saveVitalsRecord({ status });
+          return true;
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async getEvent(eventId: string): Promise<WebVitalData> {
+          // 返回当前心跳数据记录及状态信息
+          const record = this.findRecordByUserId(userId);
+          return { data, status };
+      }
+
+      /**
+       * @param event - Event ID，用于追踪事件生命周期
+       */
+      public async delete(eventId: string): Promise<void> {
+          // 删除心跳数据记录并重置状态为

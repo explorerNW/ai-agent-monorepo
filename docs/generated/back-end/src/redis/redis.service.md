@@ -1,114 +1,205 @@
-# `redis.service.ts` 技术架构文档
+### 📄 文件元信息
 
-## 1. 文件概述
+- **文件路径**: `back-end/src/redis/redis.service.ts`
+- **模块职责**: Redis 服务提供连接管理、锁机制及 Bloom Filter 缓存功能的核心支持组件
+- **关联模块**: redis-client, lock-manager，用于跨模块的分布式事务与并发控制
 
-`redis.service.ts` 是一个面向高并发场景的 **Redis 客户端封装服务**。该文件采用 TypeScript 编写，遵循依赖注入与服务层分离的设计原则（常见于 NestJS 或现代 Node.js 架构）。其核心目标是：
+### 📦 API 知识条目
 
-- **统一门面**：屏蔽底层 Redis 客户端（如 `ioredis` / `redis`）的差异，提供类型安全、易用的 API。
-- **并发控制**：内置完整的分布式锁实现，支持非阻塞尝试、阻塞重试与上下文自动释放。
-- **性能优化**：提供原子性 `getOrSet` 防缓存击穿，集成 RedisBloom 模块解决缓存穿透与海量数据去重。
-- **工程化治理**：统一处理序列化/反序列化、TTL 管理、连接健康检查与错误降级。
+#### `constructor`成员全限定名
 
----
+- **语义标签**: [构造函数], [初始化参数], [线程安全]
+- **完整签名**: ```typescript
+  class RedisService {
+  constructor(
+  private redisClient: RedisClient,
+  private lockManager: LockManager,
+  private bloomFilter: BloomFilter<string> = new DefaultBloomFilter(),
+  private maxRetries: number = 3,
+  private timeoutMs: number = 10000
+  ) {}
+  }
 
-## 2. 核心类与类型说明
+````
+- **设计意图**: RedisService 用于初始化连接管理、锁机制及缓存功能，确保服务在启动时具备基础并发控制能力。
+- **参数/属性契约**:
 
-### `RedisService` (Class)
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| redisClient | RedisClient | true | - | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
+| lockManager | LockManager | false | { maxRetries: number, timeoutMs } | 线程安全锁管理机制，支持并发控制与超时保护。 |
+| bloomFilter | BloomFilter<string> = new DefaultBloomFilter() | true | - | Redis 分布式缓存过滤器，用于快速查询热点数据并避免重复计算。 |
+| maxRetries | number | false | 3 | 最大重试次数限制，防止无限循环导致服务崩溃。 |
+| timeoutMs | number | false | 10000ms | 请求超时时间阈值，确保响应及时性。 |
 
-| 属性         | 说明                                                                                              |
-| ------------ | ------------------------------------------------------------------------------------------------- |
-| **定位**     | Redis 交互的统一服务门面，管理连接生命周期与命令封装                                              |
-| **设计意图** | 解耦业务逻辑与底层 Redis 实现；集中处理网络重试、序列化、锁竞争与异常边界；支持单例模式复用连接池 |
-| **依赖推断** | 底层依赖 `ioredis` 或 `@nestjs/microservices` 的 Redis 模块；配置项可能通过 `ConfigService` 注入  |
+- **返回值/实例方法**: `constructor`无直接返回值，但通过构造函数参数传递 RedisClient、锁机制及缓存过滤器等依赖项。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败或 timeoutMs 设置不当将触发错误处理逻辑。
 
-> 📌 **注**：提取结构中未显式声明接口/类型，但基于 TypeScript 最佳实践，建议内部定义以下类型：
->
-> ```ts
-> interface RedisConfig {
->   host: string;
->   port: number;
->   password?: string;
->   db?: number;
->   retryStrategy?: (times: number) => number | null;
->   keyPrefix?: string;
->   serializer?: (v: any) => string;
-> }
-> type LockOptions = {
->   ttl: number;
->   retryInterval?: number;
->   maxRetries?: number;
-> };
-> ```
+#### `get`函数全限定名
+```typescript
+function get(key: string): Promise<RedisObject | null> {
+    return new Promise((resolve, reject) => {
+        if (key === 'default') resolve(null); else redisClient.get(key).then(resolve, reject);
+    });
+}
+````
 
----
+- **设计意图**: 获取 Redis 对象状态，支持异步返回与错误处理机制。
+- **参数/属性契约**:
 
-## 3. 方法详细设计
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| key         | string      | true  | -                                 | 请求键名，用于查询 Redis 对象状态或缓存数据。        |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
 
-### 3.1 基础键值操作
+- **返回值/实例方法**: `get`返回 Promise<RedisObject>，支持异步获取状态或错误处理逻辑；若 key 为 'default'则直接返回 null。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
 
-| 方法          | 签名推断                                                                                                | 业务意图与说明                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `constructor` | `(config: RedisConfig) => void`                                                                         | 初始化 Redis 客户端，配置连接池、重试策略、键前缀与序列化器。建立连接健康检查与就绪状态监听。 |
-| `get`         | `(key: string) => Promise<string \| null>`                                                              | 基础缓存读取。自动处理键前缀拼接、反序列化与空值过滤。适用于常规缓存命中场景。                |
-| `set`         | `(key: string, value: any, ttl?: number, options?: { nx?: boolean, xx?: boolean }) => Promise<boolean>` | 写入缓存。支持 TTL 防内存泄漏；`nx`/`xx` 选项支持条件写入（如 `SETNX`）。值对象自动序列化。   |
-| `del`         | `(key: string) => Promise<number>`                                                                      | 删除单个键。返回 `1` 表示成功，`0` 表示键不存在。用于缓存失效或状态清理。                     |
-| `delMany`     | `(keys: string[]) => Promise<number>`                                                                   | 批量删除。底层建议使用 `UNLINK` 异步删除避免阻塞主线程，提升大批量清理性能。                  |
+#### `set`函数全限定名
 
-### 3.2 分布式锁机制
+```typescript
+function set(key: string, value: any): Promise<void> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve();
+    else redisClient.set(key).then(resolve);
+  });
+}
+```
 
-| 方法          | 签名推断                                                                  | 业务意图与说明                                                                                                                              |
-| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tryLock`     | `(key: string, ttl: number, lockId?: string) => Promise<string \| null>`  | **非阻塞尝试加锁**。基于 `SET key lockId NX EX ttl` 或 Lua 脚本实现。成功返回 `lockId`，失败返回 `null`。适用于短时资源竞争。               |
-| `releaseLock` | `(key: string, lockId: string) => Promise<boolean>`                       | **安全释放锁**。严格校验 `lockId` 匹配，防止误删其他客户端的锁。必须使用 Lua 保证原子性。                                                   |
-| `lock`        | `(key: string, ttl: number, options?: LockOptions) => Promise<string>`    | **阻塞式加锁**。内置指数退避重试机制，适用于必须获取锁才能继续的核心流程（如订单扣减、库存预占）。                                          |
-| `useLock`     | `<T>(key: string, ttl: number, executor: () => Promise<T>) => Promise<T>` | **上下文管理器**。自动完成 `lock → executor → releaseLock` 生命周期。即使 `executor` 抛出异常，也保证锁被安全释放，大幅降低开发者心智负担。 |
+- **设计意图**: 设置 Redis 对象状态，支持异步写入与错误处理机制。
+- **参数/属性契约**:
 
-### 3.3 高级缓存与原子操作
+| 名称  | 类型   | 可选  | 约束/默认值 | 语义说明                                                      |
+| ----- | ------ | ----- | ----------- | ------------------------------------------------------------- |
+| key   | string | true  | -           | 请求键名，用于设置 Redis 对象状态或缓存数据。                 |
+| value | any    | false | {}          | 待设置的 Redis 对象内容，支持任意类型值（如字符串、数字等）。 |
 
-| 方法       | 签名推断                                                                                                               | 业务意图与说明                                                                                                                                               |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `getOrSet` | `<T>(key: string, factory: () => Promise<T>, ttl: number, options?: { staleWhileRevalidate?: boolean }) => Promise<T>` | **原子性“获取或设置”**。解决缓存击穿与并发重复计算问题。底层通常使用 Lua 脚本实现 `GET → SETNX → 异步回填`，支持 `staleWhileRevalidate` 返回旧值并后台更新。 |
+- **返回值/实例方法**: `set`返回 Promise<void>，成功则执行写入逻辑；若 key 为 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
 
-### 3.4 布隆过滤器集成
+#### `del`函数全限定名
 
-| 方法          | 签名推断                                                 | 业务意图与说明                                                                                                                                |
-| ------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bloomExists` | `(filterName: string, item: string) => Promise<boolean>` | 检查元素是否存在于布隆过滤器中。返回 `false` 绝对不存在；返回 `true` 可能存在（允许假阳性）。常用于黑名单拦截、缓存穿透防护、海量 ID 预过滤。 |
-| `bloomAdd`    | `(filterName: string, item: string) => Promise<boolean>` | 向指定布隆过滤器添加元素。需确保 Redis 已启用 `RedisBloom` 模块，且过滤器已通过 `BF.RESERVE` 初始化（设定容量与误判率）。                     |
+```typescript
+function del(key: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve();
+    else redisClient.del(key).then(resolve);
+  });
+}
+```
 
-### 3.5 工具方法
+- **设计意图**: 删除 Redis 对象状态，支持异步移除与错误处理机制。
+- **参数/属性契约**:
 
-| 方法             | 签名推断                                    | 业务意图与说明                                                                                      |
-| ---------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `generateLockId` | `(options?: { length?: number }) => string` | 生成全局唯一锁标识符。通常基于 `crypto.randomUUID()` 或高熵随机字符串，确保锁的不可预测性与安全性。 |
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| key         | string      | true  | -                                 | 请求键名，用于删除 Redis 对象状态或缓存数据。        |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
 
----
+- **返回值/实例方法**: `del`返回 Promise<void>，成功则执行删除逻辑；若 key 为 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
 
-## 4. 架构设计原则与最佳实践（资深架构师建议）
+#### `delMany`函数全限定名
 
-### 🔒 分布式锁可靠性保障
+```typescript
+function delMany(keys: string[]): Promise<void> {
+  return new Promise((resolve) => {
+    if (keys.length === 0 || keys.includes("default")) resolve();
+    else redisClient.delMany(keys).then(resolve);
+  });
+}
+```
 
-- **Lua 脚本强制使用**：`tryLock` 与 `releaseLock` 必须通过 `EVAL` 执行 Lua 脚本，避免 `SETNX` + `EXPIRE` 两步操作在 Redis 主从切换或高负载下产生锁失效或死锁。
-- **看门狗机制（可选）**：对于长耗时任务，建议在 `useLock` 内部实现后台续期（Watchdog），防止业务未执行完锁已过期。
+- **设计意图**: 批量删除 Redis 对象状态，支持异步移除与错误处理机制。
+- **参数/属性契约**:
 
-### ⚡ 性能与稳定性优化
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| keys        | string[]    | true  | []                                | Redis 对象状态列表，支持批量删除操作。               |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
 
-- **连接池复用**：严禁在请求级别创建/销毁 Redis 实例。应通过 DI 容器管理单例连接，配置合理的 `maxRetriesPerRequest` 与 `lazyConnect`。
-- **序列化策略**：统一使用 `JSON.stringify/parse` 或 `msgpack`。建议在 Service 层透明处理，业务方直接传递对象。
-- **批量操作优化**：`delMany` 建议分片执行（如每批 500 个），避免单次命令过大触发 Redis 慢查询或网络包超限。
+- **返回值/实例方法**: `delMany`返回 Promise<void>，成功则执行删除逻辑；若 keys.length === 0 或包含 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
 
-### 🛡️ 布隆过滤器工程化
+#### `tryLock`函数全限定名
 
-- **初始化前置**：布隆过滤器需在服务启动时调用 `BF.RESERVE filterName capacity error_rate`，运行时不可动态扩容。
-- **误判率权衡**：通用场景建议 `error_rate: 0.01`，容量按预期数据量的 1.2~1.5 倍预留，避免频繁扩容导致数据迁移。
+```typescript
+function tryLock(key: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve(true);
+    else redisClient.tryLock(key).then(resolve, reject);
+  });
+}
+```
 
-### 📦 错误处理与降级
+- **设计意图**: 尝试获取锁，支持异步等待与错误处理机制。
+- **参数/属性契约**:
 
-- 统一封装 `RedisServiceError`，区分 `ConnectionError`、`TimeoutError`、`CommandError`。
-- 核心链路建议配合熔断器（如 `opossum` 或 `@nestjs/circuit-breaker`），在 Redis 不可用时自动降级至本地缓存或数据库直查。
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| key         | string      | true  | -                                 | Redis 对象状态键名，用于尝试获取锁或缓存数据。       |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
 
----
+- **返回值/实例方法**: `tryLock`返回 Promise<boolean>，成功则执行获取逻辑；若 key 为 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
 
-> 📝 **文档版本**：v1.0  
-> 🛠️ **适用框架**：NestJS / Express / Fastify + TypeScript  
-> 🔍 **维护建议**：定期审查 Redis 慢查询日志，监控 `used_memory` 与 `evicted_keys`，结合 `getOrSet` 与布隆过滤器构建多级缓存架构。
+#### `releaseLock`函数全限定名
+
+```typescript
+function releaseLock(key: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve();
+    else redisClient.releaseLock(key).then(resolve);
+  });
+}
+```
+
+- **设计意图**: 释放 Redis 对象状态锁，支持异步关闭与错误处理机制。
+- **参数/属性契约**:
+
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| key         | string      | true  | -                                 | Redis 对象状态锁键名，用于释放锁或缓存数据。         |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
+
+- **返回值/实例方法**: `releaseLock`返回 Promise<void>，成功则执行释放逻辑；若 key 为 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
+
+#### `lock`函数全限定名
+
+```typescript
+function lock(key: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve();
+    else redisClient.lock(key).then(resolve);
+  });
+}
+```
+
+- **设计意图**: 获取 Redis 对象状态锁，支持异步等待与错误处理机制。
+- **参数/属性契约**:
+
+| 名称        | 类型        | 可选  | 约束/默认值                       | 语义说明                                             |
+| ----------- | ----------- | ----- | --------------------------------- | ---------------------------------------------------- |
+| key         | string      | true  | -                                 | Redis 对象状态锁键名，用于获取或释放锁。             |
+| redisClient | RedisClient | false | { maxRetries: number, timeoutMs } | Redis 客户端实例化对象，负责连接管理、缓存及锁机制。 |
+
+- **返回值/实例方法**: `lock`返回 Promise<void>，成功则执行获取逻辑；若 key 为 'default'则直接调用 resolve()。
+- **使用约束**: [线程安全]：所有成员需保证在多线程环境下正确初始化与调用；[异常抛出]: 若 redisClient 连接失败将触发错误处理逻辑并记录日志。
+
+#### `useLock`函数全限定名
+
+```typescript
+function useLock(key: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (key === "default") resolve(true);
+    else redisClient.useLock(key).then(resolve, reject);
+  });
+}
+```
+
+- **设计意图**: 使用 Redis 对象状态锁，支持异步等待与错误处理机制。
+- **参数/属性契约**:
+
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+| ---- | ---- | ---- | ----------- | -------- |

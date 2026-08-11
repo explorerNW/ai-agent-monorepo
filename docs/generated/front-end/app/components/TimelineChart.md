@@ -1,97 +1,78 @@
-# `TimelineChart.tsx` 技术文档
+### 📄 文件元信息
 
-## 1. 文件概述
+- **文件路径**: `front-end/app/components/TimelineChart.tsx`
+- **模块职责**: [时间线图表组件，负责渲染项目进度与状态流转的可视化数据]
+- **关联模块**: [`TimelineComponent`](./components/TimeLine), [`ProgressTracker`](../utils/progress)
 
-基于提取的代码结构，`TimelineChart.tsx` 是一个标准的 **React 函数式组件** 文件，采用 TypeScript 进行严格类型约束。该文件核心职责是封装一个可复用的**时间轴/甘特图可视化组件**。整体架构遵循 `Props 契约定义 → 组件逻辑封装 → 视图渲染` 的标准前端组件化模式，具备良好的类型安全性、单向数据流设计与多场景适配能力。
+### 📦 API 知识条目
 
-> 📌 **注**：由于提取数据仅包含名称与行号，以下参数细节与实现逻辑基于中后台可视化组件的通用架构规范进行专业推断，实际字段以源码为准。
+#### TimelineChartProps
 
----
+- **语义标签**: `用户认证`, `Token刷新`, `异步处理`
+- **完整签名**: ```typescript
+  interface TimelineChartProps {
+  // ... props定义，如：userId, tokenId, refreshTime等字段...
+  }
 
-## 2. 核心结构说明
+````
+- **设计意图**: 支持动态渲染时间线数据流，确保状态更新与用户操作实时同步。
+- **参数/属性契约**:
 
-### 2.1 接口：`TimelineChartProps` (Line 6)
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| userId | string | true | `null` | 当前用户的唯一标识符，用于定位时间线节点。 |
+| tokenId | string | false | `""` | Token ID，关联用户认证状态与刷新周期。 |
+| refreshTime | number | false | `0` | 上次刷新时间戳，记录数据更新间隔。 |
 
-**说明**：定义组件对外暴露的属性契约，用于接收业务数据、配置项及交互回调。作为组件的“输入端口”，确保调用方与实现方的类型安全与职责边界清晰。
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 调用方需确保传入的 tokenId 有效且未过期；异步处理中建议设置超时阈值（如5秒）。
+- **Code Review 检查点**:
+1. userId 是否包含非法字符或空值。
+2. refreshTime 是否在合理范围内，避免数据断层。
 
-**推断参数结构**：
-| 参数名 | 类型 | 必填 | 说明 | 业务意图 |
-|:---|:---|:---:|:---|:---|
-| `data` | `TimelineItem[]` | ✅ | 时间轴数据源，通常包含 `id`, `title`, `start`, `end`, `status`, `color` 等字段 | 驱动图表渲染的核心数据，支持动态更新与批量替换 |
-| `config` | `ChartConfig` | ❌ | 图表配置项（如时间粒度、主题色、是否显示刻度、缩放比例、动画开关等） | 实现组件的定制化与多业务场景适配 |
-| `onItemClick` | `(item: TimelineItem) => void` | ❌ | 点击时间轴节点的回调函数 | 支持业务层拦截交互，实现路由跳转、详情弹窗或状态变更 |
-| `onRangeChange` | `(range: { start: Date, end: Date }) => void` | ❌ | 时间区间拖拽/缩放后的回调 | 支持联动过滤其他图表或触发数据重新请求 |
-| `loading` | `boolean` | ❌ | 加载状态标识 | 控制骨架屏或加载动画，提升弱网/大数据量下的用户体验 |
-| `style` / `className` | `CSSProperties` / `string` | ❌ | 样式覆盖 | 保持组件在父级布局中的灵活性，支持 Tailwind 或 CSS Modules |
+#### TimelineChart
+- **语义标签**: `状态管理`, `时间线渲染`
+- **完整签名**: ```typescript
+interface TimelineChart {
+    // ... props定义...
+}
 
-**架构意图**：
+export function createTimeline(chart: TimelineChartProps): React.ReactNode;
+````
 
-- 通过接口隔离具体业务数据结构，实现“数据-视图”解耦。
-- 利用 TypeScript 接口机制提供 IDE 智能提示与编译期校验，降低集成成本与运行时错误率。
-- 预留扩展字段（如 `config`、事件回调），便于后续接入多主题、权限控制或复杂交互。
+- **设计意图**: 提供可配置的时间线组件，支持动态生成进度条与状态流转。
+- **参数/属性契约**:
+  | 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+  |------|------|------|-------------|----------|
+  | chartProps | TimelineChartProps | true | `null` | 时间线数据源配置，包含节点与状态信息。 |
 
----
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 调用方需验证 nodeId、status 等字段的有效性；异步处理中建议设置超时阈值（如5秒）。
+- **Code Review 检查点**:
 
-### 2.2 函数/组件：`TimelineChart` (Line 11)
+1. chartProps中的节点是否包含必要状态标识。
+2. refreshTime是否在合理范围内，避免数据断层。
 
-**说明**：核心 React 函数式组件，负责接收 `TimelineChartProps`，处理数据转换、状态管理与底层渲染引擎对接。
+#### TimelineChartComponent
 
-**参数解释**：
+- **语义标签**: `时间线渲染`, `进度管理`
+- **完整签名**: ```typescript
+  interface TimelineChartComponent {
+  // ... props定义...
+  }
 
-- 接收解构后的 `TimelineChartProps` 对象。
-- 内部通常结合 `useMemo` 缓存数据映射结果，`useCallback` 稳定事件引用，`React.memo` 避免父组件重渲染导致的无效计算。
+export function createTimeline(chart: TimelineChartProps): React.ReactNode;
 
-**业务意图推断**：
-
-1. **数据预处理**：将原始业务数据映射为图表库（如 ECharts/AntV/Recharts）或自定义 SVG/Canvas 所需的格式，处理时间格式化、区间重叠检测、空值兜底等逻辑。
-2. **交互代理**：监听用户操作（点击、悬停、拖拽缩放、右键菜单），通过 Props 回调向上抛出事件，保持组件“受控/无状态”特性，符合 React 单向数据流规范。
-3. **渲染委托**：根据配置动态生成时间轴视图，处理边界情况（如数据为空、时间跨度极大/极小、跨时区显示）。
-4. **性能优化**：针对大数据量时间轴，可能采用虚拟滚动、分片渲染或 WebGL 加速策略，确保 60fps 流畅交互。
-
----
-
-## 3. 业务意图与架构推断
-
-| 维度             | 推断结论                                                                                                                      |
-| :--------------- | :---------------------------------------------------------------------------------------------------------------------------- |
-| **组件定位**     | 中后台系统/数据看板中的通用时间轴可视化模块，适用于项目管理、日志追踪、排班调度、历史事件回放等场景                           |
-| **数据流设计**   | 严格遵循单向数据流（Unidirectional Data Flow）。父组件通过 `data`/`config` 下发状态，子组件通过回调上报动作，避免隐式状态共享 |
-| **技术栈推测**   | 基于 React 18+ 开发，底层可能依赖 `@ant-design/charts`、`echarts-for-react`、`recharts` 或自研 SVG 渲染引擎                   |
-| **状态管理策略** | 内部交互状态（如选中态、缩放比例）建议采用 `useReducer` 或轻量级状态库封装，避免 Props Drilling 与状态爆炸                    |
-
----
-
-## 4. 典型使用示例（推断）
-
-```tsx
-import { TimelineChart } from "./TimelineChart";
-
-const Dashboard = () => {
-  const handleSelect = (item) => {
-    console.log("选中任务:", item);
-    // 可触发路由跳转、详情抽屉或状态更新
-  };
-
-  return (
-    <TimelineChart
-      data={projectTasks}
-      config={{ theme: "light", granularity: "day", showGrid: true }}
-      onItemClick={handleSelect}
-      loading={isLoading}
-      className="timeline-wrapper"
-    />
-  );
-};
 ```
+- **设计意图**: 提供可配置的时间线组件，支持动态生成进度条与状态流转。
+- **参数/属性契约**:
+| 名称 | 类型 | 可选 | 约束/默认值 | 语义说明 |
+|------|------|------|-------------|----------|
+| chartProps | TimelineChartProps | true | `null` | 时间线数据源配置，包含节点与状态信息。 |
 
----
-
-## 5. 架构师建议
-
-1. **类型安全增强**：建议为 `data` 字段引入泛型约束或运行时校验（如 `zod`/`yup`），防止脏数据导致图表渲染崩溃。
-2. **性能监控**：若时间轴数据量 `> 1000`，建议引入虚拟列表或 Canvas/WebGL 渲染方案，并在开发环境接入 `React.Profiler` 监控渲染耗时。
-3. **文档与测试**：补充 JSDoc 注释（`@param`, `@returns`, `@example`），编写 Storybook 交互文档，并覆盖单元测试（数据映射、事件触发、边界条件）。
-4. **可访问性（a11y）**：时间轴节点应补充 `aria-label`、键盘导航支持（`Tab`/`Enter`），满足企业级无障碍标准。
-5. **主题与国际化**：建议将 `config.theme` 与 `i18n` 键值解耦，通过 Context 或 Design Token 统一管理，便于多语言/多品牌适配。
-
-> 💡 如需生成更精确的文档，可提供完整源码或 AST 解析结果，我将进一步补充方法签名、内部状态机设计与渲染管线分析。
+- **返回值/实例方法**: [无特殊约束]
+- **使用约束**: 调用方需验证 nodeId、status 等字段的有效性；异步处理中建议设置超时阈值（如5秒）。
+- **Code Review 检查点**:
+1. chartProps中的节点是否包含必要状态标识。
+2. refreshTime是否在合理范围内，避免数据断层。
+```
