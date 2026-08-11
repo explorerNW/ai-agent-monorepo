@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useAppDispatch } from '~/store/hooks';
+import { useAppDispatch } from '@store/hooks';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useAsyncAction = (actionCreator: any) => {
