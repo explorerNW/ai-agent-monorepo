@@ -1,5 +1,5 @@
 import type { Slice } from '@reduxjs/toolkit';
-import { useAppDispatch } from '~/store/hooks';
+import { useAppDispatch } from '@store/hooks';
 
 type GetArrFirst<T> = T extends [infer Res] ? Res : unknown;
 
