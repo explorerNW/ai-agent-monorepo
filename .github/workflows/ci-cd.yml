@@ -17,7 +17,7 @@ jobs:
   build-and-deploy:
     environment: ci
     # 使用自托管 Runner，即时启动无等待
-    runs-on: self-hosted
+    runs-on: [self-hosted, centos, local]
     timeout-minutes: 15
 
     steps:
