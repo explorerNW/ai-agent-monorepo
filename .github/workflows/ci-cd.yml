@@ -357,7 +357,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 5m
           script_stop: false
-          debug: false
+          debug: true
           script: |
             echo "🔍 Running post-deployment verification..."
 
