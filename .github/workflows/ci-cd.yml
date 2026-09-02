@@ -124,6 +124,19 @@ jobs:
           fi
 
           echo "✅ Configuration validated successfully"
+      - name: 🔍 Debug SSH Secrets
+        run: |
+          echo "=== SSH Connection Parameters ==="
+          echo "HOST: [${{ secrets.SERVER_HOST }}]"
+          echo "PORT: [${{ secrets.SERVER_PORT }}]"
+          echo "USER: [${{ secrets.SERVER_USER }}]"
+          echo "KEY length: $(echo '${{ secrets.SSH_PRIVATE_KEY }}' | wc -c) chars"
+          echo "KEY starts with: $(echo '${{ secrets.SSH_PRIVATE_KEY }}' | head -c 30)"
+          echo "KEY ends with: $(echo '${{ secrets.SSH_PRIVATE_KEY }}' | tail -c 30)"
+
+          # 测试实际连通性
+          echo "=== TCP Test ==="
+          nc -zv "${{ secrets.SERVER_HOST }}" "${{ secrets.SERVER_PORT }}" 2>&1 || echo "❌ TCP FAILED" || true
 
       # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
       - name: Deploy to Server via SSH
