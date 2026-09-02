@@ -136,7 +136,7 @@ jobs:
           # 优化SSH连接参数,减少国内网络延迟
           command_timeout: 15m
           script_stop: true # 遇到错误立即停止
-          debug: false # 生产环境关闭debug日志,减少输出开销
+          debug: true # 生产环境关闭debug日志,减少输出开销
           script: |
             set -e  # 遇到错误立即退出
 
@@ -281,25 +281,25 @@ jobs:
             # Restore SSL certificates from latest backup (if available)
             # Note: SSL certificates are managed by docker.sh deploy script
             # The script will check existing certificates and only regenerate if needed
-            if [ -d "backups" ]; then
-              LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
-              if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
-                echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
-                mkdir -p ssl
+            # if [ -d "backups" ]; then
+            #   LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
+            #   if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
+            #     echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
+            #     mkdir -p ssl
                 
-                # Copy certificate files with proper permission handling
-                # Use -f to force overwrite and handle permission issues
-                if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
-                   cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
-                  # Set correct permissions after restore
-                  chmod 644 ssl/server.crt 2>/dev/null || true
-                  chmod 600 ssl/server.key 2>/dev/null || true
-                  echo "✅ SSL certificates restored successfully"
-                else
-                  echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
-                fi
-              fi
-            fi
+            #     # Copy certificate files with proper permission handling
+            #     # Use -f to force overwrite and handle permission issues
+            #     if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
+            #        cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
+            #       # Set correct permissions after restore
+            #       chmod 644 ssl/server.crt 2>/dev/null || true
+            #       chmod 600 ssl/server.key 2>/dev/null || true
+            #       echo "✅ SSL certificates restored successfully"
+            #     else
+            #       echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
+            #     fi
+            #   fi
+            # fi
 
             # 显示当前提交信息
             echo "📝 Current commit:"
