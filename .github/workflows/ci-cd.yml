@@ -17,7 +17,7 @@ jobs:
   build-and-deploy:
     environment: ci
     # 使用自托管 Runner，即时启动无等待
-    runs-on: [self-hosted, centos, local]
+    runs-on: self-hosted
     timeout-minutes: 15
 
     steps:
@@ -125,18 +125,6 @@ jobs:
 
           echo "✅ Configuration validated successfully"
 
-      # 测试SSH连接
-      - name: 🔍 Debug Runner SSH Identity
-        run: |
-          echo "=== Runner 运行环境 ==="
-          echo "当前用户: $(whoami)"
-          echo "UID/GID: $(id)"
-          echo "HOME目录: $HOME"
-          echo ""
-          echo "=== 用 Runner 身份测试 SSH ==="
-          ssh -v -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-            explorernw@127.0.0.1 echo "✅ Runner身份SSH成功" 2>&1 || true
-      # "=== 用 Runner 身份测试 SSH 完成 ==="
       # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
@@ -148,7 +136,7 @@ jobs:
           # 优化SSH连接参数,减少国内网络延迟
           command_timeout: 15m
           script_stop: true # 遇到错误立即停止
-          debug: true # 生产环境关闭debug日志,减少输出开销
+          debug: false # 生产环境关闭debug日志,减少输出开销
           script: |
             set -e  # 遇到错误立即退出
 
@@ -293,25 +281,25 @@ jobs:
             # Restore SSL certificates from latest backup (if available)
             # Note: SSL certificates are managed by docker.sh deploy script
             # The script will check existing certificates and only regenerate if needed
-            # if [ -d "backups" ]; then
-            #   LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
-            #   if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
-            #     echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
-            #     mkdir -p ssl
+            if [ -d "backups" ]; then
+              LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
+              if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
+                echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
+                mkdir -p ssl
                 
-            #     # Copy certificate files with proper permission handling
-            #     # Use -f to force overwrite and handle permission issues
-            #     if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
-            #        cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
-            #       # Set correct permissions after restore
-            #       chmod 644 ssl/server.crt 2>/dev/null || true
-            #       chmod 600 ssl/server.key 2>/dev/null || true
-            #       echo "✅ SSL certificates restored successfully"
-            #     else
-            #       echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
-            #     fi
-            #   fi
-            # fi
+                # Copy certificate files with proper permission handling
+                # Use -f to force overwrite and handle permission issues
+                if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
+                   cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
+                  # Set correct permissions after restore
+                  chmod 644 ssl/server.crt 2>/dev/null || true
+                  chmod 600 ssl/server.key 2>/dev/null || true
+                  echo "✅ SSL certificates restored successfully"
+                else
+                  echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
+                fi
+              fi
+            fi
 
             # 显示当前提交信息
             echo "📝 Current commit:"
@@ -321,8 +309,8 @@ jobs:
             chmod +x docker.sh
 
             # 配置国内镜像源以加速可能的 npm/pnpm 操作
-            export NPM_CONFIG_REGISTRY=http://192.168.88.118:4873
-            export PNPM_REGISTRY=http://192.168.88.118:4873
+            export NPM_CONFIG_REGISTRY=http://192.168.1.118:4873
+            export PNPM_REGISTRY=http://192.168.1.118:4873
 
             # Export DEPLOY_DOMAIN for docker.sh script
             export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
@@ -369,7 +357,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 5m
           script_stop: false
-          debug: true
+          debug: false
           script: |
             echo "🔍 Running post-deployment verification..."
 
