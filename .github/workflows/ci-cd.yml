@@ -125,13 +125,30 @@ jobs:
 
           echo "✅ Configuration validated successfully"
 
+      - name: 🔍 Clean & Verify SSH Target
+        run: |
+          # 清洗变量：去除所有空白和不可见字符
+          CLEAN_HOST=$(echo "${{ secrets.SERVER_HOST }}" | tr -d '[:space:]')
+          CLEAN_PORT=$(echo "${{ secrets.SERVER_PORT }}" | tr -d '[:space:]')
+
+          echo "Raw HOST bytes: $(printf '%s' '${{ secrets.SERVER_HOST }}' | xxd | head -1)"
+          echo "Clean HOST: [$CLEAN_HOST]"
+          echo "Clean PORT: [$CLEAN_PORT]"
+
+          # 用清洗后的值测试
+          nc -zv "$CLEAN_HOST" "$CLEAN_PORT" 2>&1 && echo "✅ TCP OK" || echo "❌ TCP FAILED"
+
+          # 导出给后续步骤使用
+          echo "CLEAN_SSH_HOST=$CLEAN_HOST" >> $GITHUB_ENV
+          echo "CLEAN_SSH_PORT=$CLEAN_PORT" >> $GITHUB_ENV
+
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          port: ${{ secrets.SERVER_PORT }}
+          host: ${{ env.CLEAN_SSH_HOST }} # ⭐ 使用清洗后的环境变量
+          port: ${{ env.CLEAN_SSH_PORT }} # ⭐ 使用清洗后的环境变量
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }} # ⭐ 回归 key 参数
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 15m
           script_stop: true
           debug: true
