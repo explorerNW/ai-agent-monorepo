@@ -125,6 +125,18 @@ jobs:
 
           echo "✅ Configuration validated successfully"
 
+      # 测试SSH连接
+      - name: 🔍 Debug Runner SSH Identity
+        run: |
+          echo "=== Runner 运行环境 ==="
+          echo "当前用户: $(whoami)"
+          echo "UID/GID: $(id)"
+          echo "HOME目录: $HOME"
+          echo ""
+          echo "=== 用 Runner 身份测试 SSH ==="
+          ssh -v -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+            explorernw@127.0.0.1 echo "✅ Runner身份SSH成功" 2>&1 || true
+      # "=== 用 Runner 身份测试 SSH 完成 ==="
       # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
