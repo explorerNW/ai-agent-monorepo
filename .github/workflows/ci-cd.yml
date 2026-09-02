@@ -131,13 +131,13 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
-          key_path: /home/explorernw/.ssh/github_actions_key
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # ⭐ 回归 key 参数
           command_timeout: 15m
           script_stop: true
           debug: true
           script: |
             echo "✅ SSH connection successful!"
-            whoami && hostname && date
+            whoami && hostname
 
       # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
 
