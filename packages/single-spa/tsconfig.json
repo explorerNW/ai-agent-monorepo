@@ -1,0 +1,11 @@
+{
+  "extends": "ts-config-single-spa",
+  "files": ["src/explorernw-root-config.ts"],
+  "compilerOptions": {
+    "rootDir": "src",
+    "declarationDir": "dist",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test*"]
+}
