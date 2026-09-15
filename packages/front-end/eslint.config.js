@@ -7,6 +7,7 @@ import prettier from 'eslint-config-prettier';
 import prettierPlugin from 'eslint-plugin-prettier';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import reactCompiler from "eslint-plugin-react-compiler"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,7 @@ export default tseslint.config(
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
       prettier, // 必须放在最后，用于关闭与 Prettier 冲突的规则
+      reactCompiler.configs.recommended,
     ],
     plugins: {
       prettier: prettierPlugin,
