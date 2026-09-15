@@ -10,7 +10,7 @@ import { serviceWorkerPlugin } from './plugins/service-worker-plugin';
 export default defineConfig(({ mode }) => ({
   plugins: [
     tailwindcss(),
-    reactRouter(),
+    mode !== 'test' && reactRouter(),
     tsconfigPaths(),
     serviceWorkerPlugin({
       swSrc: './app/sw.js', // Changed from sw.ts to sw.js - must use pure JavaScript
@@ -53,5 +53,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: '0.0.0.0',
     allowedHosts: ['niewang.uunat.com', 'localhost'],
+  },
+  test: {
+    environment: 'jsdom', // 必须设置为 jsdom 以模拟 DOM 环境
+    globals: true, // 可选：启用全局 API (describe, it, expect)
   },
 }));
