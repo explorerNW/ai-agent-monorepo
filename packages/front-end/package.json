@@ -42,7 +42,9 @@
     "zod": "^4.4.3",
     "zustand": "^5.0.14",
     "@datatwin/react": "workspace:*",
-    "@datatwin/core": "workspace:*"
+    "@datatwin/core": "workspace:*",
+    "@datatwin/chart-core": "workspace:*",
+    "@datatwin/chart-react": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
