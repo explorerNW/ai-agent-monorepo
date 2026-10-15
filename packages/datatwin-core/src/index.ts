@@ -1,8 +1,11 @@
 // =====================================================================
 // 职责：纯粹的 3D 引擎，负责 Three.js 场景、高性能渲染、事件抛出
 // =====================================================================
+
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
+import { workerCode } from "./worker";
 
 export interface BuildingData {
   id: string;
@@ -12,11 +15,6 @@ export interface BuildingData {
   color?: number;
 }
 
-export interface TwinConfig {
-  theme?: "dark" | "light";
-  initialCameraPosition?: [number, number, number];
-}
-
 export class TwinCore {
   private container: HTMLElement; // 容器元素，用于挂载渲染器
   private scene: THREE.Scene; // 场景对象，包含所有物体
@@ -24,27 +22,36 @@ export class TwinCore {
   private renderer: THREE.WebGLRenderer; // 渲染器对象，负责场景的渲染和输出到画布
   private controls: OrbitControls; // 控制器对象，用于交互控制相机视角
 
-  // 普通 Mesh 存储 (适用于少量、需独立控制的物体)
+  // 普通 Mesh 存储 (适用于少量、需独立交互的物体)
   private objects: Map<string, THREE.Mesh> = new Map();
   private dataMap: Map<string, BuildingData> = new Map();
 
-  // InstancedMesh 存储 (适用于大批量、同构物体，极致性能)
+  // InstancedMesh 存储 (适用于 Worker 驱动的海量动态物体)
   private instanceMesh: THREE.InstancedMesh | null = null;
-  private instanceDataMap: Map<number, BuildingData> = new Map();
-  private dummy = new THREE.Object3D();
 
+  // ✅ 核心优化：使用 Map 替代 Array 遍历，实现 O(1) 查找
+  // 存储 InstancedMesh 中 业务ID -> 实例索引(index) 的映射
+  private instanceIndexMap: Map<string, number> = new Map();
+
+  private worker: Worker | null = null;
   private animationId: number | null = null;
 
-  // ✅ 性能优化：记录高亮状态，避免 O(N) 遍历重置
   private highlightedId: string | null = null;
-  private highlightedInstanceId: number | null = null;
 
-  constructor(container: HTMLElement, config: TwinConfig = {}) {
+  // ✅ 相机动画状态管理
+  private isFlying = false;
+  private flyStartTime = 0;
+  private flyDuration = 1500; // 飞行持续时间 ms
+  private startPos = new THREE.Vector3();
+  private startTarget = new THREE.Vector3();
+  private endPos = new THREE.Vector3();
+  private endTarget = new THREE.Vector3();
+
+  constructor(container: HTMLElement, theme: "dark" | "light" = "dark") {
     this.container = container;
-
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(
-      config.theme === "light" ? 0xf0f0f0 : 0x111111,
+      theme === "light" ? 0xf0f0f0 : 0x111111,
     );
 
     this.camera = new THREE.PerspectiveCamera(
@@ -53,11 +60,7 @@ export class TwinCore {
       0.1,
       1000,
     );
-    if (config.initialCameraPosition) {
-      this.camera.position.set(...config.initialCameraPosition);
-    } else {
-      this.camera.position.set(10, 8, 10);
-    }
+    this.camera.position.set(30, 20, 30);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
@@ -73,9 +76,9 @@ export class TwinCore {
     this.scene.add(dirLight);
 
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(20, 20),
+      new THREE.PlaneGeometry(100, 100),
       new THREE.MeshStandardMaterial({
-        color: config.theme === "light" ? 0xcccccc : 0x222222,
+        color: theme === "light" ? 0xcccccc : 0x222222,
       }),
     );
     floor.rotation.x = -Math.PI / 2;
@@ -87,16 +90,12 @@ export class TwinCore {
     this.animate();
   }
 
-  /**
-   * 注册单个建筑 (适用于小场景或需要独立动画的物体)
-   */
+  /** 注册单个静态建筑 */
   public registerBuilding(data: BuildingData) {
     this.dataMap.set(data.id, data);
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshStandardMaterial({
       color: data.color || 0x0077ff,
-      roughness: 0.3,
-      metalness: 0.2,
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(...data.position);
@@ -106,47 +105,68 @@ export class TwinCore {
     this.objects.set(data.id, mesh);
   }
 
-  /**
-   * ✅ 批量注册建筑 (InstancedMesh 高性能模式)
-   * 适用于 500+ 以上的大场景，将 Draw Call 降至 1
-   */
-  public registerBuildingsBatch(dataList: BuildingData[]) {
-    if (dataList.length === 0) return;
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+  /** 启动 Worker 驱动的海量实例渲染 (10万+ 级别) */
+  public startMassiveSimulation(count: number) {
+    const geometry = new THREE.BoxGeometry(0.3, 1, 0.3);
     const material = new THREE.MeshStandardMaterial({
-      roughness: 0.3,
-      metalness: 0.2,
+      roughness: 0.4,
+      metalness: 0.6,
     });
 
-    this.instanceMesh = new THREE.InstancedMesh(
-      geometry,
-      material,
-      dataList.length,
-    );
+    this.instanceMesh = new THREE.InstancedMesh(geometry, material, count);
     this.instanceMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-    const color = new THREE.Color();
-
-    dataList.forEach((data, index) => {
-      this.dummy.position.set(...data.position);
-      this.dummy.scale.set(1, Math.max(0.1, data.value / 10), 1);
-      this.dummy.updateMatrix();
-
-      this.instanceMesh!.setMatrixAt(index, this.dummy.matrix);
-      color.set(data.color || 0x0077ff);
-      this.instanceMesh!.setColorAt(index, color);
-
-      this.instanceDataMap.set(index, data);
-    });
-
-    this.instanceMesh.instanceMatrix.needsUpdate = true;
-    if (this.instanceMesh.instanceColor)
-      this.instanceMesh.instanceColor.needsUpdate = true;
+    const colorArray = new Float32Array(count * 3).fill(1);
+    this.instanceMesh.instanceColor = new THREE.InstancedBufferAttribute(
+      colorArray,
+      3,
+    );
+    this.instanceMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
 
     this.scene.add(this.instanceMesh);
+
+    // 初始化 Worker
+    const blob = new Blob([workerCode], { type: "application/javascript" });
+    this.worker = new Worker(URL.createObjectURL(blob));
+    this.worker.onmessage = (e) => this.handleWorkerMessage(e.data);
+    this.worker.postMessage({ type: "INIT", payload: { count } });
   }
 
+  /**
+   * ✅ 注册海量实例时，同步建立 O(1) 的 ID-Index 映射
+   * 注意：这里只存 index，不存完整的业务数据，以节省主线程内存
+   */
+  public registerMassiveInstances(
+    dataList: { id: string; position: [number, number, number] }[],
+  ) {
+    if (!this.instanceMesh) return;
+
+    dataList.forEach((data, index) => {
+      this.instanceIndexMap.set(data.id, index);
+
+      // 初始化矩阵 (这里仅为演示，实际位置由 Worker 接管)
+      const matrix = new THREE.Matrix4();
+      matrix.setPosition(data.position[0], data.position[1], data.position[2]);
+      this.instanceMesh?.setMatrixAt(index, matrix);
+    });
+    this.instanceMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /** 接收 Worker 的零拷贝数据 */
+  private handleWorkerMessage(data: any) {
+    if (data.type === "UPDATE" && this.instanceMesh) {
+      // 直接替换底层 TypedArray，绕过 Three.js API 开销
+      this.instanceMesh.instanceMatrix.array = data.matrices;
+      this.instanceMesh.instanceMatrix.needsUpdate = true;
+
+      if (this.instanceMesh.instanceColor) {
+        this.instanceMesh.instanceColor.array = data.colors;
+        this.instanceMesh.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  /** 射线检测 (针对普通 Mesh) */
   private handleMouseClick(event: MouseEvent) {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const mouse = new THREE.Vector2(
@@ -157,23 +177,20 @@ export class TwinCore {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, this.camera);
 
-    // 1. 检测普通 Mesh
     const meshes = Array.from(this.objects.values());
     const intersects = raycaster.intersectObjects(meshes);
 
     if (intersects.length > 0) {
-      const obj = intersects[0].object;
-      if (obj instanceof THREE.Mesh && obj.name && this.dataMap.has(obj.name)) {
+      const obj = intersects[0].object as THREE.Mesh;
+      if (obj.name && this.dataMap.has(obj.name)) {
         const data = this.dataMap.get(obj.name)!;
 
-        // 重置上一个高亮 (O(1))
+        // O(1) 重置上一个高亮
         if (this.highlightedId && this.highlightedId !== obj.name) {
           const prevMesh = this.objects.get(this.highlightedId);
           if (prevMesh) {
-            const prevColor =
-              this.dataMap.get(this.highlightedId)?.color || 0x0077ff;
             (prevMesh.material as THREE.MeshStandardMaterial).color.set(
-              prevColor,
+              this.dataMap.get(this.highlightedId)?.color || 0x0077ff,
             );
           }
         }
@@ -182,43 +199,6 @@ export class TwinCore {
         this.highlightedId = obj.name;
 
         this.dispatchInteraction(obj.name, data);
-        return; // 命中普通 Mesh 后直接返回
-      }
-    }
-
-    // 2. 检测 InstancedMesh
-    if (this.instanceMesh) {
-      const instIntersects = raycaster.intersectObject(this.instanceMesh);
-      if (
-        instIntersects.length > 0 &&
-        instIntersects[0].instanceId !== undefined
-      ) {
-        const instanceId = instIntersects[0].instanceId;
-        const data = this.instanceDataMap.get(instanceId);
-
-        if (data) {
-          // 重置上一个高亮 (O(1))
-          if (
-            this.highlightedInstanceId !== null &&
-            this.highlightedInstanceId !== instanceId
-          ) {
-            const prevData = this.instanceDataMap.get(
-              this.highlightedInstanceId,
-            );
-            if (prevData) {
-              this.instanceMesh.setColorAt(
-                this.highlightedInstanceId,
-                new THREE.Color(prevData.color || 0x0077ff),
-              );
-            }
-          }
-
-          this.instanceMesh.setColorAt(instanceId, new THREE.Color(0xffaa00));
-          this.instanceMesh.instanceColor!.needsUpdate = true;
-          this.highlightedInstanceId = instanceId;
-
-          this.dispatchInteraction(data.id, data);
-        }
       }
     }
   }
@@ -233,30 +213,89 @@ export class TwinCore {
     );
   }
 
-  public flyTo(targetName: string) {
-    // 优先在普通 Mesh 中查找
-    let targetPos = this.objects.get(targetName)?.position;
+  /**
+   * ✅ 核心改造：适配 Worker 架构的 flyTo
+   * @param targetName 目标 ID
+   * @param duration 飞行时间 (ms)
+   */
+  public flyTo(targetName: string, duration: number = 1500) {
+    let targetPos: THREE.Vector3 | undefined;
 
-    // 如果在 InstancedMesh 中，通过矩阵获取位置
-    if (!targetPos && this.instanceMesh) {
-      const entry = Array.from(this.instanceDataMap.entries()).find(
-        ([_, d]) => d.id === targetName,
-      );
-      if (entry) {
+    // 1. 优先在普通 Mesh 中查找 (O(1))
+    const staticMesh = this.objects.get(targetName);
+    if (staticMesh) {
+      targetPos = staticMesh.position.clone();
+    }
+    // 2. 如果在 InstancedMesh 中，通过 O(1) 的 Map 获取 index，再提取实时矩阵位置
+    else if (this.instanceMesh) {
+      const index = this.instanceIndexMap.get(targetName);
+
+      if (index !== undefined) {
         const matrix = new THREE.Matrix4();
-        this.instanceMesh.getMatrixAt(entry[0], matrix);
+        // ✅ 关键点：getMatrixAt 读取的是当前帧 Worker 刚刚写入的最新 buffer
+        this.instanceMesh.getMatrixAt(index, matrix);
         targetPos = new THREE.Vector3().setFromMatrixPosition(matrix);
       }
     }
 
+    // 3. 找到目标后，触发平滑飞行动画
     if (targetPos) {
-      this.controls.target.copy(targetPos);
-      this.camera.position.set(
-        targetPos.x + 5,
-        targetPos.y + 5,
-        targetPos.z + 5,
+      this.startFlyAnimation(targetPos, duration);
+    } else {
+      console.warn(
+        `[TwinCore] flyTo failed: Target '${targetName}' not found.`,
       );
-      this.controls.update();
+    }
+  }
+
+  /**
+   * ✅ 直接飞行到指定坐标 (备用 API，适用于 Worker 动态计算且未建立 ID 映射的场景)
+   */
+  public flyToPosition(
+    position: [number, number, number],
+    duration: number = 1500,
+  ) {
+    const targetPos = new THREE.Vector3(...position);
+    this.startFlyAnimation(targetPos, duration);
+  }
+
+  /**
+   * 内部方法：启动平滑飞行动画
+   */
+  private startFlyAnimation(targetPos: THREE.Vector3, duration: number) {
+    this.isFlying = true;
+    this.flyDuration = duration;
+    this.flyStartTime = performance.now();
+
+    this.startPos.copy(this.camera.position);
+    this.startTarget.copy(this.controls.target);
+
+    this.endTarget.copy(targetPos);
+    // 相机终点：保持在目标上方偏侧方，形成观察视角
+    this.endPos.set(targetPos.x + 10, targetPos.y + 8, targetPos.z + 10);
+
+    this.controls.enabled = false; // 飞行期间禁用用户控制
+  }
+
+  private updateFlyAnimation() {
+    if (!this.isFlying) return;
+
+    const now = performance.now();
+    const progress = Math.min((now - this.flyStartTime) / this.flyDuration, 1);
+
+    // easeInOutCubic 缓动
+    const ease =
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+    this.camera.position.lerpVectors(this.startPos, this.endPos, ease);
+    this.controls.target.lerpVectors(this.startTarget, this.endTarget, ease);
+    this.controls.update();
+
+    if (progress >= 1) {
+      this.isFlying = false;
+      this.controls.enabled = true;
     }
   }
 
@@ -268,30 +307,22 @@ export class TwinCore {
     this.renderer.setSize(w, h);
   }
 
+  /** 彻底的内存回收 */
   public dispose() {
     if (this.animationId) cancelAnimationFrame(this.animationId);
+    this.worker?.terminate();
 
-    // ✅ 彻底释放普通 Mesh 资源
     this.objects.forEach((mesh) => {
       mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((m) => m.dispose());
-      } else {
-        mesh.material.dispose();
-      }
+      (mesh.material as THREE.Material).dispose();
       this.scene.remove(mesh);
     });
 
-    // ✅ 彻底释放 InstancedMesh 资源
     if (this.instanceMesh) {
       this.instanceMesh.geometry.dispose();
       (this.instanceMesh.material as THREE.Material).dispose();
       this.scene.remove(this.instanceMesh);
     }
-
-    this.objects.clear();
-    this.dataMap.clear();
-    this.instanceDataMap.clear();
 
     this.renderer.dispose();
     this.container.innerHTML = "";
@@ -299,7 +330,20 @@ export class TwinCore {
 
   private animate() {
     this.animationId = requestAnimationFrame(() => this.animate());
-    this.controls.update();
+
+    // ✅ 更新飞行动画
+    this.updateFlyAnimation();
+
+    // 只有在非飞行状态下才更新阻尼控制器
+    if (!this.isFlying) {
+      this.controls.update();
+    }
+
+    // 每帧触发 Worker 计算
+    if (this.worker) {
+      this.worker.postMessage({ type: "TICK" });
+    }
+
     this.renderer.render(this.scene, this.camera);
   }
 }
