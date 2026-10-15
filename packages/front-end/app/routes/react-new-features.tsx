@@ -2,6 +2,8 @@ import React, { createContext, use, useActionState, useOptimistic, useState } fr
 import { useFormStatus } from 'react-dom';
 import { z } from 'zod';
 
+import DataTwin from '@/components/DataTwin';
+
 // 1. 定义 Zod 校验规则
 const userSchema = z.object({
   username: z.string().min(3, '用户名至少需要 3 个字符'),
@@ -206,6 +208,9 @@ export default function UserManagement() {
             </div>
           ))}
         </div>
+
+        {/* TwinViewer */}
+        <DataTwin />
       </div>
     </ThemeContext>
   );

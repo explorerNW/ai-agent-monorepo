@@ -40,7 +40,9 @@
     "vite-plugin-compression": "^0.5.1",
     "web-vitals": "^5.2.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "@datatwin/react": "workspace:*",
+    "@datatwin/core": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
