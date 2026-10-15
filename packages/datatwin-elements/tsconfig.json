@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@datatwin/core": ["../datatwin-core/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
