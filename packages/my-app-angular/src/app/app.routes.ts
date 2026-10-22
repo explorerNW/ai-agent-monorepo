@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { routerGuard } from './guards';
 
 export const routes: Routes = [
   {
@@ -15,6 +16,9 @@ export const routes: Routes = [
     path: 'activities',
     loadComponent: () => import('./pages/activities').then((m) => m.Activities),
     title: 'Activities',
+    canMatch: [],
+    canActivate: [routerGuard],
+    canLoad: [],
     data: {
       preload: true,
     },
