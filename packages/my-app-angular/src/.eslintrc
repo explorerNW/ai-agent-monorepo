@@ -1,0 +1,12 @@
+{
+  "rules": {
+    // 禁止在构造函数中访问 DOM/BOM
+    "@angular/no-dom-access-in-constructor": "error",
+    
+    // 强制使用 DOCUMENT token
+    "@angular/use-document-token": "error",
+    
+    // 检测可能导致 hydration mismatch 的模式
+    "@angular/no-hydration-mismatch": "warn"
+  }
+}
