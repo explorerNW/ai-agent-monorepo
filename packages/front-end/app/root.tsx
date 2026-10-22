@@ -31,6 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
         {/* Noscript fallback for fonts */}
+        <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
         <noscript>
           <link
             rel="stylesheet"

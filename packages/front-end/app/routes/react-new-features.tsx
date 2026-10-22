@@ -3,6 +3,7 @@ import { useFormStatus } from 'react-dom';
 import { z } from 'zod';
 
 import DataTwin from '@/components/DataTwin';
+import { MapContainer } from '@/components/MapContainer';
 
 // 1. 定义 Zod 校验规则
 const userSchema = z.object({
@@ -211,6 +212,8 @@ export default function UserManagement() {
 
         {/* TwinViewer */}
         <DataTwin />
+
+        <MapContainer />
       </div>
     </ThemeContext>
   );
