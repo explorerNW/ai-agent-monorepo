@@ -6,9 +6,17 @@
     "start": "ng serve --port=4201",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "serve:ssr:my-app-angular": "node dist/my-app-angular/server/server.mjs",
+    "lint-staged": "lint-staged"
   },
   "private": true,
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  },
   "packageManager": "pnpm@12.4.1",
   "dependencies": {
     "@angular/common": "^22.0.0",
@@ -16,7 +24,12 @@
     "@angular/core": "^22.0.0",
     "@angular/forms": "^22.0.0",
     "@angular/platform-browser": "^22.0.0",
+    "@angular/platform-server": "^22.2.3",
     "@angular/router": "^22.0.0",
+    "@angular/ssr": "^22.2.3",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "express": "^5.3.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

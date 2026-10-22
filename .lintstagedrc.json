@@ -6,6 +6,9 @@
   "packages/front-end/**/*.{ts,tsx,js,jsx}": [
     "cd packages/front-end && pnpm typecheck"
   ],
-  "*.{ts,tsx,js,jsx}": ["prettier --write"],
+  "packages/my-app-angular/**/*.{ts,tsx,js,jsx}": [
+    "cd packages/my-app-angular && pnpm lint-staged"
+  ],
+  "*.{ts,tsx,js,jsx}": ["./node_modules/.bin/eslint --fix", "prettier --write"],
   "*.{json,md,yml,yaml}": ["prettier --write"]
 }
