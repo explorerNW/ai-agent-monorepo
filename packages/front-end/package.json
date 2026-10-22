@@ -18,7 +18,7 @@
     ]
   },
   "dependencies": {
-    "@explorernw/monitor-sdk": "^1.0.8",
+    "@explorernw/monitor-sdk": "workspace:*",
     "@react-router/node": "7.13.2",
     "@react-router/serve": "7.13.2",
     "@reduxjs/toolkit": "^2.12.0",
