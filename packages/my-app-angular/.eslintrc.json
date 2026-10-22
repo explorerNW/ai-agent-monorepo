@@ -1,0 +1,23 @@
+{
+  "rules": {
+    // 禁止直接使用 CDR，必须通过 useManualRefresh
+    "@angular/no-explicit-change-detection": "error",
+
+    // 禁止在 Zoneless 模块中使用 zone-patch 相关导入
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": ["zone.js/*", "@angular/core/zone"]
+      }
+    ],
+
+    // Angular 18 新增：禁止在 Zoneless 项目中使用 NgZone.run()
+    "@angular/no-zone-run": "error",
+
+    // 推荐使用 signal 而非 CDR
+    "@angular/prefer-signals-over-cdr": "warn",
+
+    // 强制使用新 Control Flow
+    "@angular/template/no-ng-template-outlet": "error"
+  }
+}
