@@ -1,18 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-
-/**
- * Navigation Item Interface
- *
- * Represents a single navigation tab item.
- */
-interface NavItem {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  isActive?: boolean;
-  link?: string; // Optional link for routing
-}
+import type { BottomNavigationProps, NavItem } from './type';
 
 /**
  * BottomNavigation Component
@@ -23,10 +11,6 @@ interface NavItem {
  * @param activeTab - Currently active tab ID
  * @param onTabChange - Callback function when tab is changed
  */
-interface BottomNavigationProps {
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
-}
 
 const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
   ({ activeTab, onTabChange }) => {
@@ -126,7 +110,13 @@ const BottomNavigation: React.FC<BottomNavigationProps> = React.memo(
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => (item.link ? navigate(item.link) : onTabChange(item.id))} // Only trigger onTabChange if there's no link
+              onClick={() => {
+                if (item.link) {
+                  navigate(item.link);
+                } else {
+                  onTabChange(item.id);
+                }
+              }}
               className={`flex flex-col items-center justify-center w-[75px] h-[49px] transition-colors ${
                 item.isActive ? 'text-white' : 'text-[#CFD9E4]'
               }`}

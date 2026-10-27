@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as echarts from 'echarts';
 // 1. 引入拆分好的图表基座组件和类型
 import { TwinChart } from '@datatwin/chart-react';
-import type { TwinChartRef } from '@datatwin/chart-core';
+import type { ChartClickPayload, TwinChartRef } from '@datatwin/chart-core';
 // 引入 3D 场景组件
 import { TwinViewer } from '@datatwin/react';
 import type { TwinViewerRef } from '@datatwin/react';
@@ -70,15 +70,14 @@ export const DataTwin: React.FC = () => {
 
   // 3. 监听 3D 交互事件
   const handleTwinInteraction = useCallback((e: CustomEvent) => {
-    const { type, id } = e.detail;
+    const { type, id } = e.detail as { type: string; id: string };
     if (type === 'object-click') {
       setSelectedId(id);
     }
   }, []);
 
   // 4. 处理图表点击事件 (实现 2D -> 3D 联动)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleChartClick = (params: any) => {
+  const handleChartClick = (params: ChartClickPayload) => {
     if (params.componentType === 'series' && selectedId) {
       console.log(`[ECharts → 3D] 点击了 ${params.name} 时刻的数据`);
       // 调用 3D 基座的飞行动画

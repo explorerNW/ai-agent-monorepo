@@ -175,10 +175,12 @@ export function onServiceWorkerUpdate(callback: () => void): () => void {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   navigator.serviceWorker.addEventListener('controllerchange', handler);
 
   // Return cleanup function
   return () => {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     navigator.serviceWorker.removeEventListener('controllerchange', handler);
   };
 }

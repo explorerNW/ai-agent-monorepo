@@ -18,7 +18,7 @@ export function createMobxStore<TState extends object, TActions extends object>(
   return function useStore(externalInit?: Partial<TState>) {
     const [store] = useState(() => {
       // 1. 合并外部初始化数据
-      const state = { ...options.initialState, ...externalInit } as TState;
+      const state = { ...options.initialState, ...externalInit };
 
       // 2. 生成 Actions
       const actions = options.actions(state);

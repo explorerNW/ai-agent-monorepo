@@ -18,11 +18,16 @@
     ]
   },
   "dependencies": {
+    "@datatwin/chart-core": "workspace:*",
+    "@datatwin/chart-react": "workspace:*",
+    "@datatwin/core": "workspace:*",
+    "@datatwin/react": "workspace:*",
     "@explorernw/monitor-sdk": "workspace:*",
     "@react-router/node": "7.13.2",
     "@react-router/serve": "7.13.2",
     "@reduxjs/toolkit": "^2.12.0",
     "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-virtual": "^3.14.22",
     "axios": "^1.16.1",
     "echarts": "^5.5.0",
     "eslint-config-prettier": "^10.1.8",
@@ -40,11 +45,7 @@
     "vite-plugin-compression": "^0.5.1",
     "web-vitals": "^5.2.0",
     "zod": "^4.4.3",
-    "zustand": "^5.0.14",
-    "@datatwin/react": "workspace:*",
-    "@datatwin/core": "workspace:*",
-    "@datatwin/chart-core": "workspace:*",
-    "@datatwin/chart-react": "workspace:*"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

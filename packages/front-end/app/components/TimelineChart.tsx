@@ -96,7 +96,7 @@ function TimelineChart({ data, days }: TimelineChartProps) {
           if (Array.isArray(params)) {
             params.forEach((param) => {
               const value = param?.value as number;
-              result += `<div>${param.marker} ${param.seriesName}: ${value?.toFixed(param.seriesName === 'CLS' ? 5 : 0)}${param.seriesName === 'CLS' ? '' : 'ms'}</div>`;
+              result += `<div>${param.marker as string} ${param.seriesName}: ${value?.toFixed(param.seriesName === 'CLS' ? 5 : 0)}${param.seriesName === 'CLS' ? '' : 'ms'}</div>`;
             });
           }
 

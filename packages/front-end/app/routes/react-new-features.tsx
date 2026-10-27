@@ -52,7 +52,7 @@ const Text = (props: { content: { text: string } }) => {
   // 模拟一次高耗时的计算
   // eslint-disable-next-line react-hooks/purity
   const start = Date.now();
-  /* eslint-disable no-empty */
+
   // eslint-disable-next-line react-hooks/purity
   while (Date.now() - start < 100) {}
 
@@ -112,6 +112,7 @@ export default function UserManagement() {
     addOptimisticUser({ id: Date.now(), username, email });
 
     // 2. 执行真实的异步表单提交（useActionState 会自动处理 pending 和错误）
+    // eslint-disable-next-line @typescript-eslint/await-thenable
     await formAction(formData);
 
     // 3. 如果真实请求成功，将数据同步到真实的 users 状态中

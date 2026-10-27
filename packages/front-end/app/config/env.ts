@@ -27,10 +27,13 @@ export const env: EnvConfig = {
   // API Configuration
   // Use relative path to avoid mixed content issues
   // All API requests will go through Nginx HTTPS proxy
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '',
 
   // Application Info
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   appName: import.meta.env.VITE_APP_NAME || 'AI Assistant',
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
 
   // Feature Flags

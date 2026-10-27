@@ -113,6 +113,7 @@ async function networkFirstStrategy(request: Request): Promise<Response> {
     return networkResponse;
   } catch (error) {
     console.log('[SW] Network failed, trying cache:', request.url);
+    console.error(error);
     const cachedResponse = await caches.match(request);
 
     if (cachedResponse) {
@@ -173,11 +174,11 @@ function isStaticAsset(pathname: string): boolean {
 
 // Message handler for cache management
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (event.data && (event.data as { type: string }).type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
+  if (event.data && (event.data as { type: string }).type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then((cacheNames) => {
         return Promise.all(cacheNames.map((name) => caches.delete(name)));

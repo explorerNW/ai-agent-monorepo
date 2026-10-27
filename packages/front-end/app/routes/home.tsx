@@ -4,7 +4,7 @@ import { useState } from 'react';
 import React from 'react';
 import BottomNavigation from '~/components/BottomNavigation';
 
-// eslint-disable-next-line no-empty-pattern, react-refresh/only-export-components
+// eslint-disable-next-line react-refresh/only-export-components
 export function meta({}: Route.MetaArgs) {
   return [
     { title: 'Infinite Feed' },

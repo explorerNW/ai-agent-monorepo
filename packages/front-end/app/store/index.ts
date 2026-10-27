@@ -3,7 +3,8 @@ import { createCustomStore } from '@hooks/createZustandStore';
 // 业务中使用：
 export const { useStore: useAvatarStore } = createCustomStore(
   { height: 170, weight: 60, a: { b: { c: { d: 0 }, c1: 1 } } },
-  (set) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (set: (input: Record<string, any>) => void) => ({
     setHeight: (val: number) => set({ height: val }),
     setDeep: (val: number) =>
       set((draft: { a: { b: { c: { d: number } } } }) => {
