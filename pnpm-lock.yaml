@@ -609,6 +609,9 @@ importers:
       "@tanstack/react-query":
         specifier: ^5.101.2
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
+      "@tanstack/react-virtual":
+        specifier: ^3.14.22
+        version: 3.14.22(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       axios:
         specifier: ^1.16.1
         version: 1.20.0(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
@@ -810,6 +813,18 @@ importers:
         specifier: ^2.3.0
         version: 2.8.1
     devDependencies:
+      "@angular-eslint/builder":
+        specifier: ^22.6.0
+        version: 22.6.0(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/eslint-plugin":
+        specifier: ^22.6.0
+        version: 22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/eslint-plugin-template":
+        specifier: ^22.6.0
+        version: 22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/template-parser":
+        specifier: ^22.6.0
+        version: 22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
       "@angular/build":
         specifier: ^22.0.5
         version: 22.2.3(2040fbad3ebe82fb974f76ac3093b67b)
@@ -822,6 +837,9 @@ importers:
       "@tailwindcss/postcss":
         specifier: ^4.1.12
         version: 4.3.3
+      angular-eslint:
+        specifier: ^22.6.0
+        version: 22.6.0(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript-eslint@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(typescript@6.0.3)
       jsdom:
         specifier: ^28.0.0
         version: 28.1.0(@noble/hashes@1.8.0)(supports-color@8.1.1)
@@ -1077,6 +1095,68 @@ packages:
         npm: ^6.11.0 || ^7.5.6 || >=8.0.0,
         yarn: ">= 1.13.0",
       }
+
+  "@angular-eslint/builder@22.6.0":
+    resolution:
+      {
+        integrity: sha512-Zn9yjLtUYKd9HF5UZXKqLKuvdYFejVuTJHQ0gFt4pjWDRvb16Lgc8EzeGyYTsc9MNnyFAmHeDTs2dtlFITSDBg==,
+      }
+    peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
+
+  "@angular-eslint/bundled-angular-compiler@22.6.0":
+    resolution:
+      {
+        integrity: sha512-OOoWbFG3JOsdY9/qiY2YdXJFZNVg3jPb09OTHQvBir0CLIdEnudKePVs0JxlKL1Yl05ibvwolo+/Ewfmp5Gqvg==,
+      }
+
+  "@angular-eslint/eslint-plugin-template@22.6.0":
+    resolution:
+      {
+        integrity: sha512-e3ueYzr1ARovQtoBaiAeYtLR3MLIeJNKA46LBwKbRhVl1S8L1FiwYsWJvx0lRvcgdFWFt+WrSXeTxuc0ITW9eA==,
+      }
+    peerDependencies:
+      "@angular-eslint/template-parser": 22.6.0
+      "@typescript-eslint/types": ^8.0.0
+      "@typescript-eslint/utils": ^8.0.0
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
+
+  "@angular-eslint/eslint-plugin@22.6.0":
+    resolution:
+      {
+        integrity: sha512-zLQSfwNiOaWYp1IRQh4TlgBbUmaGm0OWNEO98E2U9DstHJTPTghRwG4wZX4Ly/YOYsb3WU06pD1/cCRUYHRgmw==,
+      }
+    peerDependencies:
+      "@typescript-eslint/utils": ^8.0.0
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
+
+  "@angular-eslint/schematics@22.6.0":
+    resolution:
+      {
+        integrity: sha512-rLZkMWuUxIc8IZlf3TDPkLreVAmPDAJmzqziwnBzXM8slb1xumU4yXsNk8A8nQAua4Sr1IcBKBRJKydSg8fHFg==,
+      }
+
+  "@angular-eslint/template-parser@22.6.0":
+    resolution:
+      {
+        integrity: sha512-QmrW5T9Sb8ve2cgEGtkhDujp7ENRnXkqT+nCxLK0rZkbPXET+i1svLxuc4tzyVJpceYo772EzMyQuJbNqiH/cA==,
+      }
+    peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
+
+  "@angular-eslint/utils@22.6.0":
+    resolution:
+      {
+        integrity: sha512-Nd5pZGgkBTvcCNMBt88iG6r/Tzk1XTWHpQQccwYUWYhz4PMim0yyXAEvqAabxag8S9iLPUEufpaOw20OOxNJ3w==,
+      }
+    peerDependencies:
+      "@typescript-eslint/utils": ^8.0.0
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
 
   "@angular/build@22.2.3":
     resolution:
@@ -6507,6 +6587,21 @@ packages:
       "@types/react":
         optional: true
 
+  "@tanstack/react-virtual@3.14.22":
+    resolution:
+      {
+        integrity: sha512-zNiB9IF3prySTfAUrj9tPHjD/lonBYkfxrPP4v4ITUx+qwHajJR5cY/xirjvwc+KWkur10GX3TpsbKh7JkD8Lw==,
+      }
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  "@tanstack/virtual-core@3.19.7":
+    resolution:
+      {
+        integrity: sha512-gxy5SvH0mFRJ0YujtrflB/1HAu9Wn1KGvL0bjZfQkYVVMsIpQiwcf1mR06/ViN4NjllUb4HNCjqE9FGwgTvMCQ==,
+      }
+
   "@testing-library/dom@10.4.2":
     resolution:
       {
@@ -7771,6 +7866,16 @@ packages:
       }
     engines: { node: ">=18" }
 
+  angular-eslint@22.6.0:
+    resolution:
+      {
+        integrity: sha512-nHjnadgrM54bz6tq/1EJqAg1mZCjJLyunitINdpPk+07Iz5MkJc4F1smeYshqfhH0i9+HOyJ4c7eA419O970Pw==,
+      }
+    peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
+      typescript: "*"
+      typescript-eslint: ^8.0.0
+
   ansi-align@3.0.1:
     resolution:
       {
@@ -8061,6 +8166,13 @@ packages:
       {
         integrity: sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg==,
       }
+
+  axobject-query@4.1.0:
+    resolution:
+      {
+        integrity: sha512-qIj0G9wZbMGNLjLmg1PT6v2mE9AH2zlnADJD/2tC6E00hgmhUOfEB6greHPAfLRSufHqROIUTkw6E+M3lH0PTQ==,
+      }
+    engines: { node: ">= 0.4" }
 
   babel-dead-code-elimination@1.0.12:
     resolution:
@@ -11331,6 +11443,13 @@ packages:
     resolution:
       {
         integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==,
+      }
+    engines: { node: ">= 4" }
+
+  ignore@7.0.12:
+    resolution:
+      {
+        integrity: sha512-/8UvqAPU9DGTI9k4mxtf49U37Isfwr8Uts96+SBHIkFxPJnHS0Ew4f00sM4Scd8V8EjM0jUNtVDdv1kPdt35lg==,
       }
     engines: { node: ">= 4" }
 
@@ -18212,6 +18331,69 @@ snapshots:
     transitivePeerDependencies:
       - chokidar
 
+  "@angular-eslint/builder@22.6.0(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-devkit/architect": 0.2202.3(chokidar@5.0.0)
+      "@angular-devkit/core": 22.2.3(chokidar@5.0.0)
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - chokidar
+
+  "@angular-eslint/bundled-angular-compiler@22.6.0": {}
+
+  "@angular-eslint/eslint-plugin-template@22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-eslint/bundled-angular-compiler": 22.6.0
+      "@angular-eslint/template-parser": 22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/utils": 22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@typescript-eslint/types": 8.72.0
+      "@typescript-eslint/utils": 8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      aria-query: 5.3.2
+      axobject-query: 4.1.0
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      typescript: 6.0.3
+
+  "@angular-eslint/eslint-plugin@22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-eslint/bundled-angular-compiler": 22.6.0
+      "@angular-eslint/utils": 22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@typescript-eslint/utils": 8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      ts-api-utils: 2.5.0(typescript@6.0.3)
+      typescript: 6.0.3
+
+  "@angular-eslint/schematics@22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-devkit/core": 22.2.3(chokidar@5.0.0)
+      "@angular-devkit/schematics": 22.2.3(chokidar@5.0.0)
+      "@angular-eslint/eslint-plugin": 22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/eslint-plugin-template": 22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      ignore: 7.0.12
+      semver: 7.8.5
+      strip-json-comments: 3.1.1
+    transitivePeerDependencies:
+      - "@angular-eslint/template-parser"
+      - "@typescript-eslint/types"
+      - "@typescript-eslint/utils"
+      - chokidar
+      - eslint
+      - typescript
+
+  "@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-eslint/bundled-angular-compiler": 22.6.0
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-scope: 9.1.2
+      typescript: 6.0.3
+
+  "@angular-eslint/utils@22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)":
+    dependencies:
+      "@angular-eslint/bundled-angular-compiler": 22.6.0
+      "@typescript-eslint/utils": 8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      typescript: 6.0.3
+
   "@angular/build@22.2.3(2040fbad3ebe82fb974f76ac3093b67b)":
     dependencies:
       "@ampproject/remapping": 2.3.0
@@ -21703,6 +21885,14 @@ snapshots:
     optionalDependencies:
       "@types/react": 19.3.0
 
+  "@tanstack/react-virtual@3.14.22(react-dom@19.3.1(react@19.3.1))(react@19.3.1)":
+    dependencies:
+      "@tanstack/virtual-core": 3.19.7
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  "@tanstack/virtual-core@3.19.7": {}
+
   "@testing-library/dom@10.4.2":
     dependencies:
       "@babel/code-frame": 7.29.7
@@ -22568,6 +22758,24 @@ snapshots:
     dependencies:
       buffer-more-ints: 1.0.0
 
+  angular-eslint@22.6.0(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript-eslint@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(typescript@6.0.3):
+    dependencies:
+      "@angular-devkit/core": 22.2.3(chokidar@5.0.0)
+      "@angular-devkit/schematics": 22.2.3(chokidar@5.0.0)
+      "@angular-eslint/builder": 22.6.0(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/eslint-plugin": 22.6.0(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/eslint-plugin-template": 22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/schematics": 22.6.0(@angular-eslint/template-parser@22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3))(@typescript-eslint/types@8.72.0)(@typescript-eslint/utils@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(chokidar@5.0.0)(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@angular-eslint/template-parser": 22.6.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(typescript@6.0.3)
+      "@typescript-eslint/types": 8.72.0
+      "@typescript-eslint/utils": 8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@8.1.1)
+      typescript: 6.0.3
+      typescript-eslint: 8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
+    transitivePeerDependencies:
+      - chokidar
+      - supports-color
+
   ansi-align@3.0.1:
     dependencies:
       string-width: 4.2.3
@@ -22725,6 +22933,8 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - supports-color
+
+  axobject-query@4.1.0: {}
 
   babel-dead-code-elimination@1.0.12(supports-color@8.1.1):
     dependencies:
@@ -25167,6 +25377,8 @@ snapshots:
   ignore@4.0.6: {}
 
   ignore@5.3.2: {}
+
+  ignore@7.0.12: {}
 
   ignore@7.0.13: {}
 

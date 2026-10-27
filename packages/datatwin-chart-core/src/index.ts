@@ -20,6 +20,7 @@ export interface ChartClickPayload {
   value?: any;
   data?: any;
   dataIndex?: number;
+  componentType?: string;
 }
 
 export interface ChartHoverPayload {

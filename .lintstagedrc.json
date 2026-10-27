@@ -1,14 +1,15 @@
 {
   "packages/back-end/src/**/*.{ts,js}": [
-    "cd packages/back-end && pnpm lint",
-    "cd packages/back-end && pnpm format"
+    "pnpm --filter back-end lint:staged",
+    "pnpm --filter back-end format:staged"
   ],
   "packages/front-end/**/*.{ts,tsx,js,jsx}": [
-    "cd packages/front-end && pnpm typecheck"
+    "pnpm --filter front-end lint:staged",
+    "pnpm --filter front-end format:staged",
+    "pnpm --filter front-end typecheck"
   ],
-  "packages/my-app-angular/**/*.{ts,tsx,js,jsx}": [
-    "cd packages/my-app-angular && pnpm lint-staged"
+  "packages/my-app-angular/**/*.{ts,html}": [
+    "pnpm --filter my-app-angular lint:staged"
   ],
-  "*.{ts,tsx,js,jsx}": ["./node_modules/.bin/eslint --fix", "prettier --write"],
-  "*.{json,md,yml,yaml}": ["prettier --write"]
+  "*.{json,md,yml,yaml,css,scss}": ["prettier --write"]
 }

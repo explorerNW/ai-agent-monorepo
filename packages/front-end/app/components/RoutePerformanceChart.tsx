@@ -103,8 +103,15 @@ function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
 
             let result = `<strong>${route}</strong><br/>`;
             params.forEach((param) => {
-              const value = param.value !== undefined ? param.value : 'N/A';
-              result += `${param.marker} ${param.seriesName}: ${value}ms<br/>`;
+              // TooltipMarker = string | RichTextTooltipMarker；富文本时取其 content 字段
+              const marker =
+                typeof param.marker === 'string' ? param.marker : (param.marker?.content ?? '');
+              // 系列数据为 number/string；Date、对象、数组等无法安全字符串化，回退为 'N/A'
+              const value =
+                typeof param.value === 'number' || typeof param.value === 'string'
+                  ? param.value
+                  : 'N/A';
+              result += `${marker} ${param.seriesName}: ${value}ms<br/>`;
             });
             return result;
           }

@@ -4,7 +4,7 @@ import React from 'react';
 import BottomNavigation from '~/components/BottomNavigation';
 import { ServiceWorkerManager } from '~/components';
 
-// eslint-disable-next-line no-empty-pattern, react-refresh/only-export-components
+// eslint-disable-next-line react-refresh/only-export-components
 export function meta({}: Route.MetaArgs) {
   return [
     { title: 'Service Worker Management' },
