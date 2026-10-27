@@ -394,6 +394,9 @@ importers:
         specifier: ^3.25.2
         version: 3.25.2(zod@4.6.7)
     devDependencies:
+      "@darraghor/eslint-plugin-nestjs-typed":
+        specifier: ^7.5.8
+        version: 7.5.8(@typescript-eslint/parser@8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(class-validator@0.14.4)(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
       "@eslint/eslintrc":
         specifier: ^3.2.0
         version: 3.3.7(supports-color@8.1.1)
@@ -2744,6 +2747,17 @@ packages:
         integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==,
       }
     engines: { node: ">=20.19.0" }
+
+  "@darraghor/eslint-plugin-nestjs-typed@7.5.8":
+    resolution:
+      {
+        integrity: sha512-WOuLE5b030T+z5MYZGFhx/KgqQa+561/zFDhQcsB7tuZqWz3Yb/xxAFW8KM5ip20Tpcc28TwG1GLd17sYstTlg==,
+      }
+    engines: { node: ">=24.0.0" }
+    peerDependencies:
+      "@typescript-eslint/parser": ^7.0.0 || ^8.0.0
+      class-validator: "*"
+      eslint: ">=9.18.0"
 
   "@dimforge/rapier3d-compat@0.12.0":
     resolution:
@@ -10074,6 +10088,30 @@ packages:
       {
         integrity: sha512-WNQO3CqXETekc4lRmdKn+uPpHsCuj/o9mTDFtHkEbLiwVZo2b3fiuWncdbm4hKnTUlACMJGYAirQVIMXnBHblw==,
       }
+
+  eslint-module-utils@2.14.0:
+    resolution:
+      {
+        integrity: sha512-W2WCRZ9Dqntd+2u8jJcVMV2PKulc6RdLgUUoh/yQr3uB6lo/ZOeGx11sv60/8S4QFFKNslAlWhr9u0Ef7ZW6Ig==,
+      }
+    engines: { node: ">=4" }
+    peerDependencies:
+      "@typescript-eslint/parser": "*"
+      eslint: "*"
+      eslint-import-resolver-node: "*"
+      eslint-import-resolver-typescript: "*"
+      eslint-import-resolver-webpack: "*"
+    peerDependenciesMeta:
+      "@typescript-eslint/parser":
+        optional: true
+      eslint:
+        optional: true
+      eslint-import-resolver-node:
+        optional: true
+      eslint-import-resolver-typescript:
+        optional: true
+      eslint-import-resolver-webpack:
+        optional: true
 
   eslint-plugin-prettier@3.4.1:
     resolution:
@@ -19821,6 +19859,25 @@ snapshots:
 
   "@csstools/css-tokenizer@4.0.2": {}
 
+  "@darraghor/eslint-plugin-nestjs-typed@7.5.8(@typescript-eslint/parser@8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(class-validator@0.14.4)(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)":
+    dependencies:
+      "@typescript-eslint/parser": 8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      "@typescript-eslint/scope-manager": 8.72.0
+      "@typescript-eslint/type-utils": 8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      "@typescript-eslint/utils": 8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      class-validator: 0.14.4
+      eslint: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
+      eslint-module-utils: 2.14.0(@typescript-eslint/parser@8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)
+      glob: 13.0.6
+      reflect-metadata: 0.2.2
+      ts-api-utils: 2.5.0(typescript@5.9.3)
+    transitivePeerDependencies:
+      - eslint-import-resolver-node
+      - eslint-import-resolver-typescript
+      - eslint-import-resolver-webpack
+      - supports-color
+      - typescript
+
   "@dimforge/rapier3d-compat@0.12.0": {}
 
   "@discoveryjs/json-ext@0.5.7": {}
@@ -24256,6 +24313,15 @@ snapshots:
   eslint-config-ts-important-stuff@1.1.0:
     dependencies:
       eslint-config-important-stuff: 1.1.0
+
+  eslint-module-utils@2.14.0(@typescript-eslint/parser@8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1):
+    dependencies:
+      debug: 3.2.7(supports-color@8.1.1)
+    optionalDependencies:
+      "@typescript-eslint/parser": 8.72.0(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
+      eslint: 9.39.5(jiti@2.7.0)(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
 
   eslint-plugin-prettier@3.4.1(eslint-config-prettier@8.10.2(eslint@7.32.0(supports-color@8.1.1)))(eslint@7.32.0(supports-color@8.1.1))(prettier@2.8.8):
     dependencies:

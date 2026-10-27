@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { ZodTypeAny } from 'zod';
+import type { ZodTypeAny } from 'zod';
 
 export const MCP_TOOL_METADATA = 'mcp_tool_metadata';
 export const MCP_RESOURCE_METADATA = 'mcp_resource_metadata';
