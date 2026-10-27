@@ -1,6 +1,6 @@
-import { BaseMessage } from '@langchain/core/messages';
-import { BaseCheckpointSaver } from '@langchain/langgraph';
-import { ChatOpenAI } from '@langchain/openai';
+import type { BaseMessage } from '@langchain/core/messages';
+import type { BaseCheckpointSaver } from '@langchain/langgraph';
+import type { ChatOpenAI } from '@langchain/openai';
 
 export interface AgentInvokeContext {
   sessionId: string;
