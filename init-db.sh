@@ -7,14 +7,31 @@ echo "🗄️  开始初始化 PostgreSQL 数据库..."
 
 # 加载环境变量
 if [ -f .env ]; then
-  export $(cat .env | grep -v '^#' | xargs)
+  ENV_FILE=".env"
   echo "✅ 已加载根目录 .env 文件"
 elif [ -f packages/back-end/.env ]; then
-  export $(cat packages/back-end/.env | grep -v '^#' | xargs)
+  ENV_FILE="packages/back-end/.env"
   echo "✅ 已加载 packages/back-end/.env 文件"
 else
   echo "⚠️  未找到 .env 文件，使用默认值"
+  ENV_FILE=""
 fi
+
+if [ -n "$ENV_FILE" ]; then
+  # 只导出 KEY=VALUE 行，跳过注释行和空行
+  set -a
+  while IFS='=' read -r key value; do
+    # 跳过空行和注释行
+    [[ -z "$key" || "$key" =~ ^[[:space:]]*# ]] && continue
+    # 去除 key 首尾空格
+    key=$(echo "$key" | xargs)
+    # 只导出合法的 KEY=VALUE
+    [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] && export "$key=$value"
+  done < "$ENV_FILE"
+  set +a
+fi
+
+echo "🗄️  开始初始化 PostgreSQL 数据库..."
 
 # 设置默认值
 DB_USER=${DB_USER:-admin}
