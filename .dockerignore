@@ -64,8 +64,28 @@ temp
 # Development tools
 .husky
 .eslintcache
+.anima
+.doc_cache.json
+.doc_cache-temp.json
+
+# Data volumes (mounted at runtime, not needed in build)
+grafana-data/
+clickhouse-data/
+venv/
+
+# Non-deployable packages (Angular app, shared utils not used in build)
+packages/my-app-angular/
+packages/shared/
 
 # Sub-package lock files (monorepo uses root lock file only)
 packages/*/pnpm-lock.yaml
 packages/*/package-lock.json
 packages/*/yarn.lock
+
+# Python (if any leftover)
+__pycache__
+*.pyc
+.venv
+
+# SSL certs (mounted at runtime via docker-compose volume)
+ssl/

@@ -71,9 +71,12 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
+    # 启用 BuildKit 利用层缓存加速重复构建
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
     $DOCKER_COMPOSE up -d --build
     echo -e "${GREEN}✓ Services started successfully!${NC}"
-    echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
+    echo -e "${BLUE}Front-end: https://localhost:443${NC}"
     echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
     echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
 }
@@ -159,7 +162,7 @@ view_postgres_logs() {
 }
 
 build_services() {
-    echo -e "${GREEN}Building all services...${NC}"
+    echo -e "${GREEN}Building all services (with cache)...${NC}"
     
     # 配置国内镜像源加速（针对国内网络环境）
     echo -e "${BLUE}Configuring registry mirrors for China network...${NC}"
@@ -168,12 +171,14 @@ build_services() {
     export NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
     export PNPM_REGISTRY=${PNPM_REGISTRY:-https://registry.npmmirror.com}
     
-    # Docker构建时使用国内镜像源（如果配置了DOCKER_BUILDKIT）
-    if [ -n "$DOCKER_BUILDKIT" ]; then
-        echo -e "${YELLOW}Using Docker BuildKit with optimized settings${NC}"
-    fi
+    # 启用 BuildKit 并行构建 + 层缓存
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
+    echo -e "${YELLOW}Using Docker BuildKit with parallel build and layer cache${NC}"
     
-    $DOCKER_COMPOSE build --no-cache
+    # --parallel 并行构建 back-end / front-end / rabbit-mq-service 三个镜像
+    # 不加 --no-cache，充分利用 Docker 层缓存
+    $DOCKER_COMPOSE build --parallel
     echo -e "${GREEN}✓ Build completed${NC}"
 }
 
@@ -187,87 +192,39 @@ build_service() {
 deploy_rolling() {
     local force_mode="${1:-false}"
     
-    echo -e "${BLUE}Starting rolling update deployment...${NC}"
-    echo -e "${YELLOW}This will perform zero-downtime updates with health checks${NC}"
-    echo ""
+    echo -e "${BLUE}Starting deployment...${NC}"
     
-    # Pre-deployment: Check and generate SSL certificates if needed
-    echo -e "${BLUE}Step 0: Checking SSL certificates...${NC}"
+    # BuildKit 并行构建 + 层缓存
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
     
-    # Extract domain from DEPLOY_DOMAIN or use default
-    local deploy_domain=""
-    if [ -n "$DEPLOY_DOMAIN" ]; then
-        deploy_domain="$DEPLOY_DOMAIN"
-        echo -e "${BLUE}Detected deployment domain: ${deploy_domain}${NC}"
-    fi
+    # 清理旧镜像释放磁盘
+    docker image prune -f 2>/dev/null || true
     
-    # Pre-deployment health check
-    echo -e "${BLUE}Step 1: Checking current service health...${NC}"
-    if ! $DOCKER_COMPOSE ps | grep -q "Up"; then
-        echo -e "${RED}Error: No running services detected. Please start services first.${NC}"
-        exit 1
-    fi
-    
-    # Backup current state
-    #echo -e "${BLUE}Step 2: Creating backup of current configuration...${NC}"
-    #local backup_dir="backups/$(date +%Y%m%d_%H%M%S)"
-    #mkdir -p "$backup_dir"
-    #cp docker-compose.yml "$backup_dir/docker-compose.yml.bak"
-    #echo -e "${GREEN}✓ Backup created at ${backup_dir}${NC}"
-    
-    # Build new images
-    echo -e "${BLUE}Step 3: Building new images...${NC}"
+    # 一次性构建 + 启动：BuildKit 并行构建三个镜像，compose 按依赖图同时启动所有服务
+    # 所有依赖条件都是 service_started，不会串行等待 healthy
+    echo -e "${BLUE}Building and starting all services...${NC}"
     if [ "$force_mode" = "true" ]; then
-        $DOCKER_COMPOSE build --no-cache
+        $DOCKER_COMPOSE up -d --build --force-recreate
     else
-        $DOCKER_COMPOSE build
-    fi
-    echo -e "${GREEN}✓ New images built successfully${NC}"
-    
-    # Perform rolling update
-    echo -e "${BLUE}Step 4: Performing rolling update...${NC}"
-    echo -e "${YELLOW}Update strategy:${NC}"
-    echo "  - Order: Start new container before stopping old one"
-    echo "  - Parallelism: 1 service at a time"
-    echo "  - Delay between updates: 10-15 seconds"
-    echo "  - Health check monitoring: 30-60 seconds"
-    echo "  - Max failure ratio: 30%"
-    echo "  - Auto-rollback on failure: Enabled"
-    echo ""
-    
-    # Update services in dependency order
-    echo -e "${BLUE}Updating rabbit-mq-service...${NC}"
-    $DOCKER_COMPOSE up -d --build --no-deps rabbit-mq-service
-    # rabbit-mq-service is a NestJS microservice without HTTP endpoint, use simple wait
-    echo -e "${YELLOW}Waiting for rabbit-mq-service to stabilize...${NC}"
-    sleep 8
-    local container_status=$(docker inspect --format='{{.State.Running}}' "ai-agent-rabbitmq-service" 2>/dev/null || echo "false")
-    if [ "$container_status" = "true" ]; then
-        echo -e "${GREEN}✓ rabbit-mq-service is running${NC}"
-    else
-        echo -e "${RED}✗ rabbit-mq-service failed to start${NC}"
-        handle_update_failure "rabbit-mq-service"
+        $DOCKER_COMPOSE up -d --build
     fi
     
-    sleep 5
+    echo -e "${GREEN}✓ All services started${NC}"
     
-    echo -e "${BLUE}Updating back-end...${NC}"
-    $DOCKER_COMPOSE up -d --build --no-deps back-end
-    # Wait longer for backend to initialize (includes start_period)
-    sleep 15
-    wait_for_healthcheck "back-end" 90 || handle_update_failure "back-end"
+    # 只等 back-end 就绪（最重的服务），其余不阻塞
+    echo -e "${BLUE}Waiting for back-end to be ready...${NC}"
+    wait_for_healthcheck "back-end" 45 || {
+        echo -e "${RED}back-end failed to start, showing logs:${NC}"
+        docker logs --tail 30 ai-agent-backend 2>&1
+        exit 1
+    }
     
-    sleep 5
-    
-    echo -e "${BLUE}Updating front-end...${NC}"
-    $DOCKER_COMPOSE up -d --build --no-deps front-end
-    # Wait for frontend to initialize
-    sleep 10
-    wait_for_healthcheck "front-end" 60 || handle_update_failure "front-end"
+    # 清理构建缓存
+    docker builder prune -f --keep-storage 2GB 2>/dev/null || true
     
     echo ""
-    echo -e "${GREEN}✓ Rolling update completed successfully!${NC}"
-    echo -e "${BLUE}All services are running with new version${NC}"
+    echo -e "${GREEN}✓ Deployment completed${NC}"
     
     # Post-deployment verification
     verify_deployment

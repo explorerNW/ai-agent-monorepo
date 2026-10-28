@@ -1,110 +1,76 @@
 # ======================
-# 1. 依赖安装阶段 (Dependencies)
-# ======================
-FROM node:22-alpine AS dependencies
-
-WORKDIR /app
-
-# Enable pnpm with Chinese mirror (set registry BEFORE corepack prepare)
-RUN npm config set registry http://192.168.88.118:4873 && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
-
-# Copy workspace configuration files
-COPY .npmrc ./
-COPY package.json pnpm-lock.yaml ./
-COPY pnpm-workspace.yaml ./
-COPY packages/back-end/clickhouse-config.xml ./
-COPY users.xml ./
-
-# Copy all package.json files for dependency installation
-COPY packages/back-end/package.json ./packages/back-end/package.json
-
-# Install all dependencies (including devDependencies for build)
-# Use --force to ensure optional dependencies are installed on Alpine
-RUN pnpm install --frozen-lockfile --force
-
-
-# ======================
-# 2. 构建阶段 (Builder)
+# 1. 构建阶段 (Builder) - 合并依赖安装 + 编译
 # ======================
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry http://192.168.88.118:4873 && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
 
-# Copy workspace configuration
+RUN npm install -g pnpm@11.1.2
+
+# 先复制依赖描述文件，利用 Docker 层缓存
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/back-end/package.json ./packages/back-end/package.json
-COPY packages/back-end/clickhouse-config.xml ./
-COPY packages/back-end/users.xml ./
-COPY packages/back-end/default-user.xml ./
 
-# Install all dependencies (including devDependencies for build)
-# Use --force to ensure optional dependencies are installed on Alpine
-RUN pnpm install --frozen-lockfile --force
+# 一次性安装全部依赖（含 devDependencies，构建需要）
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Copy source code
+# 再复制源码（依赖不变时上面的 install 层走缓存）
+COPY packages/back-end/clickhouse-config.xml ./packages/back-end/
+COPY packages/back-end/users.xml ./packages/back-end/
+COPY packages/back-end/default-user.xml ./packages/back-end/
 COPY packages/back-end/. ./packages/back-end/
 
-# Build the application from workspace root using the correct package name filter
+# 编译
 WORKDIR /app
 RUN pnpm --filter=llm build
 
 
 # ======================
-# 3. 生产阶段 (Production)
+# 2. 生产阶段 (Production)
 # ======================
 FROM node:22-alpine AS production
 
-# Add labels for better maintainability
 LABEL maintainer="ai-agent-team"
 LABEL description="AI Agent Backend Service"
-LABEL version="1.0.0"
+LABEL version="2.0.0"
 
-WORKDIR /app/packages/back-end
+WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S appgroup && \
+ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV NODE_ENV=production
+
+RUN npm install -g pnpm@11.1.2 && \
+    addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
 
-# Enable pnpm (set registry BEFORE corepack prepare)
-RUN npm config set registry http://192.168.88.118:4873 && \
-    corepack enable && \
-    corepack prepare pnpm@11.1.2 --activate
+# 复制依赖描述文件
+COPY .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/back-end/package.json ./packages/back-end/package.json
 
-# Copy workspace configuration
-COPY .npmrc ../../
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ../../
-COPY packages/back-end/package.json ../../packages/back-end/
-COPY packages/back-end/clickhouse-config.xml ../../
-COPY packages/back-end/users.xml ../../packages/back-end/
+# 只安装生产依赖，跳过 lifecycle 脚本
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter=llm
 
-# Install production dependencies only
-RUN cd ../.. && pnpm install --prod --frozen-lockfile --ignore-scripts --filter=llm
+# 复制构建产物
+COPY --from=builder /app/packages/back-end/dist ./packages/back-end/dist
+COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./packages/back-end/dist/src/redis/scripts/seckill.lua
 
-# Copy built application from builder
-COPY --from=builder /app/packages/back-end/dist ./dist
-COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./dist/src/redis/scripts/seckill.lua
+# 复制运行时需要的配置
+COPY packages/back-end/clickhouse-config.xml ./packages/back-end/
+COPY packages/back-end/users.xml ./packages/back-end/
 
-
-# Create necessary directories with proper permissions
-RUN mkdir -p uploads && \
+RUN mkdir -p packages/back-end/uploads && \
     chown -R appuser:appgroup /app
 
-# Switch to non-root user
+WORKDIR /app/packages/back-end
 USER appuser
 
 EXPOSE 3000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/parallel/cpu-info || exit 0
 
-# Start the application using node directly (more stable than nest CLI)
 CMD ["node", "dist/src/main.js"]
