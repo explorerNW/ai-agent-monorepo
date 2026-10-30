@@ -71,14 +71,17 @@ print_help() {
 
 start_prod() {
     echo -e "${GREEN}Starting services in production mode...${NC}"
-    # 启用 BuildKit 利用层缓存加速重复构建
-    export DOCKER_BUILDKIT=1
-    export COMPOSE_DOCKER_CLI_BUILD=1
-    $DOCKER_COMPOSE up -d --build
-    echo -e "${GREEN}✓ Services started successfully!${NC}"
-    echo -e "${BLUE}Front-end: https://localhost:443${NC}"
-    echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
-    echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
+    # # 启用 BuildKit 利用层缓存加速重复构建
+    # export DOCKER_BUILDKIT=1
+    # export COMPOSE_DOCKER_CLI_BUILD=1
+    # $DOCKER_COMPOSE up -d --build
+    # echo -e "${GREEN}✓ Services started successfully!${NC}"
+    # echo -e "${BLUE}Front-end: https://localhost:443${NC}"
+    # echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
+    # echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
+    build_services
+    sleep 2
+    deploy_rolling "false"
 }
 
 start_dev() {
@@ -91,30 +94,7 @@ start_dev() {
 
 stop_services() {
     echo -e "${YELLOW}Stopping all services...${NC}"
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-rabbitmq-service'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-redis'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'clickhouse-server'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-postgres'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'grafana'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-rabbitmq'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-backend'; then
-        $DOCKER_COMPOSE down
-    fi
-    if docker ps --format '{{.Names}}' | grep -q 'ai-agent-frontend'; then
-        $DOCKER_COMPOSE down
-    fi
+    $DOCKER_COMPOSE down
     echo -e "${GREEN}✓ All services stopped${NC}"
 }
 
@@ -189,6 +169,81 @@ build_service() {
     echo -e "${GREEN}✓ Build completed for ${service_name}${NC}"
 }
 
+# ── 变更检测：根据 git diff 判断哪些服务需要重建 ──
+# 映射规则：
+#   packages/front-end/**                      → front-end
+#   packages/back-end/micro-service/rabbit-mq/** → rabbit-mq-service
+#   packages/back-end/** (排除 rabbit-mq)       → back-end
+#   根目录文件 (docker-compose.yml / Dockerfile / package.json / pnpm-lock.yaml / .npmrc) → all
+detect_changed_services() {
+    local last_commit_file=".deploy-commit-hash"
+    local last_commit=""
+    
+    if [ -f "$last_commit_file" ]; then
+        last_commit=$(cat "$last_commit_file")
+    fi
+    
+    # 首次部署 / 无记录 / force 模式 / last_commit 不存在于 git 历史 → 全量重建
+    if [ -z "$last_commit" ] || ! git rev-parse "$last_commit" &>/dev/null; then
+        echo "back-end front-end rabbit-mq-service"
+        return
+    fi
+    
+    local current_commit
+    current_commit=$(git rev-parse HEAD)
+    
+    if [ "$last_commit" = "$current_commit" ]; then
+        # 没有新提交
+        echo ""
+        return
+    fi
+    
+    local changed_files
+    changed_files=$(git diff --name-only "$last_commit" "$current_commit" 2>/dev/null)
+    
+    if [ -z "$changed_files" ]; then
+        echo ""
+        return
+    fi
+    
+    local services=()
+    local rebuild_all=false
+    
+    # 根目录文件变更 → 全部重建
+    while IFS= read -r file; do
+        case "$file" in
+            docker-compose.yml|docker-compose*.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.npmrc)
+                rebuild_all=true
+                ;;
+            packages/front-end/*)
+                services+=("front-end")
+                ;;
+            packages/back-end/micro-service/rabbit-mq/*)
+                services+=("rabbit-mq-service")
+                ;;
+            packages/back-end/*)
+                services+=("back-end")
+                ;;
+        esac
+    done <<< "$changed_files"
+    
+    if [ "$rebuild_all" = true ]; then
+        echo "back-end front-end rabbit-mq-service"
+        return
+    fi
+    
+    # 去重
+    local unique_services
+    unique_services=$(printf '%s\n' "${services[@]}" | sort -u | tr '\n' ' ' | sed 's/ *$//')
+    
+    echo "$unique_services"
+}
+
+# 保存当前部署的 commit hash
+save_deploy_commit() {
+    git rev-parse HEAD > .deploy-commit-hash
+}
+
 deploy_rolling() {
     local force_mode="${1:-false}"
     
@@ -201,16 +256,35 @@ deploy_rolling() {
     # 清理旧镜像释放磁盘
     docker image prune -f 2>/dev/null || true
     
-    # 一次性构建 + 启动：BuildKit 并行构建三个镜像，compose 按依赖图同时启动所有服务
-    # 所有依赖条件都是 service_started，不会串行等待 healthy
-    echo -e "${BLUE}Building and starting all services...${NC}"
+    # ── 智能变更检测 ──
+    local services_to_build=""
+    
     if [ "$force_mode" = "true" ]; then
-        $DOCKER_COMPOSE up -d --build --force-recreate
+        echo -e "${YELLOW}Force mode: rebuilding all services${NC}"
+        services_to_build="back-end front-end rabbit-mq-service"
     else
-        $DOCKER_COMPOSE up -d --build
+        services_to_build=$(detect_changed_services)
     fi
     
-    echo -e "${GREEN}✓ All services started${NC}"
+    if [ -z "$services_to_build" ]; then
+        echo -e "${GREEN}No code changes detected. Starting services with existing images...${NC}"
+        $DOCKER_COMPOSE up -d
+    else
+        echo -e "${BLUE}Changed services: ${CYAN}${services_to_build}${NC}"
+        
+        # 只构建有变化的服务
+        echo -e "${BLUE}Building changed services...${NC}"
+        for svc in $services_to_build; do
+            echo -e "${BLUE}  Building ${svc}...${NC}"
+        done
+        $DOCKER_COMPOSE build --parallel $services_to_build
+        
+        # 启动所有服务（compose 按依赖图启动，只重建有变化的容器）
+        echo -e "${BLUE}Starting services...${NC}"
+        $DOCKER_COMPOSE up -d
+    fi
+    
+    echo -e "${GREEN}✓ Services started${NC}"
     
     # 只等 back-end 就绪（最重的服务），其余不阻塞
     echo -e "${BLUE}Waiting for back-end to be ready...${NC}"
@@ -222,6 +296,9 @@ deploy_rolling() {
     
     # 清理构建缓存
     docker builder prune -f --keep-storage 2GB 2>/dev/null || true
+    
+    # 保存部署 commit hash
+    save_deploy_commit
     
     echo ""
     echo -e "${GREEN}✓ Deployment completed${NC}"

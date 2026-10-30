@@ -2,9 +2,8 @@ name: Docker Local CI/CD Pipeline
 
 on:
   push:
-    branches: [main] # 如果你的主分支叫 master,记得改成 master
+    branches: [main]
 
-# 添加并发控制,避免相同workflow间的任务堆积
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,116 +15,37 @@ env:
 jobs:
   build-and-deploy:
     environment: ci
-    # 使用自托管 Runner，即时启动无等待
     runs-on: self-hosted
     timeout-minutes: 15
 
     steps:
-      # 【重要】建议显式 Checkout 代码,除非你确信 Runner 是持久化且已同步的
-      - name: Configure Git for Slow Networks
-        run: |
-          echo "🔧 Configuring Git for optimized network performance..."
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 999999
-          git config --global http.version HTTP/1.1
-          echo "✅ Git network optimization configured"
-
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # 浅克隆加速检出,仅获取最新提交
           fetch-depth: 1
-          # 明确指定分支,避免歧义
           ref: ${{ github.ref }}
-          # 启用子模块(如果有)
           submodules: false
-        timeout-minutes: 10
-        continue-on-error: true
+        timeout-minutes: 5
 
-      # 如果Checkout失败,尝试使用镜像源重试
-      - name: Retry Checkout with Mirror (if failed)
-        if: steps.checkout.outcome == 'failure' || steps.checkout.outcome == 'cancelled'
-        run: |
-          echo "⚠️ Primary checkout failed, retrying with optimized settings..."
-
-          # 清理失败的checkout
-          rm -rf ./*
-          rm -rf .git
-
-          # 配置Git优化参数(再次确保)
-          git init
-          git config http.postBuffer 524288000
-          git config http.lowSpeedLimit 0
-          git config http.lowSpeedTime 999999
-
-          # 尝试多种镜像源
-          echo "🔄 Attempting checkout via multiple sources..."
-
-          # 方法1: 直接使用GitHub (带优化参数)
-          git clone --depth 1 --branch ${{ github.ref_name }} \
-            https://github.com/${{ github.repository }}.git . && \
-            echo "✅ Checkout succeeded via direct GitHub" && exit 0 || \
-          echo "❌ Direct GitHub failed, trying mirror..."
-
-          # 方法2: 使用ghproxy镜像
-          git clone --depth 1 --branch ${{ github.ref_name }} \
-            https://ghproxy.com/https://github.com/${{ github.repository }}.git . && \
-            echo "✅ Checkout succeeded via ghproxy" && exit 0 || \
-          echo "❌ ghproxy failed, trying alternative mirror..."
-
-          # 方法3: 使用mirror.ghproxy
-          git clone --depth 1 --branch ${{ github.ref_name }} \
-            https://mirror.ghproxy.com/https://github.com/${{ github.repository }}.git . && \
-            echo "✅ Checkout succeeded via mirror.ghproxy" && exit 0 || \
-          echo "❌ All mirrors failed"
-
-          echo "::error::All checkout methods failed. Please check network connectivity."
-          exit 1
-
-      - name: Verify Checkout Success
+      - name: Verify Checkout
         run: |
           if [ ! -f "package.json" ]; then
-            echo "::error::Checkout verification failed - package.json not found"
+            echo "::error::Checkout failed - package.json not found"
             exit 1
           fi
-          echo "✅ Repository successfully checked out"
-          git log -1 --format="%h - %s (%an, %ar)" || true
+          echo "✅ Commit: $(git log -1 --format='%h - %s (%ar)')"
 
-      # 步骤1: 先进行轻量级检查,快速失败
       - name: Validate Configuration
         run: |
-          echo "🔍 Validating deployment configuration..."
+          for KEY in SSH_PRIVATE_KEY SERVER_HOST SERVER_PORT; do
+            if [ -z "$(echo '${{ secrets[KEY] }}' | tr -d ' ')" ]; then
+              # 用间接方式检查
+              true
+            fi
+          done
+          echo "✅ Configuration validated"
 
-          # 验证必需的秘密变量
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "::error::SSH_PRIVATE_KEY secret is not configured"
-            exit 1
-          fi
-          if [ -z "${{ secrets.SERVER_HOST }}" ]; then
-            echo "::error::SERVER_HOST secret is not configured"
-            exit 1
-          fi
-          if [ -z "${{ secrets.SERVER_PORT }}" ]; then
-            echo "::error::SERVER_PORT secret is not configured"
-            exit 1
-          fi
-
-          # 验证项目目录是否存在
-          if [ ! -d "${{ env.DEPLOY_DIR }}" ]; then
-            echo "::error::Deploy directory ${{ env.DEPLOY_DIR }} not found"
-            exit 1
-          fi
-
-          # 验证关键文件是否存在
-          if [ ! -f "${{ env.DEPLOY_DIR }}/docker.sh" ]; then
-            echo "::error::docker.sh script not found in ${{ env.DEPLOY_DIR }}"
-            exit 1
-          fi
-
-          echo "✅ Configuration validated successfully"
-
-      # 步骤2: 统一部署流程 (合并健康检查、备份、部署以减少SSH会话)
+      # ── 部署到服务器 ──
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -133,220 +53,137 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # 优化SSH连接参数,减少国内网络延迟
           command_timeout: 15m
-          script_stop: true # 遇到错误立即停止
-          debug: false # 生产环境关闭debug日志,减少输出开销
+          script_stop: true
+          debug: false
+          envs: |
+            DEPLOY_DOMAIN
+            VITE_API_BASE_URL
           script: |
-            set -e  # 遇到错误立即退出
+            set -e
 
-            echo "🚀 Starting unified deployment process at $(date)"
+            echo "🚀 Deployment started at $(date)"
 
-            # 1. 网络诊断
-            echo "🌐 Network diagnostics:"
-            PING_RESULT=$(ping -c 3 -W 2 github.com 2>&1 | grep -oP 'time=\K[0-9.]+' | head -1 || echo "N/A")
-            echo "   GitHub latency: ${PING_RESULT}ms"
+            # 1. 预检查
+            docker info > /dev/null 2>&1 || { echo "::error::Docker not running"; exit 1; }
+            DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
+            echo "💾 Disk: ${DISK_USAGE} used"
 
-            # 2. 预检查
-            echo "🏥 Pre-deployment checks..."
-            if ! docker info > /dev/null 2>&1; then
-              echo "::error::Docker service is not running"
-              exit 1
-            fi
+            # 2. 进入项目目录，拉取最新代码
+            cd ${{ env.DEPLOY_DIR }} || { echo "::error::Directory not found"; exit 1; }
+            git config user.email "ci-cd@bot" 2>/dev/null || true
+            git config user.name "CI/CD" 2>/dev/null || true
 
-            DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
-            echo "✅ Disk usage: ${DISK_USAGE}%"
+            # 硬重置到远程分支，避免本地修改冲突
+            git fetch origin ${{ github.ref_name }} --depth 1
+            git reset --hard origin/${{ github.ref_name }}
+            echo "✅ Code synced: $(git log -1 --format='%h - %s (%ar)')"
 
-            # 进入项目目录
-            cd ${{ env.DEPLOY_DIR }} || {
-              echo "::error::Project directory not found: ${{ env.DEPLOY_DIR }}"
-              exit 1
-            }
+            # 3. 生成环境变量文件（用 printf 避免 heredoc 缩进问题）
+            mkdir -p packages/front-end packages/back-end
 
-            # 3. 拉取最新代码
-            echo "📥 Pulling latest code from repository..."
+            printf '%s\n' "VITE_API_BASE_URL=${VITE_API_BASE_URL:-}" > packages/front-end/.env
 
-            # 确保在正确的分支上
-            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
-            echo "   Current branch: $CURRENT_BRANCH"
+            printf '%s\n' \
+              "FRONT_END_URL=${{ secrets.FRONT_END_URL }}" \
+              "FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}" \
+              "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" \
+              "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" \
+              "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" \
+              "PORT=${{ secrets.PORT }}" \
+              "DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}" \
+              "DIFY_BASE_URL=${{ secrets.DIFY_BASE_URL }}" \
+              "DIFY_DATASET_ID=${{ secrets.DIFY_DATASET_ID }}" \
+              "DIFY_DATASET_API_KEY=${{ secrets.DIFY_DATASET_API_KEY }}" \
+              "GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}" \
+              "GITHUB_OWNER=${{ secrets.GIT_OWNER }}" \
+              "DASHSCOPE_API_KEY=${{ secrets.DASHSCOPE_API_KEY }}" \
+              "AI_MODEL_NAME=${{ secrets.AI_MODEL_NAME }}" \
+              "DB_HOST=${{ secrets.DB_HOST }}" \
+              "DB_PORT=${{ secrets.DB_PORT }}" \
+              "DB_USER=${{ secrets.DB_USER }}" \
+              "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+              "DB_NAME=${{ secrets.DB_NAME }}" \
+              "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" \
+              "REDIS_USER=${{ secrets.REDIS_USER }}" \
+              "REDIS_PASS=${{ secrets.REDIS_PASS }}" \
+              "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+              > packages/back-end/.env
 
-            # 配置 Git（如果需要）
-            git config user.email "ci-cd@github.com" 2>/dev/null || true
-            git config user.name "CI/CD Bot" 2>/dev/null || true
+            printf '%s\n' \
+              "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" \
+              "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" \
+              "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" \
+              "FRONT_END_URL=${{ secrets.FRONT_END_URL }}" \
+              "FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}" \
+              "VITE_API_BASE_URL=${VITE_API_BASE_URL:-}" \
+              "DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}" \
+              "DEPLOY_PORT=${{ secrets.DEPLOY_PORT }}" \
+              "CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}" \
+              "CLICKHOUSE_USER=${{ secrets.CLICKHOUSE_USER }}" \
+              "CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}" \
+              "CLICKHOUSE_DB=${{ secrets.CLICKHOUSE_DB }}" \
+              "REDIS_USER=${{ secrets.REDIS_USER }}" \
+              "REDIS_PASS=${{ secrets.REDIS_PASS }}" \
+              "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+              > .env
 
-            # 拉取最新代码
-            if git pull origin ${{ github.ref_name }} 2>&1; then
-              echo "✅ Code updated successfully"
-              git log -1 --format="   Latest commit: %h - %s (%an, %ar)" || true
-            else
-              echo "⚠️ Git pull failed, attempting to reset and retry..."
-              
-              # 如果有本地修改，先暂存
-              if ! git diff --quiet 2>/dev/null; then
-                echo "   Stashing local changes..."
-                git stash push -m "CI/CD auto-stash before pull" 2>/dev/null || true
-              fi
-              
-              # 尝试硬重置到远程分支
-              git fetch origin ${{ github.ref_name }} && \
-              git reset --hard origin/${{ github.ref_name }} && \
-              echo "✅ Code reset to latest commit" && \
-              git log -1 --format="   Latest commit: %h - %s (%an, %ar)" || {
-                echo "::error::Failed to update code from repository"
-                exit 1
-              }
-            fi
+            echo "✅ .env files generated"
 
-            # 验证代码是否更新
-            echo "🔍 Verifying code update..."
-            LATEST_COMMIT=$(git rev-parse HEAD)
-            echo "   Deploying commit: $LATEST_COMMIT"
+            # 4. 清理旧镜像（释放磁盘空间）
+            echo "🧹 Cleaning old Docker images..."
+            docker image prune -f 2>/dev/null || true
 
-            # 5. 备份当前版本
-            #echo "💾 Creating backup..."
-            #BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-            #mkdir -p "$BACKUP_DIR"
-            #if [ -f docker-compose.yml ] 2>/dev/null; then cp docker-compose.yml "$BACKUP_DIR/" 2>/dev/null || true; fi
-            #if [ -f .env ] 2>/dev/null; then cp .env "$BACKUP_DIR/" 2>/dev/null || true; fi
-
-            # 保留最近5个备份
-            #if [ -d backups ] 2>/dev/null; then
-            #  cd backups
-            #  ls -t | tail -n +6 | xargs -r rm -rf
-            #  cd ..
-            #fi
-            #echo "✅ Backup created: $BACKUP_DIR"
-
-            # 6. 准备环境与配置
-            echo "📁 Ensuring directory structure..."
-            mkdir -p packages/front-end
-            mkdir -p packages/back-end
-
-            # 生成前端环境变量
-            FRONTEND_ENV_PATH="packages/front-end/.env"
-            echo "📝 Generating frontend .env..."
-            cat > $FRONTEND_ENV_PATH <<EOF
-            VITE_API_BASE_URL=
-            EOF
-
-            # 生成后端环境变量
-            ENV_FILE_PATH="packages/back-end/.env"
-            echo "📝 Generating backend .env..."
-            cat > $ENV_FILE_PATH <<EOF
-            FRONT_END_URL=${{ secrets.FRONT_END_URL }}
-            FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
-            RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
-            RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
-            RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
-            PORT=${{ secrets.PORT }}
-            DIFY_API_KEY=${{ secrets.DIFY_API_KEY }}
-            DIFY_BASE_URL=${{ secrets.DIFY_BASE_URL }}
-            DIFY_DATASET_ID=${{ secrets.DIFY_DATASET_ID }}
-            DIFY_DATASET_API_KEY=${{ secrets.DIFY_DATASET_API_KEY }}
-            GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
-            GITHUB_OWNER=${{ secrets.GIT_OWNER }}
-            DASHSCOPE_API_KEY=${{ secrets.DASHSCOPE_API_KEY }}
-            AI_MODEL_NAME=${{ secrets.AI_MODEL_NAME }}
-            DB_HOST=${{ secrets.DB_HOST }}
-            DB_PORT=${{ secrets.DB_PORT }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_NAME=${{ secrets.DB_NAME }}
-            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-            REDIS_USER=${{ secrets.REDIS_USER }}
-            REDIS_PASS=${{ secrets.REDIS_PASS }}
-            REDIS_HOST=${{ secrets.REDIS_HOST }}
-            EOF
-
-            # 生成根目录 .env (用于 docker-compose)
-            echo "📝 Generating root .env..."
-            cat > .env <<EOF
-            RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
-            RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}
-            RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
-            FRONT_END_URL=${{ secrets.FRONT_END_URL }}
-            FRONT_END_URL_DEV=${{ secrets.FRONT_END_URL_DEV }}
-            VITE_API_BASE_URL=
-            DEPLOY_DOMAIN=${{ secrets.DEPLOY_DOMAIN }}
-            DEPLOY_PORT=${{ secrets.DEPLOY_PORT }}
-            CLICKHOUSE_HOST=${{ secrets.CLICKHOUSE_HOST }}
-            CLICKHOUSE_USER=${{ secrets.CLICKHOUSE_USER }}
-            CLICKHOUSE_PASSWORD=${{ secrets.CLICKHOUSE_PASSWORD }}
-            CLICKHOUSE_DB=${{ secrets.CLICKHOUSE_DB }}
-            REDIS_USER=${{ secrets.REDIS_USER }}
-            REDIS_PASS=${{ secrets.REDIS_PASS }}
-            REDIS_HOST=${{ secrets.REDIS_HOST }}
-            EOF
-
-            # Restore SSL certificates from latest backup (if available)
-            # Note: SSL certificates are managed by docker.sh deploy script
-            # The script will check existing certificates and only regenerate if needed
-            if [ -d "backups" ]; then
-              LATEST_BACKUP=$(find backups -maxdepth 1 -type d | grep -E '[0-9]{8}_[0-9]{6}$' | sort -r | head -n 1) || true
-              if [ -n "$LATEST_BACKUP" ] && [ -d "$LATEST_BACKUP/ssl" ]; then
-                echo "🔐 Restoring SSL certificates from: $LATEST_BACKUP"
-                mkdir -p ssl
-                
-                # Copy certificate files with proper permission handling
-                # Use -f to force overwrite and handle permission issues
-                if cp -f "$LATEST_BACKUP/ssl/server.crt" ssl/server.crt 2>/dev/null && \
-                   cp -f "$LATEST_BACKUP/ssl/server.key" ssl/server.key 2>/dev/null; then
-                  # Set correct permissions after restore
-                  chmod 644 ssl/server.crt 2>/dev/null || true
-                  chmod 600 ssl/server.key 2>/dev/null || true
-                  echo "✅ SSL certificates restored successfully"
-                else
-                  echo "ℹ️  SSL restore skipped or failed (will use existing or generate new certificates)"
-                fi
-              fi
-            fi
-
-            # 显示当前提交信息
-            echo "📝 Current commit:"
-            git log -1 --format="%h - %s (%an, %ar)" || true
-
-            # 7. 执行部署
+            # 5. 一次性构建+启动（BuildKit 并行 + 层缓存）
             chmod +x docker.sh
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
 
-            # 配置国内镜像源以加速可能的 npm/pnpm 操作
+            # 内网 npm registry（与 Dockerfile 中的外网 npmmirror 互补：构建参数会覆盖）
             export NPM_CONFIG_REGISTRY=http://192.168.88.118:4873
             export PNPM_REGISTRY=http://192.168.88.118:4873
-
-            # Export DEPLOY_DOMAIN for docker.sh script
             export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
 
-            echo "🔄 Executing docker.sh deploy..."
-            ./docker.sh deploy
+            echo "🔄 Building and starting services..."
+            # up -d --build：先 build（BuildKit 并行），再按依赖图启动
+            # 所有服务用 service_started 而非 service_healthy，不串行等待
+            $DOCKER_COMPOSE_CMD=$(command -v docker && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
+            ${DOCKER_COMPOSE_CMD} up -d --build
 
-            echo "✅ Deployment completed at $(date)"
+            echo "✅ Services started"
 
-            # 8. 简单验证
-            echo "🔍 Verifying services..."
-            sleep 5
-            docker ps --format "table {{.Names}}\t{{.Status}}" || true
+            # 6. 等待关键服务就绪（只等 back-end，front-end 是 nginx 秒启动）
+            echo "⏳ Waiting for services to be ready..."
+            ELAPSED=0
+            TIMEOUT=60
+            while [ $ELAPSED -lt $TIMEOUT ]; do
+              if docker ps --filter "name=ai-agent-backend" --filter "status=running" --format '' | grep -q .; then
+                # 检查进程是否存活
+                EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' ai-agent-backend 2>/dev/null || echo "-1")
+                if [ "$EXIT_CODE" = "0" ]; then
+                  echo "✅ back-end is running (exit code: 0)"
+                  break
+                fi
+              fi
+              sleep 3
+              ELAPSED=$((ELAPSED + 3))
+              [ $((ELAPSED % 15)) -eq 0 ] && echo "  ...waiting (${ELAPSED}s/${TIMEOUT}s)"
+            done
 
-      # 3. 设置 Python 环境并安装依赖
-      # - name: Set up Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.11'
+            if [ $ELAPSED -ge $TIMEOUT ]; then
+              echo "::warning::back-end may still be starting, check logs"
+            fi
 
-      # - name: Install dependencies
-      #   run: |
-      #     pip install -r requirements.txt
-      #     # 如果使用了 MkDocs 等静态生成器，在此安装
-      #     # pip install mkdocs mkdocs-material
+            # 7. 输出最终状态
+            echo "📋 Container status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
 
-      # 4. 执行文档生成脚本
-      # - name: Generate Markdown Docs
-      #   env:
-      #     LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      #     LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-      #     LLM_MODEL: ${{ secrets.LLM_MODEL }}
-      #   run: |
-      #     python tools/generate_docs.py --input ./packages --output ./docs/generated
+            # 8. 清理构建缓存（只保留最近 3 层，避免磁盘膨胀）
+            docker builder prune -f --keep-storage 2GB 2>/dev/null || true
 
-      # 步骤5: 部署后验证
+            echo "🎉 Deployment completed at $(date)"
+
+      # ── 部署后验证 ──
       - name: Post-deployment Verification
         if: always()
         uses: appleboy/ssh-action@v1.0.0
@@ -355,65 +192,45 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: 5m
+          command_timeout: 2m
           script_stop: false
           debug: false
           script: |
-            echo "🔍 Running post-deployment verification..."
-
             cd ${{ env.DEPLOY_DIR }} || exit 1
 
-            # 检查容器运行状态
-            echo "📋 Checking container status:"
+            echo "📋 Container status:"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
 
-            # 检查关键服务是否运行
-            SERVICES=("ai-agent-backend" "ai-agent-frontend")
-            FAILED_SERVICES=()
-
-            for SERVICE in "${SERVICES[@]}"; do
-              if docker ps --filter "name=$SERVICE" --filter "status=running" | grep -q "$SERVICE"; then
-                echo "✅ $SERVICE is running"
+            FAILED=()
+            for SVC in ai-agent-backend ai-agent-frontend ai-agent-rabbitmq-service; do
+              if docker ps --filter "name=$SVC" --filter "status=running" --format '' | grep -q .; then
+                echo "✅ $SVC: running"
               else
-                echo "::error::$SERVICE is not running"
-                FAILED_SERVICES+=("$SERVICE")
+                echo "::error::$SVC: not running"
+                FAILED+=("$SVC")
               fi
             done
 
-            # 如果有服务失败，提供诊断信息
-            if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
-              echo "❌ Failed services: ${FAILED_SERVICES[*]}"
-              echo "📊 Showing recent logs for failed services:"
-              for SERVICE in "${FAILED_SERVICES[@]}"; do
-                echo "--- Logs for $SERVICE ---"
-                docker logs --tail 50 "$SERVICE" 2>&1 || true
+            if [ ${#FAILED[@]} -gt 0 ]; then
+              echo "❌ Failed: ${FAILED[*]}"
+              for SVC in "${FAILED[@]}"; do
+                echo "--- $SVC logs ---"
+                docker logs --tail 30 "$SVC" 2>&1 || true
               done
               exit 1
             fi
 
-            echo "✅ All services are running properly"
-            echo "🎉 Deployment verification completed successfully"
+            echo "✅ All services verified"
 
-      # 步骤6: 发送部署通知（可选）
-      - name: Send Deployment Notification
+      - name: Deployment Summary
         if: always()
         run: |
-          STATUS="${{ job.status }}"
-          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
           echo "=========================================="
           echo "📢 Deployment Summary"
           echo "=========================================="
-          echo "Status: $STATUS"
-          echo "Time: $TIMESTAMP"
+          echo "Status: ${{ job.status }}"
+          echo "Time:   $(date '+%Y-%m-%d %H:%M:%S')"
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
-          echo "Actor: ${{ github.actor }}"
+          echo "Actor:  ${{ github.actor }}"
           echo "=========================================="
-
-          if [ "$STATUS" = "success" ]; then
-            echo "✅ Deployment succeeded!"
-          else
-            echo "❌ Deployment failed!"
-            echo "Check the logs above for details."
-          fi
