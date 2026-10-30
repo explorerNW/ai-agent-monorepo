@@ -22,7 +22,7 @@ export class PerformanceService {
     }
   }
 
-  recordPerformance(data: any): Promise<any> {
+  async recordPerformance(data: any): Promise<any> {
     try {
       // 发送到 RabbitMQ - use emit for fire-and-forget (no response needed)
       this.client.emit('performance.metrics', data).pipe(
@@ -32,7 +32,7 @@ export class PerformanceService {
       );
 
       // 同时保存到 ClickHouse (用于备份和分析)
-      // await this.clickHouseService.insertPerformanceData(data);
+      await this.clickHouseService.insertPerformanceData(data);
       return Promise.resolve({ success: true });
     } catch (error) {
       this.logger.error('Error recording performance metric:', error);
@@ -100,6 +100,12 @@ export class PerformanceService {
   async getPerformanceSummary(fromDate: string, toDate: string): Promise<any> {
     return await firstValueFrom(
       this.client.send('get.performance.summary', { fromDate, toDate }),
+    );
+  }
+
+  async getAPISummary(fromDate: string, toDate: string): Promise<any> {
+    return await firstValueFrom(
+      this.client.send('get.apiPerformance.summary', { fromDate, toDate }),
     );
   }
 }

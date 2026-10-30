@@ -22,18 +22,12 @@ function RoutePerformanceChart({ data }: RoutePerformanceChartProps) {
       route: string;
       fcp: number | null;
       lcp: number | null;
-    }> = [];
-
-    data.forEach((item) => {
-      const routePerformance = item.metrics.routePerformance;
-
-      if (routePerformance) {
-        routeData.push({
-          route: routePerformance.route,
-          fcp: routePerformance.fcp ?? null,
-          lcp: routePerformance.lcp ?? null,
-        });
-      }
+    }> = data.map((item) => {
+      return {
+        route: item.pageUrl,
+        fcp: item.avg_fcp,
+        lcp: item.avg_lcp,
+      };
     });
 
     // Group by route

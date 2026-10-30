@@ -53,6 +53,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: '0.0.0.0',
     allowedHosts: ['niewang.uunat.com', 'localhost'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: 'jsdom', // 必须设置为 jsdom 以模拟 DOM 环境

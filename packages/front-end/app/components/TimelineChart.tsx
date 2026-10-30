@@ -42,17 +42,17 @@ function TimelineChart({ data, days }: TimelineChartProps) {
       if (!groupedData[key]) {
         groupedData[key] = { lcp: [], fcp: [], cls: [], ttfb: [] };
       }
-      if (item.metrics.lcp?.value) {
-        groupedData[key].lcp.push(item.metrics.lcp.value);
+      if (item?.avg_lcp) {
+        groupedData[key].lcp.push(item.avg_lcp);
       }
-      if (item.metrics.fcp?.value) {
-        groupedData[key].fcp.push(item.metrics.fcp.value);
+      if (item?.avg_fcp) {
+        groupedData[key].fcp.push(item.avg_fcp);
       }
-      if (item.metrics.cls?.value) {
-        groupedData[key].cls.push(item.metrics.cls.value);
+      if (item?.avg_cls) {
+        groupedData[key].cls.push(item.avg_cls);
       }
-      if (item.metrics.ttfb?.value) {
-        groupedData[key].ttfb.push(item.metrics.ttfb.value);
+      if (item.ttfb) {
+        groupedData[key].ttfb.push(item.ttfb);
       }
     });
 

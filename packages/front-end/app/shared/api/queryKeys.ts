@@ -9,10 +9,11 @@ export const queryKeys = {
     details: () => [...queryKeys.users.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.users.details(), id] as const,
   },
-  orders: {
-    /* ... */
-  },
+  orders: {/* ... */},
   webVitalsStats: {
     days: (days: number) => ['web-vitals-stats', days] as const,
+  },
+  apiPerformanceStats: {
+    days: (days: number) => ['api-performance-stats', days] as const,
   },
 } as const;
