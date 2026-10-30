@@ -48,6 +48,15 @@ export class AppController {
     return { success: true, message: 'API data stored successfully' };
   }
 
+  @MessagePattern('custom.metrics')
+  async handleRouteMetrics(@Payload() data: any) {
+    this.logger.log('Received Route metrics:');
+    // 存储到 ClickHouse
+    await this.clickHouseService.insertPerformanceData(data);
+
+    return { success: true, message: 'API data stored successfully' };
+  }
+
   @MessagePattern('get.performance.summary')
   async getPerformanceSummary(
     @Payload() data: { fromDate: string; toDate: string },
@@ -55,6 +64,23 @@ export class AppController {
     try {
       this.logger.log('Received performance summary request:', data);
       return await this.clickHouseService.getPerformanceSummary(
+        new Date(data.fromDate),
+        new Date(data.toDate),
+      );
+    } catch (error) {
+      this.logger.error('Error processing performance summary request:', error);
+      throw error;
+    }
+  }
+
+  
+  @MessagePattern('get.apiPerformance.summary')
+  async getAPISummary(
+    @Payload() data: { fromDate: string; toDate: string },
+  ) {
+    try {
+      this.logger.log('Received api performance summary request:', data);
+      return await this.clickHouseService.getAPISummary(
         new Date(data.fromDate),
         new Date(data.toDate),
       );

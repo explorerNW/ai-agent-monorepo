@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
 import BottomNavigation from '~/components/BottomNavigation';
-import { useWebVitalsStats } from '~/hooks/useWebVitalsStats';
+import { useApiPerformanceStats, useWebVitalsStats } from '~/hooks/useWebVitalsStats';
 import React from 'react';
 
 const TimelineChart = React.lazy(() => import('~/components/TimelineChart'));
@@ -11,6 +11,12 @@ const RoutePerformanceChart = React.lazy(() => import('~/components/RoutePerform
 export default function Analytics() {
   const [days, setDays] = useState(7);
   const { data = [], isLoading, isFetching, refetch } = useWebVitalsStats(days);
+  const {
+    data: apiPerformanceData = [],
+    isLoading: apiPerformanceLoading,
+    isFetching: apiPerformanceFetching,
+    refetch: apiPerformanceRefetch,
+  } = useApiPerformanceStats(days);
 
   const [activeTab, setActiveTab] = useState<string>('analytics');
 
@@ -19,7 +25,7 @@ export default function Analytics() {
     setActiveTab(tabId);
   }, []);
 
-  if (isLoading) {
+  if (isLoading || apiPerformanceLoading) {
     return (
       <div className="flex flex-col h-screen bg-black">
         <div className="flex-1 flex items-center justify-center">
@@ -51,8 +57,11 @@ export default function Analytics() {
             </button>
           ))}
           <button
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={() => {
+              void refetch();
+              void apiPerformanceRefetch();
+            }}
+            disabled={isFetching || apiPerformanceFetching}
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isFetching ? 'Loading...' : 'Refresh'}
@@ -78,8 +87,7 @@ export default function Analytics() {
                 <div className="text-gray-400 text-sm">Avg LCP</div>
                 <div className="text-2xl font-bold text-blue-400">
                   {(
-                    data.reduce((sum, item) => sum + (item.metrics.lcp?.value || 0), 0) /
-                    data.length
+                    data.reduce((sum, item) => sum + (item?.avg_lcp || 0), 0) / data.length
                   ).toFixed(0)}
                   ms
                 </div>
@@ -88,8 +96,7 @@ export default function Analytics() {
                 <div className="text-gray-400 text-sm">Avg FCP</div>
                 <div className="text-2xl font-bold text-green-400">
                   {(
-                    data.reduce((sum, item) => sum + (item.metrics.fcp?.value || 0), 0) /
-                    data.length
+                    data.reduce((sum, item) => sum + (item?.avg_fcp || 0), 0) / data.length
                   ).toFixed(0)}
                   ms
                 </div>
@@ -98,8 +105,7 @@ export default function Analytics() {
                 <div className="text-gray-400 text-sm">Avg CLS</div>
                 <div className="text-2xl font-bold text-yellow-400">
                   {(
-                    data.reduce((sum, item) => sum + (item.metrics.cls?.value || 0), 0) /
-                    data.length
+                    data.reduce((sum, item) => sum + (item?.avg_cls || 0), 0) / data.length
                   ).toFixed(5)}
                 </div>
               </div>
@@ -108,10 +114,9 @@ export default function Analytics() {
               <div className="bg-gray-900 rounded-lg p-4">
                 <div className="text-gray-400 text-sm">Avg TTFB</div>
                 <div className="text-2xl font-bold text-purple-400">
-                  {(
-                    data.reduce((sum, item) => sum + (item.metrics.ttfb?.value || 0), 0) /
-                    data.length
-                  ).toFixed(0)}
+                  {(data.reduce((sum, item) => sum + (item?.ttfb || 0), 0) / data.length).toFixed(
+                    0,
+                  )}
                   ms
                 </div>
               </div>
@@ -131,7 +136,7 @@ export default function Analytics() {
                   <DistributionChart
                     data={data}
                     title="LCP Distribution"
-                    metricKey="lcp"
+                    metricKey="avg_lcp"
                     thresholds={{
                       good: 2500,
                       needsImprovement: 4000,
@@ -145,7 +150,7 @@ export default function Analytics() {
                   <DistributionChart
                     data={data}
                     title="FCP Distribution"
-                    metricKey="fcp"
+                    metricKey="avg_fcp"
                     thresholds={{
                       good: 1800,
                       needsImprovement: 3000,
@@ -159,7 +164,7 @@ export default function Analytics() {
                   <DistributionChart
                     data={data}
                     title="CLS Distribution"
-                    metricKey="cls"
+                    metricKey="avg_cls"
                     thresholds={{
                       good: 0.1,
                       needsImprovement: 0.25,
@@ -187,7 +192,7 @@ export default function Analytics() {
             {/* API Performance Chart */}
             <div className="bg-gray-900 rounded-lg p-4">
               <Suspense fallback={<div>图表加载中...</div>}>
-                <ApiPerformanceChart data={data} />
+                <ApiPerformanceChart data={apiPerformanceData} />
               </Suspense>
             </div>
 

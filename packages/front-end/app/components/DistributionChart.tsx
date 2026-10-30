@@ -6,7 +6,7 @@ import type { WebVitalsData } from '~/types/performance';
 interface DistributionChartProps {
   data: WebVitalsData[];
   title: string;
-  metricKey: keyof Pick<WebVitalsData['metrics'], 'lcp' | 'fcp' | 'cls' | 'ttfb'>;
+  metricKey: keyof Pick<WebVitalsData, 'avg_lcp' | 'avg_fcp' | 'avg_cls' | 'ttfb'>;
   thresholds: {
     good: number;
     needsImprovement: number;
@@ -24,7 +24,7 @@ function DistributionChart({ data, title, metricKey, thresholds }: DistributionC
     if (!chart) {
       chart = echarts.init(chartRef.current);
     }
-    const values = data.map((item) => item.metrics[metricKey]?.value || 0).filter((v) => v >= 0);
+    const values = data.map((item) => item?.[metricKey] || 0).filter((v) => v >= 0);
 
     const stats = { good: 0, needsImprovement: 0, poor: 0 };
     values.forEach((v) => {

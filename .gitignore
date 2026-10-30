@@ -54,4 +54,5 @@ temp_ocr/
 clickhouse-data/
 grafana-data/
 
-venv/
+venv
+venv/.deploy-commit-hash

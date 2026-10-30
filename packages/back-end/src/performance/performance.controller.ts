@@ -97,4 +97,12 @@ export class PerformanceController {
       toDate,
     );
   }
+
+  @Get('api-summary')
+  async getAPISummary(
+    @Query('fromDate') fromDate: string,
+    @Query('toDate') toDate: string,
+  ) {
+    return await this.performanceService.getAPISummary(fromDate, toDate);
+  }
 }

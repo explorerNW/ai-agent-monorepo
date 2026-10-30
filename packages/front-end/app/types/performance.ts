@@ -23,19 +23,23 @@ export interface RoutePerformanceMetric {
 
 export interface WebVitalsData {
   id: number;
-  eventName: string;
-  userId?: string;
-  url: string;
-  metrics: {
-    lcp?: WebVitalsMetric;
-    fcp?: WebVitalsMetric;
-    cls?: WebVitalsMetric;
-    fid?: WebVitalsMetric;
-    ttfb?: WebVitalsMetric;
-    apiCalls?: ApiCallMetric[];
-    routePerformance?: RoutePerformanceMetric;
-  };
-  navigationType?: string;
+  pageUrl: string;
+  userAgent: string;
   timestamp: string;
-  createdAt: string;
+  avg_fcp: number;
+  avg_lcp: number;
+  avg_cls: number;
+  fid: number;
+  ttfb: number;
+  inp: number;
+  navigationType: string;
+  connectionInfo: string;
+}
+
+export interface ApiCallData {
+  id: number;
+  url: string;
+  duration: number;
+  status: number;
+  success: boolean;
 }

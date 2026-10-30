@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { createClient } from '@clickhouse/client';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { createClient, ClickHouseClient } from '@clickhouse/client';
+import { fmt } from './tools';
 
-// Type definitions for API metrics data
 interface APIMetricData {
   url?: string;
   method?: string;
@@ -16,88 +16,343 @@ interface APIMetricData {
   timestamp?: Date | number | string;
 }
 
+interface PerformanceRecord {
+  id: number;
+  pageUrl: string;
+  userAgent: string;
+  timestamp: number;
+  fcp: number | null;
+  lcp: number | null;
+  cls: number | null;
+  fid: number | null;
+  ttfb: number | null;
+  inp: number | null;
+  navigationType: string;
+  connectionInfo: string;
+}
+
+interface APIRecord {
+  id: number;
+  url: string;
+  method: string;
+  startTime: number;
+  duration: number;
+  status: number;
+  size: number | null;
+  pageUrl: string;
+  userAgent: string;
+  timestamp: number;
+}
+
 @Injectable()
-export class ClickHouseService {
-  private client = createClient({
-    url: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
-    username: process.env.CLICKHOUSE_USER || 'default',
-    password: process.env.CLICKHOUSE_PASSWORD || '',
-    database: process.env.CLICKHOUSE_DB || 'performance_db',
-  });
+export class ClickHouseService implements OnModuleDestroy {
+  private readonly logger = new Logger(ClickHouseService.name);
+
+  private client: ClickHouseClient;
+
+  private readonly perfBuffer: PerformanceRecord[] = [];
+  private readonly apiBuffer: APIRecord[] = [];
+
+  private readonly PERF_BATCH_SIZE = Number(
+    process.env.CH_PERF_BATCH_SIZE || 500,
+  );
+  private readonly API_BATCH_SIZE = Number(
+    process.env.CH_API_BATCH_SIZE || 500,
+  );
+  private readonly FLUSH_INTERVAL_MS = Number(
+    process.env.CH_FLUSH_INTERVAL_MS || 5_000,
+  );
+
+  private flushTimer?: NodeJS.Timeout;
+
+  constructor() {
+    this.client = createClient({
+      url: process.env.CLICKHOUSE_HOST || 'http://localhost:8123',
+      username: process.env.CLICKHOUSE_USER || 'default',
+      password: process.env.CLICKHOUSE_PASSWORD || '',
+      database: process.env.CLICKHOUSE_DB || 'performance_db',
+      request_timeout: Number(process.env.CH_REQUEST_TIMEOUT_MS || 30_000),
+    });
+
+    this.flushTimer = setInterval(() => {
+      this.flushPerformanceBuffer().catch((err) =>
+        this.logger.error('Flush performance buffer failed', err),
+      );
+      this.flushAPIBuffer().catch((err) =>
+        this.logger.error('Flush API buffer failed', err),
+      );
+    }, this.FLUSH_INTERVAL_MS);
+  }
 
   async onModuleInit() {
     try {
-      // 创建数据库
       await this.client.command({
-        query: `CREATE DATABASE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}`,
+        query: `CREATE DATABASE IF NOT EXISTS ${this.getDatabase()}`,
       });
 
-      // 创建性能数据表
       await this.client.command({
         query: `
-        CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics (
-          id UInt64,
-          pageUrl String,
-          userAgent String,
-          timestamp DateTime,
-          fcp Nullable(Float64),
-          lcp Nullable(Float64),
-          cls Nullable(Float64),
-          fid Nullable(Float64),
-          ttfb Nullable(Float64),
-          inp Nullable(Float64),
-          navigationType String,
-          connectionInfo String,
-          received_at DateTime DEFAULT now()
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(timestamp)
-        ORDER BY (timestamp, pageUrl)
-      `,
+          CREATE TABLE IF NOT EXISTS ${this.getDatabase()}.performance_metrics (
+            id UInt64,
+            pageUrl String,
+            userAgent String,
+            timestamp DateTime,
+            fcp Nullable(Float64),
+            lcp Nullable(Float64),
+            cls Nullable(Float64),
+            fid Nullable(Float64),
+            ttfb Nullable(Float64),
+            inp Nullable(Float64),
+            navigationType String,
+            connectionInfo String,
+            received_at DateTime DEFAULT now()
+          ) ENGINE = MergeTree()
+          PARTITION BY toYYYYMM(timestamp)
+          ORDER BY (timestamp, pageUrl)
+        `,
       });
 
-      // 创建 API 性能数据表
       await this.client.command({
         query: `
-        CREATE TABLE IF NOT EXISTS ${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics (
-          id UInt64,
-          url String,
-          method String,
-          startTime DateTime,
-          duration Float64,
-          status UInt16,
-          size Nullable(UInt64),
-          pageUrl String,
-          userAgent String,
-          timestamp DateTime,
-          received_at DateTime DEFAULT now()
-        ) ENGINE = MergeTree()
-        PARTITION BY toYYYYMM(timestamp)
-        ORDER BY (timestamp, url)
-      `,
+          CREATE TABLE IF NOT EXISTS ${this.getDatabase()}.api_metrics (
+            id UInt64,
+            url String,
+            method String,
+            startTime DateTime,
+            duration Float64,
+            status UInt16,
+            size Nullable(UInt64),
+            pageUrl String,
+            userAgent String,
+            timestamp DateTime,
+            received_at DateTime DEFAULT now()
+          ) ENGINE = MergeTree()
+          PARTITION BY toYYYYMM(timestamp)
+          ORDER BY (timestamp, url, method)
+        `,
       });
 
-      console.log(
-        '[ClickHouse] ✅ Database and tables initialized successfully',
-      );
+      this.logger.log('ClickHouse database and tables initialized');
     } catch (error) {
-      console.error(
-        '[ClickHouse] ❌ Failed to initialize database/tables:',
+      this.logger.error(
+        'Failed to initialize ClickHouse database/tables',
         error instanceof Error ? error.message : String(error),
       );
-      // Don't throw - allow application to start even if ClickHouse is unavailable
     }
   }
 
-  /**
-   * Converts various date/time formats to Unix timestamp (seconds)
-   */
+  onModuleDestroy() {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+    }
+
+    Promise.allSettled([
+      this.flushPerformanceBuffer(),
+      this.flushAPIBuffer(),
+    ]).catch((err) => {
+      this.logger.error('Final flush failed', err);
+    });
+  }
+
+  async insertPerformanceData(data: any) {
+    const timestamp = this.toUnixTimestamp(data.timestamp);
+
+    const record: PerformanceRecord = {
+      id: Math.floor(Date.now() / 1000),
+      pageUrl: this.sanitizeString(data.pageUrl),
+      userAgent: this.sanitizeString(data.userAgent),
+      timestamp,
+      fcp: data.eventData?.fcp != null ? Number(data.eventData.fcp) : null,
+      lcp: data.eventData?.lcp != null ? Number(data.eventData.lcp) : null,
+      cls: data.eventData?.cls != null ? Number(data.eventData.cls) : null,
+      fid: data.eventData?.fid != null ? Number(data.eventData.fid) : null,
+      ttfb: data.eventData?.ttfb != null ? Number(data.eventData.ttfb) : null,
+      inp: data.eventData?.inp != null ? Number(data.eventData.inp) : null,
+      navigationType: this.sanitizeString(data.eventData?.navigationType),
+      connectionInfo: JSON.stringify(data.connectionInfo || {}),
+    };
+
+    this.perfBuffer.push(record);
+
+    if (this.perfBuffer.length >= this.PERF_BATCH_SIZE) {
+      await this.flushPerformanceBuffer();
+    }
+
+    const performanceList = data.filter(
+        (data) => data.eventType === 'performance',
+      );
+      const apiList = data.filter(
+        (data) => data.eventType === 'api',
+      );
+      const errorList = data.filter(
+        (data) => data.eventType === 'error',
+      );
+      const customList = data.filter(
+        (data) => data.eventType === 'custom',
+      );
+
+      // 性能指标
+      await Promise.all(
+        performanceList.map((data) => {
+          // return this.performanceService.recordPerformance(data);
+        }),
+      );
+
+      // API 指标
+      await Promise.all(
+        apiList.map((data) => {
+          // return this.performanceService.recordAPIMetric(data);
+        }),
+      );
+
+      // 错误指标
+      await Promise.all(
+        errorList.map((data) => {
+          // return this.performanceService.recordErrorMetric(data);
+        }),
+      );
+
+      // 自定义指标
+      await Promise.all(
+        customList.map((data) => {
+          // return this.performanceService.recordCustomMetric(data);
+        }),
+      );
+  }
+
+  async insertAPIData(data: APIMetricData) {
+    const startTimeTimestamp = this.toUnixTimestamp(data.startTime);
+    const timestampValue = this.toUnixTimestamp(data.timestamp);
+
+    const record: APIRecord = {
+      id: Math.floor(Date.now() / 1000),
+      url: this.sanitizeString(data.url),
+      method: this.sanitizeString(data.method, 10),
+      startTime: startTimeTimestamp,
+      duration: Number(data.eventData.duration) || 0,
+      status: Number(data.status) || 0,
+      size: data.size != null ? Number(data.size) : null,
+      pageUrl: this.sanitizeString(data.pageUrl),
+      userAgent: this.sanitizeString(data.userAgent),
+      timestamp: timestampValue,
+    };
+
+    this.apiBuffer.push(record);
+
+    if (this.apiBuffer.length >= this.API_BATCH_SIZE) {
+      await this.flushAPIBuffer();
+    }
+  }
+
+  async getPerformanceSummary(fromDate: Date, toDate: Date) {
+    const query = `
+      SELECT 
+        pageUrl,
+        avg(fcp) AS avg_fcp,
+        avg(lcp) AS avg_lcp,
+        avg(cls) AS avg_cls,
+        count(*) AS total_records
+      FROM ${this.getDatabase()}.performance_metrics
+      WHERE timestamp >= {from: DateTime}
+        AND timestamp <= {to: DateTime}
+        AND fcp IS NOT NULL
+        AND lcp IS NOT NULL
+      GROUP BY pageUrl
+      ORDER BY avg_lcp DESC
+    `;
+
+    const result = await this.client.query({
+      query,
+      format: 'JSONEachRow',
+      query_params: {
+        from: fmt(fromDate),
+        to: fmt(toDate),
+      },
+    });
+
+    return result.json();
+  }
+
+  async getAPISummary(fromDate: Date, toDate: Date) {
+    const query = `
+      SELECT 
+        url,
+        method,
+        avg(duration) AS avg_duration,
+        avg(size) AS avg_size,
+        count(*) AS total_requests,
+        countIf(status >= 400) AS error_count
+      FROM ${this.getDatabase()}.api_metrics
+      WHERE timestamp >= {from: DateTime}
+        AND timestamp <= {to: DateTime}
+      GROUP BY url, method
+      ORDER BY avg_duration DESC
+    `;
+
+    const result = await this.client.query({
+      query,
+      format: 'JSONEachRow',
+      query_params: {
+        from: fmt(fromDate),
+        to: fmt(toDate),
+      },
+    });
+
+    return result.json();
+  }
+
+  private async flushPerformanceBuffer() {
+    if (this.perfBuffer.length === 0) return;
+
+    const batch = this.perfBuffer.splice(0, this.PERF_BATCH_SIZE);
+
+    try {
+      await this.client.insert({
+        table: `${this.getDatabase()}.performance_metrics`,
+        values: batch,
+        format: 'JSONEachRow',
+      });
+    } catch (error) {
+      this.perfBuffer.unshift(...batch);
+
+      this.logger.error(
+        'Failed to flush performance metrics',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private async flushAPIBuffer() {
+    if (this.apiBuffer.length === 0) return;
+
+    const batch = this.apiBuffer.splice(0, this.API_BATCH_SIZE);
+
+    try {
+      await this.client.insert({
+        table: `${this.getDatabase()}.api_metrics`,
+        values: batch,
+        format: 'JSONEachRow',
+      });
+    } catch (error) {
+      this.apiBuffer.unshift(...batch);
+
+      this.logger.error(
+        'Failed to flush API metrics',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
+  private getDatabase(): string {
+    return process.env.CLICKHOUSE_DB || 'performance_db';
+  }
+
   private toUnixTimestamp(value: Date | number | string | undefined): number {
     if (value instanceof Date) {
       return Math.floor(value.getTime() / 1000);
     }
 
     if (typeof value === 'number') {
-      // Assume milliseconds if > 1e12, otherwise seconds
       return value > 1e12 ? Math.floor(value / 1000) : value;
     }
 
@@ -109,173 +364,16 @@ export class ClickHouseService {
       return Math.floor(date.getTime() / 1000);
     }
 
-    // Default to current time
     return Math.floor(Date.now() / 1000);
   }
 
-  /**
-   * Sanitizes string fields to prevent JSON parsing issues
-   * Removes control characters, newlines, and other problematic characters
-   */
   private sanitizeString(value: any, maxLength = 500): string {
     if (!value) return '';
 
-    const str = String(value);
-    return str
-      .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, ' ') // Remove non-printable chars
-      .replace(/[\r\n\t]/g, ' ') // Remove newlines and tabs
+    return String(value)
+      .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, ' ')
+      .replace(/[\r\n\t]/g, ' ')
       .trim()
-      .substring(0, maxLength); // Prevent excessively long strings
-  }
-
-  async insertPerformanceData(data: any) {
-    // Convert timestamp to Unix timestamp (seconds) - recommended for ClickHouse DateTime
-    const timestamp = this.toUnixTimestamp(data.timestamp);
-
-    // Sanitize string fields to prevent JSON parsing issues
-    const sanitizeString = (str: any) =>
-      str
-        ? String(str)
-            .replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, ' ') // Remove non-printable chars
-            .replace(/[\r\n\t]/g, ' ') // Remove newlines and tabs
-            .trim()
-        : '';
-
-    const sanitizedPageUrl = sanitizeString(data.pageUrl);
-    const sanitizedUserAgent = sanitizeString(data.userAgent);
-    const sanitizedNavigationType = sanitizeString(
-      data.eventData.navigationType,
-    );
-    const sanitizedConnectionInfo = JSON.stringify(data.connectionInfo || {});
-
-    // Prepare the record with proper typing and sanitization
-    const record = {
-      id: Math.floor(Date.now() / 1000),
-      pageUrl: sanitizedPageUrl,
-      userAgent: sanitizedUserAgent,
-      timestamp: timestamp, // Use Unix timestamp (integer) instead of ISO string
-      fcp: data.eventData.fcp != null ? Number(data.eventData.fcp) : null,
-      lcp: data.eventData.lcp != null ? Number(data.eventData.lcp) : null,
-      cls: data.eventData.cls != null ? Number(data.eventData.cls) : null,
-      fid: data.eventData.fid != null ? Number(data.eventData.fid) : null,
-      ttfb: data.eventData.ttfb != null ? Number(data.eventData.ttfb) : null,
-      inp: data.eventData.inp != null ? Number(data.eventData.inp) : null,
-      navigationType: sanitizedNavigationType,
-      connectionInfo: sanitizedConnectionInfo,
-    };
-
-    try {
-      await this.client.insert({
-        table: `${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics`,
-        values: [record],
-        format: 'JSONEachRow',
-      });
-      console.log('[ClickHouse] ✅ Successfully inserted performance metric');
-    } catch (error) {
-      console.error('[ClickHouse] ❌ Performance insert failed!');
-      console.error('[ClickHouse] Failed record JSON:', JSON.stringify(record));
-      console.error('[ClickHouse] Error details:', error);
-      throw error;
-    }
-  }
-
-  async insertAPIData(data: APIMetricData) {
-    try {
-      // Convert and validate datetime fields
-      const startTimeTimestamp = this.toUnixTimestamp(data.startTime);
-      const timestampValue = this.toUnixTimestamp(data.timestamp);
-
-      // Sanitize string fields
-      const record = {
-        id: Math.floor(Date.now() / 1000),
-        url: this.sanitizeString(data.url),
-        method: this.sanitizeString(data.method, 10),
-        startTime: startTimeTimestamp,
-        duration: Number(data.eventData.duration) || 0,
-        status: Number(data.status) || 0,
-        size: data.size != null ? Number(data.size) : null,
-        pageUrl: this.sanitizeString(data.pageUrl),
-        userAgent: this.sanitizeString(data.userAgent),
-        timestamp: timestampValue,
-      };
-
-      // Insert into ClickHouse
-      await this.client.insert({
-        table: `${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics`,
-        values: [record],
-        format: 'JSONEachRow',
-        clickhouse_settings: {
-          input_format_json_read_bools_as_strings: 0,
-          output_format_json_quote_64bit_integers: 0,
-        },
-      });
-
-      console.log('[ClickHouse] ✅ Successfully inserted API metric');
-    } catch (error) {
-      console.error(
-        '[ClickHouse] ❌ Failed to insert API metric:',
-        error instanceof Error ? error.message : String(error),
-      );
-      console.error(
-        '[ClickHouse] Data received:',
-        JSON.stringify(data).substring(0, 500),
-      );
-      throw error;
-    }
-  }
-
-  async getPerformanceSummary(fromDate: Date, toDate: Date) {
-    const query = `
-      SELECT 
-        pageUrl,
-        avg(fcp) as avg_fcp,
-        avg(lcp) as avg_lcp,
-        avg(cls) as avg_cls,
-        count(*) as total_records
-      FROM ${process.env.CLICKHOUSE_DB || 'performance_db'}.performance_metrics
-      WHERE timestamp >= {from: DateTime} AND timestamp <= {to: DateTime}
-        AND fcp IS NOT NULL
-        AND lcp IS NOT NULL
-      GROUP BY pageUrl
-      ORDER BY avg_lcp DESC
-    `;
-
-    return await this.client
-      .query({
-        query,
-        format: 'JSONEachRow',
-        query_params: {
-          from: fromDate.toISOString(),
-          to: toDate.toISOString(),
-        },
-      })
-      .then((res) => res.json());
-  }
-
-  async getAPISummary(fromDate: Date, toDate: Date) {
-    const query = `
-      SELECT 
-        url,
-        method,
-        avg(duration) as avg_duration,
-        avg(size) as avg_size,
-        count(*) as total_requests,
-        countIf(status >= 400) as error_count
-      FROM ${process.env.CLICKHOUSE_DB || 'performance_db'}.api_metrics
-      WHERE timestamp >= {from: DateTime} AND timestamp <= {to: DateTime}
-      GROUP BY url, method
-      ORDER BY avg_duration DESC
-    `;
-
-    return await this.client
-      .query({
-        query,
-        format: 'JSONEachRow',
-        query_params: {
-          from: fromDate.toISOString(),
-          to: toDate.toISOString(),
-        },
-      })
-      .then((res) => res.json());
+      .substring(0, maxLength);
   }
 }

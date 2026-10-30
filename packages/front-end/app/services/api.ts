@@ -60,14 +60,26 @@ export async function sendChatMessage(messages: ChatMessage[]): Promise<Readable
  * @returns Web Vitals statistics data
  */
 export async function getWebVitalsStats(days: number = 7, url?: string) {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const params = new URLSearchParams();
-  params.append('days', days.toString());
+  params.append('fromDate', formatDate(fromDate));
+  params.append('toDate', formatDate(now));
+
   if (url) {
     params.append('url', url);
   }
 
   try {
-    return fetch(`${API_CONFIG.BASE_URL}/api/v1/track/web-vitals/stats?${params}`, {
+    return fetch(`${API_CONFIG.BASE_URL}/api/performance/summary?${params}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -96,10 +108,12 @@ export async function processStream(
   try {
     let done = false;
     while (!done) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
 
       if (value) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const chunk = decoder.decode(value, { stream: true });
         onChunk(chunk);
       }
@@ -110,5 +124,37 @@ export async function processStream(
     }
   } finally {
     reader.releaseLock();
+  }
+}
+
+/**
+ * Fetch API performance statistics
+ * @param days - Number of days to query (default: 7)
+ * @returns API performance statistics data
+ */
+export async function getApiPerformance(days: number = 7) {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const params = new URLSearchParams();
+  params.append('fromDate', formatDate(fromDate));
+  params.append('toDate', formatDate(now));
+  try {
+    return fetch(`${API_CONFIG.BASE_URL}/api/performance/api-summary?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    console.error('Failed to fetch Web Vitals stats:', error);
+    throw error;
   }
 }

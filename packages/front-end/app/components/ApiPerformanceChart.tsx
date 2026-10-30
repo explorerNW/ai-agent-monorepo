@@ -1,10 +1,10 @@
 import { useRef, useEffect } from 'react';
 import type { EChartsOption, EChartsType } from 'echarts';
 import * as echarts from 'echarts';
-import type { WebVitalsData } from '~/types/performance';
+import type { ApiCallData } from '~/types/performance';
 
 interface ApiPerformanceChartProps {
-  data: WebVitalsData[];
+  data: ApiCallData[];
 }
 
 function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
@@ -35,20 +35,12 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
       url: string;
       avgDuration: number;
       successRate: number;
-    }> = [];
-
-    data.forEach((item) => {
-      const apiCalls = item.metrics.apiCalls;
-
-      if (apiCalls && Array.isArray(apiCalls)) {
-        apiCalls.forEach((apiCall) => {
-          apiCallsData.push({
-            url: apiCall.url,
-            avgDuration: parseFloat(apiCall.duration.toFixed(3)),
-            successRate: apiCall.success ? 100 : 0,
-          });
-        });
-      }
+    }> = data.map((item) => {
+      return {
+        url: item.url,
+        avgDuration: item.duration,
+        successRate: item.success ? 1 : 0,
+      };
     });
 
     // Group by URL and calculate averages
