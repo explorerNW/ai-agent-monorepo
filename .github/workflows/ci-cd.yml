@@ -33,19 +33,21 @@ jobs:
             echo "::error::Checkout failed - package.json not found"
             exit 1
           fi
-          echo "✅ Commit: $(git log -1 --format='%h - %s (%ar)')"
+          echo "Commit: $(git log -1 --format='%h - %s (%ar)')"
 
+      # secrets 上下文不支持 secrets[变量名] 动态下标，
+      # 缺失的 secret 会在后续真正用到它的 ssh-action 步骤自然报错，
+      # 这里只做仓库根目录关键文件的检查。
       - name: Validate Configuration
         run: |
-          for KEY in SSH_PRIVATE_KEY SERVER_HOST SERVER_PORT; do
-            if [ -z "$(echo '${{ secrets[KEY] }}' | tr -d ' ')" ]; then
-              # 用间接方式检查
-              true
+          for FILE in docker-compose.yml docker.sh; do
+            if [ ! -f "$FILE" ]; then
+              echo "::warning::$FILE not found at repo root"
             fi
           done
-          echo "✅ Configuration validated"
+          echo "Configuration validated"
 
-      # ── 部署到服务器 ──
+      # 部署到服务器
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -62,12 +64,12 @@ jobs:
           script: |
             set -e
 
-            echo "🚀 Deployment started at $(date)"
+            echo "Deployment started at $(date)"
 
             # 1. 预检查
             docker info > /dev/null 2>&1 || { echo "::error::Docker not running"; exit 1; }
             DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
-            echo "💾 Disk: ${DISK_USAGE} used"
+            echo "Disk: ${DISK_USAGE} used"
 
             # 2. 进入项目目录，拉取最新代码
             cd ${{ env.DEPLOY_DIR }} || { echo "::error::Directory not found"; exit 1; }
@@ -77,7 +79,7 @@ jobs:
             # 硬重置到远程分支，避免本地修改冲突
             git fetch origin ${{ github.ref_name }} --depth 1
             git reset --hard origin/${{ github.ref_name }}
-            echo "✅ Code synced: $(git log -1 --format='%h - %s (%ar)')"
+            echo "Code synced: $(git log -1 --format='%h - %s (%ar)')"
 
             # 3. 生成环境变量文件（用 printf 避免 heredoc 缩进问题）
             mkdir -p packages/front-end packages/back-end
@@ -128,10 +130,10 @@ jobs:
               "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
               > .env
 
-            echo "✅ .env files generated"
+            echo ".env files generated"
 
             # 4. 清理旧镜像（释放磁盘空间）
-            echo "🧹 Cleaning old Docker images..."
+            echo "Cleaning old Docker images..."
             docker image prune -f 2>/dev/null || true
 
             # 5. 一次性构建+启动（BuildKit 并行 + 层缓存）
@@ -144,26 +146,27 @@ jobs:
             export PNPM_REGISTRY=http://192.168.88.118:4873
             export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
 
-            echo "🔄 Building and starting services..."
-            # up -d --build：先 build（BuildKit 并行），再按依赖图启动
-            # 所有服务用 service_started 而非 service_healthy，不串行等待
-            $DOCKER_COMPOSE_CMD=$(command -v docker && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
-            ${DOCKER_COMPOSE_CMD} up -d --build
+            # 兼容 docker compose(插件) 与 docker-compose(独立) 两种命令
+            if docker compose version >/dev/null 2>&1; then
+              DOCKER_COMPOSE_CMD="docker compose"
+            else
+              DOCKER_COMPOSE_CMD="docker-compose"
+            fi
 
-            echo "✅ Services started"
+            echo "Building and starting services..."
+            # up -d --build：先 build（BuildKit 并行），再按依赖图启动
+            $DOCKER_COMPOSE_CMD up -d --build
+
+            echo "Services started"
 
             # 6. 等待关键服务就绪（只等 back-end，front-end 是 nginx 秒启动）
-            echo "⏳ Waiting for services to be ready..."
+            echo "Waiting for services to be ready..."
             ELAPSED=0
             TIMEOUT=60
             while [ $ELAPSED -lt $TIMEOUT ]; do
-              if docker ps --filter "name=ai-agent-backend" --filter "status=running" --format '' | grep -q .; then
-                # 检查进程是否存活
-                EXIT_CODE=$(docker inspect --format='{{.State.ExitCode}}' ai-agent-backend 2>/dev/null || echo "-1")
-                if [ "$EXIT_CODE" = "0" ]; then
-                  echo "✅ back-end is running (exit code: 0)"
-                  break
-                fi
+              if docker ps --filter "name=ai-agent-backend" --filter "status=running" --format '{{.Names}}' | grep -q .; then
+                echo "back-end is running"
+                break
               fi
               sleep 3
               ELAPSED=$((ELAPSED + 3))
@@ -175,15 +178,15 @@ jobs:
             fi
 
             # 7. 输出最终状态
-            echo "📋 Container status:"
+            echo "Container status:"
             docker ps --format "table {{.Names}}\t{{.Status}}"
 
-            # 8. 清理构建缓存（只保留最近 3 层，避免磁盘膨胀）
+            # 8. 清理构建缓存（只保留最近若干 GB，避免磁盘膨胀）
             docker builder prune -f --keep-storage 2GB 2>/dev/null || true
 
-            echo "🎉 Deployment completed at $(date)"
+            echo "Deployment completed at $(date)"
 
-      # ── 部署后验证 ──
+      # 部署后验证
       - name: Post-deployment Verification
         if: always()
         uses: appleboy/ssh-action@v1.0.0
@@ -198,13 +201,13 @@ jobs:
           script: |
             cd ${{ env.DEPLOY_DIR }} || exit 1
 
-            echo "📋 Container status:"
+            echo "Container status:"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
 
             FAILED=()
             for SVC in ai-agent-backend ai-agent-frontend ai-agent-rabbitmq-service; do
-              if docker ps --filter "name=$SVC" --filter "status=running" --format '' | grep -q .; then
-                echo "✅ $SVC: running"
+              if docker ps --filter "name=$SVC" --filter "status=running" --format '{{.Names}}' | grep -q .; then
+                echo "$SVC: running"
               else
                 echo "::error::$SVC: not running"
                 FAILED+=("$SVC")
@@ -212,7 +215,7 @@ jobs:
             done
 
             if [ ${#FAILED[@]} -gt 0 ]; then
-              echo "❌ Failed: ${FAILED[*]}"
+              echo "Failed: ${FAILED[*]}"
               for SVC in "${FAILED[@]}"; do
                 echo "--- $SVC logs ---"
                 docker logs --tail 30 "$SVC" 2>&1 || true
@@ -220,13 +223,13 @@ jobs:
               exit 1
             fi
 
-            echo "✅ All services verified"
+            echo "All services verified"
 
       - name: Deployment Summary
         if: always()
         run: |
           echo "=========================================="
-          echo "📢 Deployment Summary"
+          echo "Deployment Summary"
           echo "=========================================="
           echo "Status: ${{ job.status }}"
           echo "Time:   $(date '+%Y-%m-%d %H:%M:%S')"
