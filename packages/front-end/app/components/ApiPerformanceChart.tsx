@@ -37,9 +37,9 @@ function ApiPerformanceChart({ data }: ApiPerformanceChartProps) {
       successRate: number;
     }> = data.map((item) => {
       return {
-        url: item.url,
-        avgDuration: item.duration,
-        successRate: item.success ? 1 : 0,
+        url: item.path,
+        avgDuration: item.avg_duration,
+        successRate: 1 - (item.error_count / item.total_requests) * 100,
       };
     });
 

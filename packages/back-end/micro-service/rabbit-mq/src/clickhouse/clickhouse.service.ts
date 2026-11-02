@@ -280,6 +280,7 @@ export class ClickHouseService implements OnModuleDestroy {
         avg(duration) AS avg_duration,
         avg(size) AS avg_size,
         count(*) AS total_requests,
+        max(timestamp) AS latest_timestamp,
         countIf(status >= 400) AS error_count
       FROM ${this.getDatabase()}.api_metrics
       WHERE timestamp >= {from: DateTime}
