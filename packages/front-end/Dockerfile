@@ -5,9 +5,10 @@ FROM node:22-slim AS dependencies
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
+## https://registry.npmmirror.com
 
-RUN npm install -g pnpm@12.4.1
+RUN npm install -g pnpm@latest
 
 # 先复制 workspace 配置和所有 package.json，利用 Docker 层缓存
 COPY .npmrc ./
@@ -24,7 +25,9 @@ COPY packages/datatwin-chart-react/package.json ./packages/datatwin-chart-react/
 COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-element/
 COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/
 
-RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts
+# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
 # 再复制全部源码
 COPY packages/ ./packages/

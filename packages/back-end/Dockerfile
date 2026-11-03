@@ -5,17 +5,20 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
+## https://registry.npmmirror.com
 
-RUN npm install -g pnpm@11.1.2
+RUN npm install -g pnpm@latest
 
 # 先复制依赖描述文件，利用 Docker 层缓存
 COPY .npmrc ./
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/back-end/package.json ./packages/back-end/package.json
 
-# 一次性安装全部依赖（含 devDependencies，构建需要）
-RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
 # 再复制源码（依赖不变时上面的 install 层走缓存）
 COPY packages/back-end/clickhouse-config.xml ./packages/back-end/
@@ -39,10 +42,11 @@ LABEL version="2.0.0"
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
 ENV NODE_ENV=production
+## https://registry.npmmirror.com
 
-RUN npm install -g pnpm@11.1.2 && \
+RUN npm install -g pnpm@latest && \
     addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
 

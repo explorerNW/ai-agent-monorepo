@@ -6,16 +6,18 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 ENV NODE_ENV=development
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
+## https://registry.npmmirror.com
 
-RUN npm install -g pnpm@12.4.1
+RUN npm install -g pnpm@latest
 
 # 先复制依赖描述文件，利用 Docker 层缓存
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/back-end/micro-service/rabbit-mq/package.json ./packages/back-end/micro-service/rabbit-mq/
 
-# --ignore-scripts 跳过 husky prepare，加速安装
-RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts
+# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
 # 再复制源码
 COPY packages/back-end/micro-service/rabbit-mq/ ./packages/back-end/micro-service/rabbit-mq/
@@ -34,7 +36,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
 
-RUN npm install -g pnpm@12.4.1
+RUN npm install -g pnpm@latest
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/back-end/micro-service/rabbit-mq/package.json ./packages/back-end/micro-service/rabbit-mq/
