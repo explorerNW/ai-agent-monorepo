@@ -146,36 +146,37 @@ jobs:
             export PNPM_REGISTRY=http://192.168.88.118:4873
             export DEPLOY_DOMAIN="${{ secrets.DEPLOY_DOMAIN }}"
 
-            # 兼容 docker compose(插件) 与 docker-compose(独立) 两种命令
-            if docker compose version >/dev/null 2>&1; then
-              DOCKER_COMPOSE_CMD="docker compose"
-            else
-              DOCKER_COMPOSE_CMD="docker-compose"
-            fi
+            # # 兼容 docker compose(插件) 与 docker-compose(独立) 两种命令
+            # if docker compose version >/dev/null 2>&1; then
+            #   DOCKER_COMPOSE_CMD="docker compose"
+            # else
+            #   DOCKER_COMPOSE_CMD="docker-compose"
+            # fi
 
-            echo "Building and starting services..."
-            # up -d --build：先 build（BuildKit 并行），再按依赖图启动
-            $DOCKER_COMPOSE_CMD up -d --build
+            # echo "Building and starting services..."
+            # # up -d --build：先 build（BuildKit 并行），再按依赖图启动
+            # $DOCKER_COMPOSE_CMD up -d --build
 
+            ./docker.sh start
             echo "Services started"
 
-            # 6. 等待关键服务就绪（只等 back-end，front-end 是 nginx 秒启动）
-            echo "Waiting for services to be ready..."
-            ELAPSED=0
-            TIMEOUT=60
-            while [ $ELAPSED -lt $TIMEOUT ]; do
-              if docker ps --filter "name=ai-agent-backend" --filter "status=running" --format '{{.Names}}' | grep -q .; then
-                echo "back-end is running"
-                break
-              fi
-              sleep 3
-              ELAPSED=$((ELAPSED + 3))
-              [ $((ELAPSED % 15)) -eq 0 ] && echo "  ...waiting (${ELAPSED}s/${TIMEOUT}s)"
-            done
+            # # 6. 等待关键服务就绪（只等 back-end，front-end 是 nginx 秒启动）
+            # echo "Waiting for services to be ready..."
+            # ELAPSED=0
+            # TIMEOUT=60
+            # while [ $ELAPSED -lt $TIMEOUT ]; do
+            #   if docker ps --filter "name=ai-agent-backend" --filter "status=running" --format '{{.Names}}' | grep -q .; then
+            #     echo "back-end is running"
+            #     break
+            #   fi
+            #   sleep 3
+            #   ELAPSED=$((ELAPSED + 3))
+            #   [ $((ELAPSED % 15)) -eq 0 ] && echo "  ...waiting (${ELAPSED}s/${TIMEOUT}s)"
+            # done
 
-            if [ $ELAPSED -ge $TIMEOUT ]; then
-              echo "::warning::back-end may still be starting, check logs"
-            fi
+            # if [ $ELAPSED -ge $TIMEOUT ]; then
+            #   echo "::warning::back-end may still be starting, check logs"
+            # fi
 
             # 7. 输出最终状态
             echo "Container status:"
