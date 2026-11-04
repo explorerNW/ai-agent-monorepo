@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientRMQ } from '@nestjs/microservices';
-import { ClickHouseService } from './clickhouse/clickhouse.service';
 import { map, firstValueFrom } from 'rxjs';
 
 @Injectable()
@@ -9,7 +8,6 @@ export class PerformanceService {
 
   constructor(
     @Inject('PERFORMANCE_SERVICE') private client: ClientRMQ,
-    private readonly clickHouseService: ClickHouseService,
   ) {}
 
   async onModuleInit() {
@@ -30,9 +28,6 @@ export class PerformanceService {
           this.logger.log('✅ API metric sent to RabbitMQ');
         }),
       );
-
-      // 同时保存到 ClickHouse (用于备份和分析)
-      await this.clickHouseService.insertPerformanceData(data);
       return Promise.resolve({ success: true });
     } catch (error) {
       this.logger.error('Error recording performance metric:', error);
@@ -54,9 +49,6 @@ export class PerformanceService {
       );
 
       return Promise.resolve({ success: true });
-
-      // 同时保存到 ClickHouse (用于备份和分析)
-      // await this.clickHouseService.insertAPIData(data);
     } catch (error) {
       this.logger.error('Error recording API metric:', error);
       // Don't throw - allow the request to succeed even if storage fails

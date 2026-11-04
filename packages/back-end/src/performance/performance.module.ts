@@ -3,7 +3,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PerformanceController } from './performance.controller';
 import { PerformanceService } from './performance.service';
-import { ClickHouseService } from './clickhouse/clickhouse.service';
 
 @Module({
   imports: [
@@ -38,7 +37,7 @@ import { ClickHouseService } from './clickhouse/clickhouse.service';
     ]),
   ],
   controllers: [PerformanceController],
-  providers: [PerformanceService, ClickHouseService],
+  providers: [PerformanceService],
   exports: [PerformanceService],
 })
 export class PerformanceModule {}

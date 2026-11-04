@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { createClient, ClickHouseClient } from '@clickhouse/client';
-import { fmt, formatTimestamp } from './tools';
+import { dateCheck, fmt, formatTimestamp } from './tools';
 
 interface APIMetricData {
   url?: string;
@@ -36,7 +36,6 @@ interface APIRecord {
   id: number;
   url: string;
   method: string;
-  startTime: number | string;
   duration: number;
   status: number;
   size: number | null;
@@ -96,22 +95,24 @@ export class ClickHouseService implements OnModuleDestroy {
       await this.client.command({
         query: `
           CREATE TABLE IF NOT EXISTS ${this.getDatabase()}.performance_metrics (
-            id UInt64,
-            pageUrl String,
-            userAgent String,
-            timestamp DateTime,
-            fcp Nullable(Float64),
-            lcp Nullable(Float64),
-            cls Nullable(Float64),
-            fid Nullable(Float64),
-            ttfb Nullable(Float64),
-            inp Nullable(Float64),
-            navigationType String,
-            connectionInfo String,
-            received_at DateTime DEFAULT now()
-          ) ENGINE = MergeTree()
-          PARTITION BY toYYYYMM(timestamp)
-          ORDER BY (timestamp, pageUrl)
+                id UInt64,
+                pageUrl LowCardinality(String),
+                userAgent String,
+                timestamp DateTime64(3, 'UTC'),
+                fcp Float64 DEFAULT 0,
+                lcp Float64 DEFAULT 0,
+                cls Float64 DEFAULT 0,
+                fid Float64 DEFAULT 0,
+                ttfb Float64 DEFAULT 0,
+                inp Float64 DEFAULT 0,
+                navigationType LowCardinality(String),
+                connectionInfo LowCardinality(String),
+                received_at DateTime64(3, 'UTC') DEFAULT now64(3)
+            ) ENGINE = MergeTree()
+            PARTITION BY toYYYYMM(timestamp)
+            ORDER BY (timestamp, pageUrl)
+            TTL timestamp + INTERVAL 90 DAY
+            SETTINGS index_granularity = 8192;
         `,
       });
 
@@ -119,20 +120,21 @@ export class ClickHouseService implements OnModuleDestroy {
       await this.client.command({
         query: `
           CREATE TABLE IF NOT EXISTS ${this.getDatabase()}.api_metrics (
-            id UInt64,
-            url String,
-            method String,
-            startTime DateTime,
-            duration Float64,
-            status UInt16,
-            size Nullable(UInt64),
-            pageUrl String,
-            userAgent String,
-            timestamp DateTime,
-            received_at DateTime DEFAULT now()
-          ) ENGINE = MergeTree()
-          PARTITION BY toYYYYMM(timestamp)
-          ORDER BY (timestamp, url, method)
+                id UInt64,
+                url LowCardinality(String),
+                method LowCardinality(String),
+                duration Float64,
+                status UInt16,
+                size UInt64 DEFAULT 0,
+                pageUrl LowCardinality(String),
+                userAgent String,
+                timestamp DateTime64(3, 'UTC'),
+                received_at DateTime64(3, 'UTC') DEFAULT now64(3)
+            ) ENGINE = MergeTree()
+            PARTITION BY toYYYYMM(timestamp)
+            ORDER BY (timestamp, url, method)
+            TTL timestamp + INTERVAL 90 DAY
+            SETTINGS index_granularity = 8192;
         `,
       });
 
@@ -159,13 +161,13 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertPerformanceData(data: any) {
-    const timestamp = formatTimestamp(data.timestamp);
+    // const timestamp = formatTimestamp(data.timestamp);
 
     const record: PerformanceRecord = {
       id: Math.floor(Date.now() / 1000),
       pageUrl: this.sanitizeString(data.pageUrl),
       userAgent: this.sanitizeString(data.userAgent),
-      timestamp,
+      timestamp: Number(data.timestamp),
       fcp: data.eventData?.fcp != null ? Number(data.eventData.fcp) : null,
       lcp: data.eventData?.lcp != null ? Number(data.eventData.lcp) : null,
       cls: data.eventData?.cls != null ? Number(data.eventData.cls) : null,
@@ -219,19 +221,17 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertAPIData(data: APIMetricData) {
-    const timestampValue = formatTimestamp(data.timestamp!.toString()); //this.toUnixTimestamp(data.timestamp);
-
+    this.logger.log('Inserting API data---->', data.timestamp);
     const record: APIRecord = {
       id: Math.floor(Date.now() / 1000),
       url: this.sanitizeString(data.eventData.url),
       method: this.sanitizeString(data.method, 10),
-      startTime: '',
       duration: Number(data.eventData.duration) || 0,
       status: Number(data.status) || 0,
       size: data.size != null ? Number(data.size) : null,
       pageUrl: this.sanitizeString(data.pageUrl),
       userAgent: this.sanitizeString(data.userAgent),
-      timestamp: timestampValue,
+      timestamp: Number(data.timestamp),
     };
 
     this.apiBuffer.push(record);
@@ -242,17 +242,24 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async getPerformanceSummary(fromDate: Date, toDate: Date) {
+    // 日历日判断：fromDate 和 toDate 落在同一天 / 相邻一天 → 视为"最近1天"
+    const { toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
+
     const query = `
       SELECT
-        pageUrl,
+        pageUrl, 
         avg(fcp) AS avg_fcp,
         avg(lcp) AS avg_lcp,
         avg(cls) AS avg_cls,
         count(*) AS total_records,
         max(timestamp) AS latest_timestamp
       FROM ${this.getDatabase()}.performance_metrics
-      WHERE timestamp >= {from: DateTime}
-        AND timestamp <= {to: DateTime}
+      WHERE
+        ${
+          isRecentOneDay
+            ? 'timestamp >= now() - INTERVAL 24 HOUR'
+            : 'timestamp >= {from: DateTime} AND timestamp < {to: DateTime}'
+        }
         AND fcp IS NOT NULL
         AND lcp IS NOT NULL
       GROUP BY pageUrl
@@ -262,28 +269,33 @@ export class ClickHouseService implements OnModuleDestroy {
     const result = await this.client.query({
       query,
       format: 'JSONEachRow',
-      query_params: {
-        from: fmt(fromDate),
-        to: fmt(toDate),
-      },
+      query_params: isRecentOneDay
+        ? {}
+        : { from: formatTimestamp(fromDate), to: formatTimestamp(toDay) },
     });
 
     return result.json();
   }
 
   async getAPISummary(fromDate: Date, toDate: Date) {
+    const { toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
     const query = `
-      SELECT 
-        url,
+      SELECT
+        cutQueryString(url) AS path,
         method,
         avg(duration) AS avg_duration,
         avg(size) AS avg_size,
         count(*) AS total_requests,
+        max(timestamp) AS latest_timestamp,
         countIf(status >= 400) AS error_count
       FROM ${this.getDatabase()}.api_metrics
-      WHERE timestamp >= {from: DateTime}
-        AND timestamp <= {to: DateTime}
-      GROUP BY url, method
+      WHERE
+        ${
+          isRecentOneDay
+            ? 'timestamp >= now() - INTERVAL 24 HOUR'
+            : 'timestamp >= {from: DateTime} AND timestamp < {to: DateTime}'
+        }
+      GROUP BY path, method
       ORDER BY avg_duration DESC
     `;
 
@@ -291,8 +303,8 @@ export class ClickHouseService implements OnModuleDestroy {
       query,
       format: 'JSONEachRow',
       query_params: {
-        from: fmt(fromDate),
-        to: fmt(toDate),
+        from: formatTimestamp(fromDate),
+        to: formatTimestamp(toDay),
       },
     });
 
