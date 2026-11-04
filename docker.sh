@@ -148,8 +148,8 @@ build_services() {
     echo -e "${BLUE}Configuring registry mirrors for China network...${NC}"
     
     # 设置npm/pnpm国内镜像
-    export NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
-    export PNPM_REGISTRY=${PNPM_REGISTRY:-https://registry.npmmirror.com}
+    export NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com} #http://192.168.88.118:4873
+    export PNPM_REGISTRY=${PNPM_REGISTRY:-https://registry.npmmirror.com}#http://192.168.88.118:4873
     
     # 启用 BuildKit 并行构建 + 层缓存
     export DOCKER_BUILDKIT=1

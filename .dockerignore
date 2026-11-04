@@ -89,3 +89,7 @@ __pycache__
 
 # SSL certs (mounted at runtime via docker-compose volume)
 ssl/
+
+**/node_modules
+**/dist
+**/*.log
