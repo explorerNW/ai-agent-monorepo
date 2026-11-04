@@ -36,7 +36,7 @@ function TimelineChart({ data, days }: TimelineChartProps) {
     > = {};
 
     data.forEach((item) => {
-      const timestamp = new Date(item.timestamp);
+      const timestamp = new Date(item.latest_timestamp);
       const key = days === 1 ? timestamp.toISOString() : timestamp.toLocaleDateString();
 
       if (!groupedData[key]) {
