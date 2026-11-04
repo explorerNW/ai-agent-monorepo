@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { createClient, ClickHouseClient } from '@clickhouse/client';
-import { fmt } from './tools';
+import { fmt, formatTimestamp } from './tools';
 
 interface APIMetricData {
   url?: string;
@@ -21,7 +21,7 @@ interface PerformanceRecord {
   id: number;
   pageUrl: string;
   userAgent: string;
-  timestamp: number;
+  timestamp: number | string;
   fcp: number | null;
   lcp: number | null;
   cls: number | null;
@@ -36,13 +36,13 @@ interface APIRecord {
   id: number;
   url: string;
   method: string;
-  startTime: number;
+  startTime: number | string;
   duration: number;
   status: number;
   size: number | null;
   pageUrl: string;
   userAgent: string;
-  timestamp: number;
+  timestamp: number | string;
 }
 
 @Injectable()
@@ -159,7 +159,7 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertPerformanceData(data: any) {
-    const timestamp = this.toUnixTimestamp(data.timestamp);
+    const timestamp = formatTimestamp(data.timestamp);
 
     const record: PerformanceRecord = {
       id: Math.floor(Date.now() / 1000),
@@ -182,51 +182,50 @@ export class ClickHouseService implements OnModuleDestroy {
       await this.flushPerformanceBuffer();
     }
 
-    const performanceList = data.filter(
-      (data) => data.eventType === 'performance',
-    );
-    const apiList = data.filter((data) => data.eventType === 'api');
-    const errorList = data.filter((data) => data.eventType === 'error');
-    const customList = data.filter((data) => data.eventType === 'custom');
+    // const performanceList = data.filter(
+    //   (data) => data.eventType === 'performance',
+    // );
+    // const apiList = data.filter((data) => data.eventType === 'api');
+    // const errorList = data.filter((data) => data.eventType === 'error');
+    // const customList = data.filter((data) => data.eventType === 'custom');
 
-    // 性能指标
-    await Promise.all(
-      performanceList.map((data) => {
-        // return this.performanceService.recordPerformance(data);
-      }),
-    );
+    // // 性能指标
+    // await Promise.all(
+    //   performanceList.map((data) => {
+    //     // return this.performanceService.recordPerformance(data);
+    //   }),
+    // );
 
-    // API 指标
-    await Promise.all(
-      apiList.map((data) => {
-        // return this.performanceService.recordAPIMetric(data);
-      }),
-    );
+    // // API 指标
+    // await Promise.all(
+    //   apiList.map((data) => {
+    //     // return this.performanceService.recordAPIMetric(data);
+    //   }),
+    // );
 
-    // 错误指标
-    await Promise.all(
-      errorList.map((data) => {
-        // return this.performanceService.recordErrorMetric(data);
-      }),
-    );
+    // // 错误指标
+    // await Promise.all(
+    //   errorList.map((data) => {
+    //     // return this.performanceService.recordErrorMetric(data);
+    //   }),
+    // );
 
-    // 自定义指标
-    await Promise.all(
-      customList.map((data) => {
-        // return this.performanceService.recordCustomMetric(data);
-      }),
-    );
+    // // 自定义指标
+    // await Promise.all(
+    //   customList.map((data) => {
+    //     // return this.performanceService.recordCustomMetric(data);
+    //   }),
+    // );
   }
 
   async insertAPIData(data: APIMetricData) {
-    const startTimeTimestamp = this.toUnixTimestamp(data.startTime);
-    const timestampValue = this.toUnixTimestamp(data.timestamp);
+    const timestampValue = formatTimestamp(data.timestamp!.toString()); //this.toUnixTimestamp(data.timestamp);
 
     const record: APIRecord = {
       id: Math.floor(Date.now() / 1000),
       url: this.sanitizeString(data.eventData.url),
       method: this.sanitizeString(data.method, 10),
-      startTime: startTimeTimestamp,
+      startTime: '',
       duration: Number(data.eventData.duration) || 0,
       status: Number(data.status) || 0,
       size: data.size != null ? Number(data.size) : null,

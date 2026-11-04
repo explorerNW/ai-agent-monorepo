@@ -14,7 +14,7 @@ export function useWebVitalsStats(days: number) {
       return res.json();
     },
     // ✅ 仅对非 4xx 错误重试，404 立即停止重试
-    retry: (failureCount, error) => {
+    retry: (failureCount: number, error: Error) => {
       if ((error as Error & { response: { status: number } })?.response?.status === 404)
         return false;
       return failureCount < 3;

@@ -178,46 +178,46 @@ export class ClickHouseService implements OnModuleDestroy {
       await this.flushPerformanceBuffer();
     }
 
-    const performanceList = data.filter(
-        (data) => data.eventType === 'performance',
-      );
-      const apiList = data.filter(
-        (data) => data.eventType === 'api',
-      );
-      const errorList = data.filter(
-        (data) => data.eventType === 'error',
-      );
-      const customList = data.filter(
-        (data) => data.eventType === 'custom',
-      );
+    // const performanceList = data.filter(
+    //     (data) => data.eventType === 'performance',
+    //   );
+    //   const apiList = data.filter(
+    //     (data) => data.eventType === 'api',
+    //   );
+    //   const errorList = data.filter(
+    //     (data) => data.eventType === 'error',
+    //   );
+    //   const customList = data.filter(
+    //     (data) => data.eventType === 'custom',
+    //   );
 
-      // 性能指标
-      await Promise.all(
-        performanceList.map((data) => {
-          // return this.performanceService.recordPerformance(data);
-        }),
-      );
+    //   // 性能指标
+    //   await Promise.all(
+    //     performanceList.map((data) => {
+    //       // return this.performanceService.recordPerformance(data);
+    //     }),
+    //   );
 
-      // API 指标
-      await Promise.all(
-        apiList.map((data) => {
-          // return this.performanceService.recordAPIMetric(data);
-        }),
-      );
+    //   // API 指标
+    //   await Promise.all(
+    //     apiList.map((data) => {
+    //       // return this.performanceService.recordAPIMetric(data);
+    //     }),
+    //   );
 
-      // 错误指标
-      await Promise.all(
-        errorList.map((data) => {
-          // return this.performanceService.recordErrorMetric(data);
-        }),
-      );
+    //   // 错误指标
+    //   await Promise.all(
+    //     errorList.map((data) => {
+    //       // return this.performanceService.recordErrorMetric(data);
+    //     }),
+    //   );
 
-      // 自定义指标
-      await Promise.all(
-        customList.map((data) => {
-          // return this.performanceService.recordCustomMetric(data);
-        }),
-      );
+    //   // 自定义指标
+    //   await Promise.all(
+    //     customList.map((data) => {
+    //       // return this.performanceService.recordCustomMetric(data);
+    //     }),
+    //   );
   }
 
   async insertAPIData(data: APIMetricData) {
