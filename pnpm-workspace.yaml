@@ -1,5 +1,5 @@
 packages:
-  - "packages/*"
+  - "packages/**"
 allowBuilds:
   "@nestjs/core": true
   "@parcel/watcher": true

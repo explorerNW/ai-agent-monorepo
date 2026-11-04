@@ -1,80 +1,43 @@
-# ======================
-# 1. 构建阶段 (Builder) - 合并依赖安装 + 编译
-# ======================
-FROM node:22-alpine AS builder
-
+# syntax=docker/dockerfile:1
+FROM node:22-alpine AS base
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+    #http://192.168.88.118:4873
+# 尊重 package.json 里的 packageManager，不再 npm -g 装 latest
+RUN corepack enable
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
-## https://registry.npmmirror.com
-
-RUN npm install -g pnpm@latest
-
-# 先复制依赖描述文件，利用 Docker 层缓存
-COPY .npmrc ./
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/back-end/package.json ./packages/back-end/package.json
-
-
-# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+# ============ Builder ============
+FROM base AS builder
+ENV NODE_ENV=development
+COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prod=false --ignore-scripts
-
-# 再复制源码（依赖不变时上面的 install 层走缓存）
-COPY packages/back-end/clickhouse-config.xml ./packages/back-end/
-COPY packages/back-end/users.xml ./packages/back-end/
-COPY packages/back-end/default-user.xml ./packages/back-end/
-COPY packages/back-end/. ./packages/back-end/
-
-# 编译
-WORKDIR /app
+    pnpm install --frozen-lockfile --ignore-scripts --prefer-offline
 RUN pnpm --filter=llm build
 
-
-# ======================
-# 2. 生产阶段 (Production)
-# ======================
-FROM node:22-alpine AS production
-
-LABEL maintainer="ai-agent-team"
-LABEL description="AI Agent Backend Service"
-LABEL version="2.0.0"
-
-WORKDIR /app
-
-ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
+# ============ Production ============
+FROM base AS production
+LABEL maintainer="ai-agent-team" description="AI Agent Backend Service" version="2.0.0"
 ENV NODE_ENV=production
-## https://registry.npmmirror.com
+COPY . .
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod --ignore-scripts \
+      --filter=llm... --prefer-offline
 
-RUN npm install -g pnpm@latest && \
-    addgroup -g 1001 -S appgroup && \
-    adduser -S appuser -u 1001 -G appgroup
-
-# 复制依赖描述文件
-COPY .npmrc ./
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/back-end/package.json ./packages/back-end/package.json
-
-# 只安装生产依赖，跳过 lifecycle 脚本
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts --filter=llm
-
-# 复制构建产物
+# 产物 + 运行时文件（保持 packages/back-end 目录结构，路径最省改动）
 COPY --from=builder /app/packages/back-end/dist ./packages/back-end/dist
-COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./packages/back-end/dist/src/redis/scripts/seckill.lua
+COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua \
+     ./packages/back-end/dist/src/redis/scripts/seckill.lua
+COPY packages/back-end/clickhouse-config.xml packages/back-end/users.xml \
+     ./packages/back-end/
 
-# 复制运行时需要的配置
-COPY packages/back-end/clickhouse-config.xml ./packages/back-end/
-COPY packages/back-end/users.xml ./packages/back-end/
-
-RUN mkdir -p packages/back-end/uploads && \
-    chown -R appuser:appgroup /app
+RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup && \
+    mkdir -p packages/back-end/uploads && chown -R appuser:appgroup /app
 
 WORKDIR /app/packages/back-end
 USER appuser
-
 EXPOSE 3000
-
+# 关键：失败要 exit 1，不能 exit 0
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/parallel/cpu-info || exit 0
-
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/parallel/cpu-info || exit 1
 CMD ["node", "dist/src/main.js"]

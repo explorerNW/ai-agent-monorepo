@@ -1,54 +1,36 @@
-# ======================
-# Builder Stage
-# ======================
-FROM node:22-alpine AS builder
-
+# syntax=docker/dockerfile:1
+FROM node:22-alpine AS base
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+    #http://192.168.88.118:4873
+RUN corepack enable
 WORKDIR /app
 
+# ===================== Builder =====================
+FROM base AS builder
 ENV NODE_ENV=development
-ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
-## https://registry.npmmirror.com
-
-RUN npm install -g pnpm@latest
-
-# 先复制依赖描述文件，利用 Docker 层缓存
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/back-end/micro-service/rabbit-mq/package.json ./packages/back-end/micro-service/rabbit-mq/
-
-# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prod=false --ignore-scripts
-
-# 再复制源码
-COPY packages/back-end/micro-service/rabbit-mq/ ./packages/back-end/micro-service/rabbit-mq/
-
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts --prefer-offline
 WORKDIR /app/packages/back-end/micro-service/rabbit-mq
-RUN npx tsc -p tsconfig.build.json || npx tsc -p tsconfig.json
+RUN pnpm exec tsc -p tsconfig.build.json
 
-
-# ======================
-# Production Stage
-# ======================
-FROM node:22-alpine AS production
-
-WORKDIR /app
-
+# ===================== Production =====================
+FROM base AS production
 ENV NODE_ENV=production
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
+COPY . .
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod --ignore-scripts \
+      --filter rabbit-mq... --prefer-offline && \
+    pnpm deploy --filter=rabbit-mq --prod --legacy /app/deploy
 
-RUN npm install -g pnpm@latest
-
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
-COPY packages/back-end/micro-service/rabbit-mq/package.json ./packages/back-end/micro-service/rabbit-mq/
-
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
-
+# 把 builder 编译好的产物放进 deploy（deploy 只拍平依赖，不含 dist）
 COPY --from=builder \
-  /app/packages/back-end/micro-service/rabbit-mq/dist \
-  /app/packages/back-end/micro-service/rabbit-mq/dist
+     /app/packages/back-end/micro-service/rabbit-mq/dist \
+     /app/deploy/dist
 
-WORKDIR /app/packages/back-end/micro-service/rabbit-mq
-
+WORKDIR /app/deploy
+USER node
 EXPOSE 3002
-
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3002/health || exit 1
 CMD ["node", "dist/src/main.js"]
