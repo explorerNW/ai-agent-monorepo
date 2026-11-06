@@ -7,26 +7,28 @@ services:
       POSTGRES_USER: ${DB_USER:-admin}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
     env_file:
-      - ./packages/back-end/.env
+      - ./packages/back-end/.env # 确保此文件在 .gitignore 中
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
+    # ports:
+    #   - "5432:5432"
     networks:
       - ai-agent-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-admin}"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
-      start_period: 5s
+      start_period: 10s
     deploy:
       resources:
         limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
           cpus: "0.5"
           memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
 
   redis:
     image: redis:7-alpine
@@ -37,6 +39,8 @@ services:
       - ${REDIS_PASS}
       - --appendonly
       - "yes"
+    # ports:
+    #   - "6379:6379"
     env_file:
       - ./packages/back-end/.env
     environment:
@@ -50,29 +54,30 @@ services:
       - ai-agent-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 2s
+      interval: 10s
+      timeout: 3s
       retries: 3
     deploy:
       resources:
         limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
           cpus: "0.25"
           memory: 128M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
 
   rabbitmq:
     image: rabbitmq:4-management
     container_name: ai-agent-rabbitmq
     ports:
+      # - "5672:5672"
       - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:5672
     env_file:
-      - ./packages/back-end/.env
+      - ./packages/back-end/.env # 确保此文件在 .gitignore 中
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     restart: unless-stopped
@@ -80,23 +85,23 @@ services:
       - ai-agent-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
           cpus: "0.5"
           memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
 
   rabbit-mq-service:
     build:
       context: .
-      dockerfile: packages/back-end/micro-service/rabbit-mq/Dockerfile
+      dockerfile: ./packages/back-end/micro-service/rabbit-mq/Dockerfile
     container_name: ai-agent-rabbitmq-service
     environment:
       - NODE_ENV=production
@@ -116,20 +121,38 @@ services:
     networks:
       - ai-agent-network
     deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
       resources:
         limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
           cpus: "0.25"
           memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: clickhouse-server
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "8123:8123" # HTTP interface
+      - "9000:9000" # Native interface
     volumes:
       - ./clickhouse-data:/var/lib/clickhouse
       - ./packages/back-end/clickhouse-config.xml:/etc/clickhouse-server/config.xml
@@ -149,18 +172,18 @@ services:
           "CMD-SHELL",
           "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 0",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s # 增加启动时间
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1G
+          cpus: "2.0"
+          memory: 4G
         reservations:
-          cpus: "0.5"
-          memory: 512M
+          cpus: "1.0"
+          memory: 2G
     ulimits:
       nofile:
         soft: 262144
@@ -182,11 +205,6 @@ services:
     restart: always
     networks:
       - ai-agent-network
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
 
   back-end:
     build:
@@ -222,30 +240,47 @@ services:
           "CMD-SHELL",
           "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/parallel/cpu-info || exit 0",
         ]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 40s
     depends_on:
       postgres:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
       rabbit-mq-service:
         condition: service_started
       clickhouse:
-        condition: service_started
+        condition: service_healthy
     deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+        monitor: 60s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
       resources:
         limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
           cpus: "0.5"
           memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 256M
 
   front-end:
-    image: ai-agent-frontend:latest
     build:
       context: .
       dockerfile: packages/front-end/Dockerfile
@@ -254,6 +289,7 @@ services:
     container_name: ai-agent-frontend
     ports:
       - "443:443"
+      # - "80:80"  # Commented out to avoid port conflict - use HTTPS only
     environment:
       - NODE_ENV=production
       - PORT=443
@@ -264,7 +300,7 @@ services:
       - /etc/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       back-end:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - ai-agent-network
@@ -274,18 +310,36 @@ services:
           "CMD-SHELL",
           "wget --no-verbose --tries=1 --spider https://127.0.0.1:443/ --no-check-certificate || exit 0",
         ]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 20s
     deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 45s
+        max_failure_ratio: 0.3
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
       resources:
         limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
           cpus: "0.25"
           memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
 
 volumes:
   backend-uploads:

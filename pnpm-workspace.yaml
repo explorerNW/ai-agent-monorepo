@@ -1,5 +1,6 @@
 packages:
   - "packages/**"
+  - "!packages/single-spa"
 allowBuilds:
   "@nestjs/core": true
   "@parcel/watcher": true
