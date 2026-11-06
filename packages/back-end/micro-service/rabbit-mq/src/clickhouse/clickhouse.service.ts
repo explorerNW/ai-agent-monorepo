@@ -161,7 +161,6 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertPerformanceData(data: any) {
-    // const timestamp = formatTimestamp(data.timestamp);
 
     const record: PerformanceRecord = {
       id: Math.floor(Date.now() / 1000),
@@ -221,7 +220,6 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertAPIData(data: APIMetricData) {
-    this.logger.log('Inserting API data---->', data.timestamp);
     const record: APIRecord = {
       id: Math.floor(Date.now() / 1000),
       url: this.sanitizeString(data.eventData.url),
@@ -243,7 +241,7 @@ export class ClickHouseService implements OnModuleDestroy {
 
   async getPerformanceSummary(fromDate: Date, toDate: Date) {
     // 日历日判断：fromDate 和 toDate 落在同一天 / 相邻一天 → 视为"最近1天"
-    const { toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
+    const { fromDay, toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
 
     const query = `
       SELECT
@@ -252,13 +250,13 @@ export class ClickHouseService implements OnModuleDestroy {
         avg(lcp) AS avg_lcp,
         avg(cls) AS avg_cls,
         count(*) AS total_records,
-        max(timestamp) AS latest_timestamp
+        toTimeZone(max(timestamp), 'Asia/Shanghai') AS latest_timestamp
       FROM ${this.getDatabase()}.performance_metrics
       WHERE
         ${
           isRecentOneDay
-            ? 'timestamp >= now() - INTERVAL 24 HOUR'
-            : 'timestamp >= {from: DateTime} AND timestamp < {to: DateTime}'
+            ? "timestamp >= toDateTime64(now(), 3, 'Asia/Shanghai') - INTERVAL 24 HOUR"
+            : "timestamp >= toDateTime64({from:String}, 3, 'Asia/Shanghai') AND timestamp < toDateTime64({to:String}, 3, 'Asia/Shanghai')"
         }
         AND fcp IS NOT NULL
         AND lcp IS NOT NULL
@@ -271,14 +269,14 @@ export class ClickHouseService implements OnModuleDestroy {
       format: 'JSONEachRow',
       query_params: isRecentOneDay
         ? {}
-        : { from: formatTimestamp(fromDate), to: formatTimestamp(toDay) },
+        : { from: formatTimestamp(fromDay), to: formatTimestamp(toDay) },
     });
 
     return result.json();
   }
 
   async getAPISummary(fromDate: Date, toDate: Date) {
-    const { toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
+    const { fromDay, toDay, isRecentOneDay } = dateCheck(fromDate, toDate);
     const query = `
       SELECT
         cutQueryString(url) AS path,
@@ -286,26 +284,26 @@ export class ClickHouseService implements OnModuleDestroy {
         avg(duration) AS avg_duration,
         avg(size) AS avg_size,
         count(*) AS total_requests,
-        max(timestamp) AS latest_timestamp,
+        toTimeZone(max(timestamp), 'Asia/Shanghai') AS latest_timestamp,
         countIf(status >= 400) AS error_count
       FROM ${this.getDatabase()}.api_metrics
       WHERE
         ${
           isRecentOneDay
-            ? 'timestamp >= now() - INTERVAL 24 HOUR'
-            : 'timestamp >= {from: DateTime} AND timestamp < {to: DateTime}'
+            ? "timestamp >= toDateTime64(now(), 3, 'Asia/Shanghai') - INTERVAL 24 HOUR"
+            : "timestamp >= toDateTime64({from:String}, 3, 'Asia/Shanghai') AND timestamp < toDateTime64({to:String}, 3, 'Asia/Shanghai')"
         }
       GROUP BY path, method
       ORDER BY avg_duration DESC
     `;
 
+
     const result = await this.client.query({
       query,
       format: 'JSONEachRow',
-      query_params: {
-        from: formatTimestamp(fromDate),
-        to: formatTimestamp(toDay),
-      },
+      query_params: isRecentOneDay
+        ? {}
+        : { from: formatTimestamp(fromDay), to: formatTimestamp(toDay) },
     });
 
     return result.json();
@@ -355,26 +353,6 @@ export class ClickHouseService implements OnModuleDestroy {
 
   private getDatabase(): string {
     return process.env.CLICKHOUSE_DB || 'performance_db';
-  }
-
-  private toUnixTimestamp(value: Date | number | string | undefined): number {
-    if (value instanceof Date) {
-      return Math.floor(value.getTime() / 1000);
-    }
-
-    if (typeof value === 'number') {
-      return value > 1e12 ? Math.floor(value / 1000) : value;
-    }
-
-    if (typeof value === 'string') {
-      const date = new Date(value);
-      if (isNaN(date.getTime())) {
-        throw new Error(`Invalid date format: ${value}`);
-      }
-      return Math.floor(date.getTime() / 1000);
-    }
-
-    return Math.floor(Date.now() / 1000);
   }
 
   private sanitizeString(value: any, maxLength = 500): string {
