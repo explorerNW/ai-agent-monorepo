@@ -70,18 +70,20 @@ print_help() {
 }
 
 start_prod() {
+    set -e
     echo -e "${GREEN}Starting services in production mode...${NC}"
-    # # 启用 BuildKit 利用层缓存加速重复构建
-    # export DOCKER_BUILDKIT=1
-    # export COMPOSE_DOCKER_CLI_BUILD=1
-    # $DOCKER_COMPOSE up -d --build
-    # echo -e "${GREEN}✓ Services started successfully!${NC}"
-    # echo -e "${BLUE}Front-end: https://localhost:443${NC}"
-    # echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
-    # echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
-    build_services
-    sleep 2
-    deploy_rolling "false"
+
+    docker compose up -d --build
+
+    echo ""
+    echo -e "${GREEN}✓ Deployment completed${NC}"
+
+    verify_deployment
+
+    echo -e "${GREEN}✓ Services started successfully!${NC}"
+    echo -e "${BLUE}Front-end: https://localhost:443${NC}"
+    echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
+    echo -e "${BLUE}PostgreSQL: localhost:5432${NC}"
 }
 
 start_dev() {
@@ -139,6 +141,11 @@ view_postgres_logs() {
     echo -e "${BLUE}Viewing PostgreSQL logs...${NC}"
     echo -e "${YELLOW}Press Ctrl+C to exit${NC}"
     $DOCKER_COMPOSE logs -f postgres
+}
+
+clean_build_cache() {
+    echo -e "${YELLOW}Cleaning old build cache...${NC}"
+    docker builder prune -f --keep-storage 8GB 2>/dev/null || true
 }
 
 build_services() {
@@ -564,6 +571,12 @@ case "${1:-help}" in
         ;;
     clean)
         clean_all
+        ;;
+    clean:build)
+        clean_build_cache
+        ;;
+    verify)
+        verify_services
         ;;
     status)
         show_status

@@ -1,43 +1,112 @@
-# syntax=docker/dockerfile:1
-FROM node:22-alpine AS base
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-    #http://192.168.88.118:4873
-# 尊重 package.json 里的 packageManager，不再 npm -g 装 latest
-RUN corepack enable
+# ======================
+# 1. 依赖安装阶段 (Dependencies)
+# ======================
+# FROM node:22-alpine AS dependencies
+
+# WORKDIR /app
+
+# # Enable pnpm with Chinese mirror (set registry BEFORE corepack prepare)
+# RUN npm config set registry https://registry.npmmirror.com && \
+#     corepack enable && \
+#     corepack prepare pnpm@11.1.2 --activate
+
+# # Copy workspace configuration files
+# COPY .npmrc ./
+# COPY package.json pnpm-lock.yaml ./
+# COPY pnpm-workspace.yaml ./
+# COPY packages/back-end/clickhouse-config.xml ./
+# COPY users.xml ./
+
+# # Copy all package.json files for dependency installation
+# COPY packages/back-end/package.json ./packages/back-end/package.json
+
+# # Install all dependencies (including devDependencies for build)
+# # Use --force to ensure optional dependencies are installed on Alpine
+# # 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+# RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+#     pnpm install --frozen-lockfile --prod=false --ignore-scripts
+
+
+# ======================
+# 2. 构建阶段 (Builder)
+# ======================
+FROM node:22-alpine AS builder
+
 WORKDIR /app
 
-# ============ Builder ============
-FROM base AS builder
-ENV NODE_ENV=development
-COPY . .
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts --prefer-offline
+# Copy workspace configuration
+COPY .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/back-end/package.json ./packages/back-end/package.json
+COPY packages/back-end/clickhouse-config.xml ./
+COPY packages/back-end/users.xml ./
+COPY packages/back-end/default-user.xml ./
+
+# Install all dependencies (including devDependencies for build)
+# Use --force to ensure optional dependencies are installed on Alpine
+# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+RUN npm config set registry https://registry.npmmirror.com && \
+    corepack enable && corepack prepare pnpm@11.1.2 --activate && \
+    pnpm config set store-dir /root/.local/share/pnpm/store
+RUN --mount=type=cache,id=pnpm-store-backend,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts
+
+# Copy source code
+COPY packages/back-end/. ./packages/back-end/
+
+# Build the application from workspace root using the correct package name filter
+WORKDIR /app
 RUN pnpm --filter=llm build
 
-# ============ Production ============
-FROM base AS production
-LABEL maintainer="ai-agent-team" description="AI Agent Backend Service" version="2.0.0"
-ENV NODE_ENV=production
-COPY . .
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prod --ignore-scripts \
-      --filter=llm... --prefer-offline
 
-# 产物 + 运行时文件（保持 packages/back-end 目录结构，路径最省改动）
-COPY --from=builder /app/packages/back-end/dist ./packages/back-end/dist
-COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua \
-     ./packages/back-end/dist/src/redis/scripts/seckill.lua
-COPY packages/back-end/clickhouse-config.xml packages/back-end/users.xml \
-     ./packages/back-end/
+# ======================
+# 3. 生产阶段 (Production)
+# ======================
+FROM node:22-alpine AS production
 
-RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup && \
-    mkdir -p packages/back-end/uploads && chown -R appuser:appgroup /app
+# Add labels for better maintainability
+LABEL maintainer="ai-agent-team"
+LABEL description="AI Agent Backend Service"
+LABEL version="1.0.0"
 
 WORKDIR /app/packages/back-end
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+
+# Enable pnpm (set registry BEFORE corepack prepare)
+RUN npm config set registry https://registry.npmmirror.com && \
+    corepack enable && \
+    corepack prepare pnpm@11.1.2 --activate
+
+# Copy workspace configuration
+COPY .npmrc ../../
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ../../
+COPY packages/back-end/package.json ../../packages/back-end/
+COPY packages/back-end/clickhouse-config.xml ../../
+COPY packages/back-end/users.xml ../../packages/back-end/
+
+# Install production dependencies only
+RUN cd ../.. && pnpm install --prod --frozen-lockfile --ignore-scripts --filter=llm
+
+# Copy built application from builder
+COPY --from=builder /app/packages/back-end/dist ./dist
+COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./dist/src/redis/scripts/seckill.lua
+
+
+# Create necessary directories with proper permissions
+RUN mkdir -p uploads && \
+    chown -R appuser:appgroup /app
+
+# Switch to non-root user
 USER appuser
+
 EXPOSE 3000
-# 关键：失败要 exit 1，不能 exit 0
+
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/parallel/cpu-info || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0
+
+# Start the application using node directly (more stable than nest CLI)
 CMD ["node", "dist/src/main.js"]

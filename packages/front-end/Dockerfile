@@ -26,7 +26,7 @@ COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-elem
 COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/
 
 # 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store-front-end,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
 # 再复制全部源码
