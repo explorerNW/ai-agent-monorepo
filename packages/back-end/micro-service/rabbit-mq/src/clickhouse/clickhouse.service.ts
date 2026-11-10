@@ -245,7 +245,12 @@ export class ClickHouseService implements OnModuleDestroy {
 
     const query = `
       SELECT
-        pageUrl, 
+        pageUrl,
+        ${
+          isRecentOneDay
+            ? 'toStartOfSecond(timestamp) AS time_bucket'
+            : "toStartOfDay(timestamp, 'Asia/Shanghai') AS time_bucket"
+        },
         avg(fcp) AS avg_fcp,
         avg(lcp) AS avg_lcp,
         avg(cls) AS avg_cls,
@@ -260,8 +265,8 @@ export class ClickHouseService implements OnModuleDestroy {
         }
         AND fcp IS NOT NULL
         AND lcp IS NOT NULL
-      GROUP BY pageUrl
-      ORDER BY avg_lcp DESC
+      GROUP BY pageUrl, time_bucket
+      ORDER BY time_bucket DESC, avg_lcp DESC
     `;
 
     const result = await this.client.query({
@@ -281,6 +286,11 @@ export class ClickHouseService implements OnModuleDestroy {
       SELECT
         cutQueryString(url) AS path,
         method,
+        ${
+          isRecentOneDay
+            ? "toStartOfSecond(timestamp) AS time_bucket"
+            : "toStartOfDay(timestamp, 'Asia/Shanghai') AS time_bucket"
+        },
         avg(duration) AS avg_duration,
         avg(size) AS avg_size,
         count(*) AS total_requests,
@@ -293,8 +303,8 @@ export class ClickHouseService implements OnModuleDestroy {
             ? "timestamp >= toDateTime64(now(), 3, 'Asia/Shanghai') - INTERVAL 24 HOUR"
             : "timestamp >= toDateTime64({from:String}, 3, 'Asia/Shanghai') AND timestamp < toDateTime64({to:String}, 3, 'Asia/Shanghai')"
         }
-      GROUP BY path, method
-      ORDER BY avg_duration DESC
+      GROUP BY path, method, time_bucket
+      ORDER BY time_bucket DESC, avg_duration DESC
     `;
 
 
