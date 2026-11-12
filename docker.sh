@@ -43,6 +43,7 @@ print_help() {
     echo "  restart       Restart all services"
     echo "  deploy        Rolling update deployment (zero-downtime)"
     echo "  deploy:force  Force rolling update (skip health checks)"
+    echo "  deploy:quick  Quick local deploy (skip git sync, usage: deploy:quick [svc1 svc2])"
     echo "  logs          View logs from all services"
     echo "  logs:backend  View backend logs"
     echo "  logs:frontend View frontend logs"
@@ -323,16 +324,79 @@ deploy_rolling() {
     verify_deployment
 }
 
-# ── 安全部署单个服务 ──
-# 策略：记录旧镜像 → 快速切换新镜像 → 等健康检查 → 失败自动回滚到旧镜像
+# ── 本地快速部署（跳过 git sync） ──
+deploy_quick() {
+    local services_to_build="${1:-all}"
+    
+    echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║   🚀 Quick Deploy (no git sync)       ║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════╝${NC}"
+    echo ""
+    
+    # BuildKit 并行构建 + 层缓存
+    export DOCKER_BUILDKIT=1
+    export COMPOSE_DOCKER_CLI_BUILD=1
+    
+    # 确定要构建的服务
+    if [ "$services_to_build" = "all" ]; then
+        services_to_build="back-end front-end rabbit-mq-service"
+        echo -e "${BLUE}Building all services...${NC}"
+    else
+        echo -e "${BLUE}Building specified services: ${CYAN}${services_to_build}${NC}"
+    fi
+    
+    # ═══ Phase 1: Build images ═══
+    echo ""
+    echo -e "${BLUE}Phase 1: Building images...${NC}"
+    $DOCKER_COMPOSE build --parallel $services_to_build
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Build failed!${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✓ All images built${NC}"
+    
+    # ═══ Phase 2: Deploy each service ═══
+    echo ""
+    echo -e "${BLUE}Phase 2: Deploying services...${NC}"
+    local failed_services=""
+    
+    for svc in $services_to_build; do
+        deploy_service_safe "$svc"
+        if [ $? -ne 0 ]; then
+            failed_services="$failed_services $svc"
+        fi
+    done
+    
+    # ═══ Phase 3: Ensure unchanged services are running ═══
+    $DOCKER_COMPOSE up -d 2>/dev/null
+    
+    # ═══ Phase 4: Cleanup ═══
+    docker image prune -f 2>/dev/null || true
+    
+    # ═══ Result ═══
+    echo ""
+    if [ -z "$failed_services" ]; then
+        echo -e "${GREEN}✓ Quick deploy completed successfully!${NC}"
+    else
+        echo -e "${YELLOW}⚠ Failed services:${failed_services} (auto-rolled back)${NC}"
+    fi
+    
+    verify_deployment
+}
+
+# ── 安全部署单个服务（带自动重试） ──
+# 策略：记录旧镜像 → 快速切换新镜像 → 等健康检查 → 失败自动回滚 → 重试（最多 2 次）
 deploy_service_safe() {
     local svc=$1
     local container_name=$(get_container_name "$svc")
+    local max_retries=2
+    local retry_count=0
     
     echo ""
     echo -e "${BLUE}━━━ Deploying: ${CYAN}${svc}${NC} ━━━${NC}"
     
-    # Step 1: 记录当前运行的镜像 ID（用于回滚）
+    # Step 1: 记录当前运行的镜像 ID（用于回滚，只记录一次）
     local old_image
     old_image=$(docker inspect --format='{{.Image}}' "$container_name" 2>/dev/null || echo "")
     
@@ -345,39 +409,66 @@ deploy_service_safe() {
         return 1
     fi
     
-    # Step 3: 等待健康检查
-    echo -e "${YELLOW}  Verifying health...${NC}"
-    wait_for_healthcheck "$svc" 90
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}  ✓ ${svc} deployed successfully!${NC}"
-        return 0
-    fi
-    
-    # Step 4: 健康检查失败 → 自动回滚
-    echo -e "${RED}  ✗ New version failed health check!${NC}"
-    
-    if [ -n "$old_image" ]; then
-        echo -e "${YELLOW}  Rolling back to previous image...${NC}"
-        docker stop "$container_name" 2>/dev/null
-        docker rm "$container_name" 2>/dev/null
-        
-        # 用旧镜像启动
-        docker run -d --name "$container_name" \
-            $(docker inspect --format='{{range $e := .Config.Env}}-e "{{$e}}" {{end}}' "$container_name" 2>/dev/null || true) \
-            --network ai-agent-network \
-            --restart unless-stopped \
-            "$old_image" 2>/dev/null
+    # Step 3: 健康检查 + 自动重试循环
+    while [ $retry_count -lt $max_retries ]; do
+        # 等待健康检查
+        echo -e "${YELLOW}  Verifying health...${NC}"
+        wait_for_healthcheck "$svc" 90
         
         if [ $? -eq 0 ]; then
-            echo -e "${GREEN}  ✓ Rolled back to previous version${NC}"
-        else
-            echo -e "${RED}  ✗ Rollback failed! Manual intervention needed.${NC}"
+            echo -e "${GREEN}  ✓ ${svc} deployed successfully!${NC}"
+            return 0
         fi
-    else
-        echo -e "${YELLOW}  No previous image found, container may be in bad state${NC}"
-    fi
+        
+        # 健康检查失败
+        retry_count=$((retry_count + 1))
+        
+        if [ $retry_count -lt $max_retries ]; then
+            echo -e "${YELLOW}  ✗ Health check failed, rolling back and retrying (${retry_count}/${max_retries})...${NC}"
+        else
+            echo -e "${RED}  ✗ Health check failed, rolling back (${retry_count}/${max_retries})...${NC}"
+        fi
+        
+        # 自动回滚
+        if [ -n "$old_image" ]; then
+            echo -e "${YELLOW}  Rolling back to previous image...${NC}"
+            docker stop "$container_name" 2>/dev/null
+            docker rm "$container_name" 2>/dev/null
+            
+            # 用旧镜像启动
+            docker run -d --name "$container_name" \
+                $(docker inspect --format='{{range $e := .Config.Env}}-e "{{$e}}" {{end}}' "$container_name" 2>/dev/null || true) \
+                --network ai-agent-network \
+                --restart unless-stopped \
+                "$old_image" 2>/dev/null
+            
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}  ✓ Rolled back to previous version${NC}"
+            else
+                echo -e "${RED}  ✗ Rollback failed! Manual intervention needed.${NC}"
+                return 1
+            fi
+        else
+            echo -e "${YELLOW}  No previous image found, container may be in bad state${NC}"
+        fi
+        
+        # 如果还有重试机会，等待一下再重试
+        if [ $retry_count -lt $max_retries ]; then
+            echo -e "${YELLOW}  Waiting 5 seconds before retry...${NC}"
+            sleep 5
+            
+            # 重新切换到新镜像
+            echo -e "${YELLOW}  Retrying deployment...${NC}"
+            $DOCKER_COMPOSE up -d --no-deps --force-recreate "$svc" 2>/dev/null
+            
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}  ✗ Failed to recreate container on retry!${NC}"
+                return 1
+            fi
+        fi
+    done
     
+    echo -e "${RED}  ✗ ${svc} deployment failed after ${max_retries} attempts${NC}"
     return 1
 }
 
@@ -726,6 +817,9 @@ case "${1:-help}" in
         ;;
     deploy:force)
         deploy_rolling "true"
+        ;;
+    deploy:quick)
+        deploy_quick "${2:-all}"
         ;;
     logs)
         view_logs

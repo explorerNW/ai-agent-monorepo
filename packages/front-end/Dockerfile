@@ -1,14 +1,16 @@
 # ======================
 # 1. 依赖安装阶段 (Dependencies)
 # ======================
-FROM node:22-slim AS dependencies
+FROM node:22-alpine AS dependencies
 
 WORKDIR /app
 
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
 
-RUN npm install -g pnpm@latest
+# 🔑 用 corepack 固定 pnpm 版本（和 back-end 一致），避免 @latest 每次重新下载
+RUN corepack enable && corepack prepare pnpm@12.4.1 --activate && \
+    pnpm config set store-dir /root/.local/share/pnpm/store
 
 # 先复制 workspace 配置和所有 package.json，利用 Docker 层缓存
 COPY .npmrc ./
@@ -25,9 +27,9 @@ COPY packages/datatwin-chart-react/package.json ./packages/datatwin-chart-react/
 COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-element/
 COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/
 
-# 🔑 使用 BuildKit cache mount，即使 lock 文件变了也能复用已下载的包
+# 🔑 加 --prefer-offline 优先使用本地缓存
 RUN --mount=type=cache,id=pnpm-store-front-end,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --prod=false --ignore-scripts
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts --prefer-offline
 
 
 # ======================

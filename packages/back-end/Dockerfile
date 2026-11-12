@@ -12,18 +12,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Copy all workspace package.json — pnpm --frozen-lockfile 需要校验所有 importers
 COPY packages/back-end/package.json ./packages/back-end/package.json
 COPY packages/back-end/micro-service/rabbit-mq/package.json ./packages/back-end/micro-service/rabbit-mq/package.json
-COPY packages/front-end/package.json ./packages/front-end/package.json
-COPY packages/monitor-sdk/package.json ./packages/monitor-sdk/package.json
-COPY packages/datatwin-core/package.json ./packages/datatwin-core/package.json
-COPY packages/datatwin-react/package.json ./packages/datatwin-react/package.json
-COPY packages/datatwin-chart-core/package.json ./packages/datatwin-chart-core/package.json
-COPY packages/datatwin-chart-react/package.json ./packages/datatwin-chart-react/package.json
-COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-element/package.json
-COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/package.json
 
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 RUN npm config set registry ${NPM_REGISTRY} && \
-    corepack enable && corepack prepare pnpm@11.1.2 --activate && \
+    corepack enable && corepack prepare pnpm@12.4.1 --activate && \
     pnpm config set store-dir /root/.local/share/pnpm/store
 
 # ======================
@@ -67,22 +59,18 @@ LABEL version="1.0.0"
 
 WORKDIR /app
 
-# Create non-root user for security
+# 🔑 先创建用户（在 COPY 之前），后面用 --chown 在复制时设权限
 RUN addgroup -g 1001 -S appgroup && \
     adduser -S appuser -u 1001 -G appgroup
 
-# 直接拿 prod-deps 的 deploy 产物（含裁剪后的 node_modules + package.json）
-COPY --from=prod-deps /deploy ./
+# 🔑 用 --chown 替代 chown -R，复制时就设好权限，避免遍历几万文件
+COPY --from=prod-deps --chown=appuser:appgroup /deploy ./
+COPY --from=builder --chown=appuser:appgroup /app/packages/back-end/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/packages/back-end/src/redis/scripts/seckill.lua ./dist/src/redis/scripts/seckill.lua
 
-# 编译产物覆盖进去
-COPY --from=builder /app/packages/back-end/dist ./dist
-COPY --from=builder /app/packages/back-end/src/redis/scripts/seckill.lua ./dist/src/redis/scripts/seckill.lua
+# 只 chown uploads 目录，不 chown 整个 /app
+RUN mkdir -p uploads && chown appuser:appgroup uploads
 
-# Create necessary directories with proper permissions
-RUN mkdir -p uploads && \
-    chown -R appuser:appgroup /app
-
-# Switch to non-root user
 USER appuser
 
 EXPOSE 3000

@@ -13,8 +13,9 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
 # 注意：id 用 pnpm-store-rabbitmq，与 back-end 区分，避免共享同一缓存卷
 RUN --mount=type=cache,id=corepack-rabbitmq,target=/root/.cache/node/corepack \
     corepack enable && \
-    corepack prepare pnpm@latest --activate && \
-    pnpm config set store-dir /pnpm/store
+    corepack prepare pnpm@12.4.1 --activate && \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm config set registry ${NPM_REGISTRY}
 
 WORKDIR /app
 
@@ -43,13 +44,17 @@ RUN --mount=type=cache,id=pnpm-store-rabbitmq,target=/pnpm/store \
 # ============ Build deps：开发依赖，用于 tsc ============
 FROM manifests AS build-deps
 
+# 🔑 只安装 rabbit-mq 及其依赖（...表示包含传递依赖），不装整个 monorepo
 RUN --mount=type=cache,id=pnpm-store-rabbitmq,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod=false --ignore-scripts --prefer-offline
+    pnpm install --frozen-lockfile --prod=false --ignore-scripts --prefer-offline \
+      --filter=./packages/back-end/micro-service/rabbit-mq...
 
 # ============ Builder：源码最后才拷，改源码只击穿 build，不碰 install ============
 FROM build-deps AS builder
 
-COPY . .                          
+# 🔑 只拷贝 rabbit-mq 源码，不拷贝整个 monorepo
+COPY packages/back-end/micro-service/rabbit-mq/ ./packages/back-end/micro-service/rabbit-mq/
+
 WORKDIR /app/packages/back-end/micro-service/rabbit-mq
 RUN pnpm exec tsc -p tsconfig.build.json
 
@@ -62,12 +67,13 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-# 直接拿 prod 的 deploy 产物（含裁剪后的 node_modules + package.json）
-COPY --from=prod-deps /deploy ./
-# 编译产物覆盖进去（源码变更只走到这里，install 不再重跑）
-COPY --from=builder /app/packages/back-end/micro-service/rabbit-mq/dist ./dist
+# 🔑 先创建用户
+RUN addgroup -g 1001 -S app && adduser -S app -u 1001 -G app
 
-RUN addgroup -g 1001 -S app && adduser -S app -u 1001 -G app && chown -R app:app /app
+# 🔑 用 --chown 替代 chown -R
+COPY --from=prod-deps --chown=app:app /deploy ./
+COPY --from=builder --chown=app:app /app/packages/back-end/micro-service/rabbit-mq/dist ./dist
+
 USER app
 
 EXPOSE 3002
