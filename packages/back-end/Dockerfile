@@ -21,7 +21,8 @@ COPY packages/datatwin-chart-react/package.json ./packages/datatwin-chart-react/
 COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-element/package.json
 COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/package.json
 
-RUN npm config set registry http://192.168.88.118:4873 && \
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+RUN npm config set registry ${NPM_REGISTRY} && \
     corepack enable && corepack prepare pnpm@11.1.2 --activate && \
     pnpm config set store-dir /root/.local/share/pnpm/store
 

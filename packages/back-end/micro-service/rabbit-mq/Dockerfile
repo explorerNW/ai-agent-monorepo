@@ -3,8 +3,9 @@
 # ===================== Base =====================
 FROM node:22-alpine AS base
 
+ARG NPM_REGISTRY=https://registry.npmmirror.com
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    COREPACK_NPM_REGISTRY=http://192.168.88.118:4873 \
+    COREPACK_NPM_REGISTRY=${NPM_REGISTRY} \
     PNPM_HOME="/pnpm" \
     PATH="$PNPM_HOME:/pnpm/bin:$PATH"
 

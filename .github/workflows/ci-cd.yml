@@ -110,6 +110,7 @@ jobs:
               "REDIS_USER=${{ secrets.REDIS_USER }}" \
               "REDIS_PASS=${{ secrets.REDIS_PASS }}" \
               "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+              "NPM_REGISTRY=${{ secrets.NPM_REGISTRY }}" \
               > packages/back-end/.env
 
             printf '%s\n' \
@@ -128,6 +129,7 @@ jobs:
               "REDIS_USER=${{ secrets.REDIS_USER }}" \
               "REDIS_PASS=${{ secrets.REDIS_PASS }}" \
               "REDIS_HOST=${{ secrets.REDIS_HOST }}" \
+              "NPM_REGISTRY=${{ secrets.NPM_REGISTRY }}" \
               > .env
 
             echo ".env files generated"
