@@ -5,7 +5,8 @@ FROM node:22-slim AS dependencies
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY}
 
 RUN npm install -g pnpm@latest
 

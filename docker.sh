@@ -406,6 +406,8 @@ wait_for_healthcheck() {
     local container_name
     container_name=$(get_container_name "$service_name")
     local elapsed=0
+    local prev_restart_count=-1
+    local stable_checks=0
     
     echo -e "${YELLOW}Waiting for ${service_name} to become healthy...${NC}"
     echo -e "${YELLOW}  Container name: ${container_name}${NC}"
@@ -428,46 +430,80 @@ wait_for_healthcheck() {
     # No healthcheck: fallback to stability check
     if [ "$has_healthcheck" = "no" ]; then
         echo -e "${YELLOW}  No healthcheck defined, checking container stability...${NC}"
+        local initial_pid
+        initial_pid=$(docker inspect --format='{{.State.Pid}}' "$container_name" 2>/dev/null || echo "0")
         sleep 5
         local running
         running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
-        if [ "$running" = "true" ]; then
-            echo -e "${GREEN}✓ ${service_name} is running${NC}"
+        local current_pid
+        current_pid=$(docker inspect --format='{{.State.Pid}}' "$container_name" 2>/dev/null || echo "0")
+        local restart_count
+        restart_count=$(docker inspect --format='{{.RestartCount}}' "$container_name" 2>/dev/null || echo "0")
+        
+        if [ "$running" = "true" ] && [ "$restart_count" -le 1 ] && [ "$initial_pid" = "$current_pid" ]; then
+            echo -e "${GREEN}✓ ${service_name} is running (stable, pid=${current_pid})${NC}"
             return 0
         else
-            echo -e "${RED}✗ ${service_name} container not running${NC}"
+            echo -e "${RED}✗ ${service_name} container unstable (running=${running}, restarts=${restart_count}, pid changed=${initial_pid}→${current_pid})${NC}"
+            docker logs --tail 5 "$container_name" 2>&1
             return 1
         fi
     fi
 
     while [ $elapsed -lt $timeout ]; do
-        # Get current status
+        # Get current status + restart count + PID in one inspect call
+        local inspect_json
+        inspect_json=$(docker inspect --format='{{json .State}}' "$container_name" 2>/dev/null || echo "{}")
+        
         local health_status
-        health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "unknown")
+        health_status=$(echo "$inspect_json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Health',{}).get('Status','unknown'))" 2>/dev/null || echo "unknown")
         health_status=$(echo "$health_status" | tr -d '[:space:]')
-
-        # Get container running state
+        
         local running
-        running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+        running=$(echo "$inspect_json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Running',False))" 2>/dev/null || echo "False")
+        
+        local restart_count
+        restart_count=$(echo "$inspect_json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('RestartCount',0))" 2>/dev/null || echo "0")
+        
+        local current_pid
+        current_pid=$(echo "$inspect_json" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Pid',0))" 2>/dev/null || echo "0")
 
-        # Get last healthcheck output (if available)
+        # Get last healthcheck output
         local last_output
         last_output=$(docker inspect --format='{{(index .State.Health.Log 0).Output}}' "$container_name" 2>/dev/null || echo "")
-        last_output=$(echo "$last_output" | tr -d '\n' | head -c 100)
+        last_output=$(echo "$last_output" | tr -d '\n' | head -c 150)
 
         if [ "$health_status" = "healthy" ]; then
-            echo -e "${GREEN}✓ ${service_name} is healthy${NC}"
+            echo -e "${GREEN}✓ ${service_name} is healthy (pid=${current_pid})${NC}"
             return 0
         elif [ "$health_status" = "unhealthy" ]; then
             echo -e "${RED}✗ ${service_name} health check failed (status: ${health_status})${NC}"
             echo -e "${YELLOW}  Last check output: ${last_output}${NC}"
-            echo -e "${YELLOW}  Container running: ${running}${NC}"
             return 1
         fi
 
-        # Status: starting, none, unknown — keep waiting
+        # ── Crash loop detection ──
+        # If restart count jumped by 2+ since we started watching, container is crash-looping
+        if [ "$prev_restart_count" -ge 0 ] && [ "$restart_count" -ge $((prev_restart_count + 2)) ]; then
+            echo -e "${RED}✗ ${service_name} is crash-looping (restarts: ${prev_restart_count} → ${restart_count})${NC}"
+            echo -e "${YELLOW}  Last healthcheck output: ${last_output}${NC}"
+            docker logs --tail 10 "$container_name" 2>&1 | head -15
+            return 1
+        fi
+
+        # If container not running at all and has restarted, it crashed
+        if [ "$running" != "True" ] && [ "$running" != "true" ] && [ "$restart_count" -gt 0 ]; then
+            echo -e "${RED}✗ ${service_name} crashed and stopped (restarts=${restart_count}, exit code from logs)${NC}"
+            docker logs --tail 10 "$container_name" 2>&1 | head -15
+            return 1
+        fi
+        
+        # Track restart count for next iteration
+        prev_restart_count=$restart_count
+
+        # Periodic status output
         if [ $((elapsed % 10)) -eq 0 ]; then
-            echo -e "${YELLOW}  Still waiting... (${elapsed}s/${timeout}s) [status=${health_status}, running=${running}]${NC}"
+            echo -e "${YELLOW}  Still waiting... (${elapsed}s/${timeout}s) [status=${health_status}, running=${running}, restarts=${restart_count}, pid=${current_pid}]${NC}"
             if [ -n "$last_output" ]; then
                 echo -e "${YELLOW}  Last output: ${last_output}${NC}"
             fi
@@ -478,12 +514,6 @@ wait_for_healthcheck() {
     done
     
     echo -e "${RED}✗ ${service_name} health check timeout after ${timeout}s${NC}"
-    # Print final diagnostic
-    local final_status
-    final_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "unknown")
-    local final_running
-    final_running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
-    echo -e "${YELLOW}  Final status: ${final_status}, running: ${final_running}${NC}"
     docker logs --tail 10 "$container_name" 2>&1 | head -15
     return 1
 }
