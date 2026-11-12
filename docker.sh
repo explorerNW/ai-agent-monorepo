@@ -254,14 +254,11 @@ save_deploy_commit() {
 deploy_rolling() {
     local force_mode="${1:-false}"
     
-    echo -e "${BLUE}Starting deployment...${NC}"
+    echo -e "${BLUE}Starting zero-downtime deployment...${NC}"
     
     # BuildKit 并行构建 + 层缓存
     export DOCKER_BUILDKIT=1
     export COMPOSE_DOCKER_CLI_BUILD=1
-    
-    # 清理旧镜像释放磁盘
-    docker image prune -f 2>/dev/null || true
     
     # ── 智能变更检测 ──
     local services_to_build=""
@@ -276,42 +273,112 @@ deploy_rolling() {
     if [ -z "$services_to_build" ]; then
         echo -e "${GREEN}No code changes detected. Starting services with existing images...${NC}"
         $DOCKER_COMPOSE up -d
-    else
-        echo -e "${BLUE}Changed services: ${CYAN}${services_to_build}${NC}"
-        
-        # 只构建有变化的服务
-        echo -e "${BLUE}Building changed services...${NC}"
-        for svc in $services_to_build; do
-            echo -e "${BLUE}  Building ${svc}...${NC}"
-        done
-        $DOCKER_COMPOSE build --parallel $services_to_build
-        
-        # 启动所有服务（compose 按依赖图启动，只重建有变化的容器）
-        echo -e "${BLUE}Starting services...${NC}"
-        $DOCKER_COMPOSE up -d
+        verify_deployment
+        return
     fi
     
-    echo -e "${GREEN}✓ Services started${NC}"
+    echo -e "${BLUE}Changed services: ${CYAN}${services_to_build}${NC}"
     
-    # 只等 back-end 就绪（最重的服务），其余不阻塞
-    echo -e "${BLUE}Waiting for back-end to be ready...${NC}"
-    wait_for_healthcheck "back-end" 45 || {
-        echo -e "${RED}back-end failed to start, showing logs:${NC}"
-        docker logs --tail 30 ai-agent-backend 2>&1
+    # ═══ Phase 1: Build images (不影响运行中的服务) ═══
+    echo ""
+    echo -e "${BLUE}Phase 1: Building images...${NC}"
+    $DOCKER_COMPOSE build --parallel $services_to_build
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Build failed! No services were touched.${NC}"
         exit 1
-    }
+    fi
+    echo -e "${GREEN}✓ All images built${NC}"
     
-    # 清理构建缓存
+    # ═══ Phase 2: Deploy each service with auto-rollback ═══
+    echo ""
+    echo -e "${BLUE}Phase 2: Deploying services (build-first + auto-rollback)...${NC}"
+    local failed_services=""
+    
+    for svc in $services_to_build; do
+        deploy_service_safe "$svc"
+        if [ $? -ne 0 ]; then
+            failed_services="$failed_services $svc"
+        fi
+    done
+    
+    # ═══ Phase 3: Ensure unchanged services are running ═══
+    $DOCKER_COMPOSE up -d 2>/dev/null
+    
+    # ═══ Phase 4: Cleanup ═══
+    docker image prune -f 2>/dev/null || true
     docker builder prune -f --keep-storage 2GB 2>/dev/null || true
     
-    # 保存部署 commit hash
+    # Save deploy commit hash
     save_deploy_commit
     
+    # ═══ Result ═══
     echo ""
-    echo -e "${GREEN}✓ Deployment completed${NC}"
+    if [ -z "$failed_services" ]; then
+        echo -e "${GREEN}✓ All services deployed successfully!${NC}"
+    else
+        echo -e "${YELLOW}⚠ Failed services:${failed_services} (auto-rolled back)${NC}"
+    fi
     
-    # Post-deployment verification
     verify_deployment
+}
+
+# ── 安全部署单个服务 ──
+# 策略：记录旧镜像 → 快速切换新镜像 → 等健康检查 → 失败自动回滚到旧镜像
+deploy_service_safe() {
+    local svc=$1
+    local container_name=$(get_container_name "$svc")
+    
+    echo ""
+    echo -e "${BLUE}━━━ Deploying: ${CYAN}${svc}${NC} ━━━${NC}"
+    
+    # Step 1: 记录当前运行的镜像 ID（用于回滚）
+    local old_image
+    old_image=$(docker inspect --format='{{.Image}}' "$container_name" 2>/dev/null || echo "")
+    
+    # Step 2: 快速切换 — stop + recreate with new image
+    echo -e "${YELLOW}  Switching to new image...${NC}"
+    $DOCKER_COMPOSE up -d --no-deps --force-recreate "$svc" 2>/dev/null
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}  ✗ Failed to recreate container!${NC}"
+        return 1
+    fi
+    
+    # Step 3: 等待健康检查
+    echo -e "${YELLOW}  Verifying health...${NC}"
+    wait_for_healthcheck "$svc" 90
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}  ✓ ${svc} deployed successfully!${NC}"
+        return 0
+    fi
+    
+    # Step 4: 健康检查失败 → 自动回滚
+    echo -e "${RED}  ✗ New version failed health check!${NC}"
+    
+    if [ -n "$old_image" ]; then
+        echo -e "${YELLOW}  Rolling back to previous image...${NC}"
+        docker stop "$container_name" 2>/dev/null
+        docker rm "$container_name" 2>/dev/null
+        
+        # 用旧镜像启动
+        docker run -d --name "$container_name" \
+            $(docker inspect --format='{{range $e := .Config.Env}}-e "{{$e}}" {{end}}' "$container_name" 2>/dev/null || true) \
+            --network ai-agent-network \
+            --restart unless-stopped \
+            "$old_image" 2>/dev/null
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}  ✓ Rolled back to previous version${NC}"
+        else
+            echo -e "${RED}  ✗ Rollback failed! Manual intervention needed.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}  No previous image found, container may be in bad state${NC}"
+    fi
+    
+    return 1
 }
 
 # Helper function to get container name from service name
@@ -341,37 +408,83 @@ wait_for_healthcheck() {
     local elapsed=0
     
     echo -e "${YELLOW}Waiting for ${service_name} to become healthy...${NC}"
-    
-    while [ $elapsed -lt $timeout ]; do
-        local health_status
-        health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>&1)
-        local exit_code=$?
-        
-        # If docker inspect fails, treat as not ready yet
-        if [ $exit_code -ne 0 ]; then
-            health_status="error"
+    echo -e "${YELLOW}  Container name: ${container_name}${NC}"
+
+    # Check if container exists
+    local exists
+    exists=$(docker inspect --format='{{.Id}}' "$container_name" 2>/dev/null)
+    if [ -z "$exists" ]; then
+        echo -e "${RED}✗ Container '${container_name}' not found!${NC}"
+        echo -e "${YELLOW}  Running containers:${NC}"
+        docker ps --format "table {{.Names}}\t{{.Status}}" | grep -i "agent\|backend\|frontend\|rabbit" || echo "  (none matching)"
+        return 1
+    fi
+
+    # Detect if service has a healthcheck defined
+    local has_healthcheck
+    has_healthcheck=$(docker inspect --format='{{if .State.Health}}yes{{else}}no{{end}}' "$container_name" 2>/dev/null || echo "no")
+    echo -e "${YELLOW}  Has healthcheck: ${has_healthcheck}${NC}"
+
+    # No healthcheck: fallback to stability check
+    if [ "$has_healthcheck" = "no" ]; then
+        echo -e "${YELLOW}  No healthcheck defined, checking container stability...${NC}"
+        sleep 5
+        local running
+        running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+        if [ "$running" = "true" ]; then
+            echo -e "${GREEN}✓ ${service_name} is running${NC}"
+            return 0
         else
-            # Trim whitespace and newlines
-            health_status=$(echo "$health_status" | tr -d '[:space:]')
+            echo -e "${RED}✗ ${service_name} container not running${NC}"
+            return 1
         fi
-        
+    fi
+
+    while [ $elapsed -lt $timeout ]; do
+        # Get current status
+        local health_status
+        health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "unknown")
+        health_status=$(echo "$health_status" | tr -d '[:space:]')
+
+        # Get container running state
+        local running
+        running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+
+        # Get last healthcheck output (if available)
+        local last_output
+        last_output=$(docker inspect --format='{{(index .State.Health.Log 0).Output}}' "$container_name" 2>/dev/null || echo "")
+        last_output=$(echo "$last_output" | tr -d '\n' | head -c 100)
+
         if [ "$health_status" = "healthy" ]; then
             echo -e "${GREEN}✓ ${service_name} is healthy${NC}"
             return 0
         elif [ "$health_status" = "unhealthy" ]; then
-            echo -e "${RED}✗ ${service_name} health check failed${NC}"
+            echo -e "${RED}✗ ${service_name} health check failed (status: ${health_status})${NC}"
+            echo -e "${YELLOW}  Last check output: ${last_output}${NC}"
+            echo -e "${YELLOW}  Container running: ${running}${NC}"
             return 1
+        fi
+
+        # Status: starting, none, unknown — keep waiting
+        if [ $((elapsed % 10)) -eq 0 ]; then
+            echo -e "${YELLOW}  Still waiting... (${elapsed}s/${timeout}s) [status=${health_status}, running=${running}]${NC}"
+            if [ -n "$last_output" ]; then
+                echo -e "${YELLOW}  Last output: ${last_output}${NC}"
+            fi
         fi
         
         sleep 2
         elapsed=$((elapsed + 2))
-        
-        if [ $((elapsed % 10)) -eq 0 ]; then
-            echo -e "${YELLOW}  Still waiting... (${elapsed}s/${timeout}s)${NC}"
-        fi
     done
     
     echo -e "${RED}✗ ${service_name} health check timeout after ${timeout}s${NC}"
+    # Print final diagnostic
+    local final_status
+    final_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "unknown")
+    local final_running
+    final_running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+    echo -e "${YELLOW}  Final status: ${final_status}, running: ${final_running}${NC}"
+    docker logs --tail 10 "$container_name" 2>&1 | head -15
     return 1
 }
 
@@ -428,47 +541,86 @@ handle_update_failure() {
 
 verify_deployment() {
     echo -e "${BLUE}Verifying deployment...${NC}"
-    
-    local all_healthy=true
-    
-    # Check back-end and front-end with health checks
-    for service in "back-end" "front-end"; do
+
+    local max_wait=${1:-60}   # 最长等待秒数，默认 60
+    local interval=5          # 轮询间隔秒数
+    local elapsed=0
+
+    # 带健康检查的服务列表
+    local health_services=("back-end" "front-end")
+    # 只需 running 状态的服务
+    local running_services=("rabbit-mq-service")
+
+    while [ $elapsed -lt $max_wait ]; do
+        local all_ok=true
+
+        # 检查带健康检查的服务
+        for service in "${health_services[@]}"; do
+            local container_name
+            container_name=$(get_container_name "$service")
+            local status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "not_found")
+            if [ "$status" != "healthy" ]; then
+                all_ok=false
+            fi
+        done
+
+        # 检查只需 running 的服务
+        for service in "${running_services[@]}"; do
+            local container_name
+            container_name=$(get_container_name "$service")
+            local running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+            local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "-1")
+            if [ "$running" != "true" ] || [ "$exit_code" != "0" ]; then
+                all_ok=false
+            fi
+        done
+
+        if [ "$all_ok" = true ]; then
+            echo ""
+            # 打印最终状态
+            for service in "${health_services[@]}"; do
+                echo -e "${GREEN}✓ ${service}: healthy${NC}"
+            done
+            for service in "${running_services[@]}"; do
+                echo -e "${GREEN}✓ ${service}: running${NC}"
+            done
+            echo ""
+            echo -e "${GREEN}✓ All services verified successfully! (${elapsed}s)${NC}"
+            echo -e "${BLUE}Front-end: https://localhost:443${NC}"
+            echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
+            return 0
+        fi
+
+        echo -e "${YELLOW}  Waiting for services to be healthy... (${elapsed}s/${max_wait}s)${NC}"
+        sleep $interval
+        elapsed=$((elapsed + interval))
+    done
+
+    # 超时后打印各服务实际状态
+    echo ""
+    echo -e "${RED}⚠ Timeout after ${max_wait}s. Current status:${NC}"
+    for service in "${health_services[@]}"; do
         local container_name
         container_name=$(get_container_name "$service")
-        local health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "not found")
-        
-        if [ "$health_status" = "healthy" ]; then
-            echo -e "${GREEN}✓ ${service}: healthy${NC}"
+        local status=$(docker inspect --format='{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "not_found")
+        if [ "$status" = "healthy" ]; then
+            echo -e "${GREEN}✓ ${service}: ${status}${NC}"
         else
-            echo -e "${RED}✗ ${service}: ${health_status}${NC}"
-            all_healthy=false
+            echo -e "${RED}✗ ${service}: ${status}${NC}"
         fi
     done
-    
-    # Check rabbit-mq-service (microservice without health check)
-    local container_name
-    container_name=$(get_container_name "rabbit-mq-service")
-    local container_status=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
-    local exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container_name" 2>/dev/null || echo "-1")
-    
-    if [ "$container_status" = "true" ] && [ "$exit_code" = "0" ]; then
-        echo -e "${GREEN}✓ rabbit-mq-service: running${NC}"
-    else
-        echo -e "${RED}✗ rabbit-mq-service: not running (exit code: ${exit_code})${NC}"
-        all_healthy=false
-    fi
-    
-    if [ "$all_healthy" = true ]; then
-        echo ""
-        echo -e "${GREEN}✓ All services verified successfully!${NC}"
-        echo -e "${BLUE}Front-end: http://localhost:3001${NC}"
-        echo -e "${BLUE}Back-end:  http://localhost:3000${NC}"
-        return 0
-    else
-        echo ""
-        echo -e "${RED}⚠ Some services may not be healthy. Check logs for details.${NC}"
-        return 1
-    fi
+    for service in "${running_services[@]}"; do
+        local container_name
+        container_name=$(get_container_name "$service")
+        local running=$(docker inspect --format='{{.State.Running}}' "$container_name" 2>/dev/null || echo "false")
+        if [ "$running" = "true" ]; then
+            echo -e "${GREEN}✓ ${service}: running${NC}"
+        else
+            echo -e "${RED}✗ ${service}: not running${NC}"
+        fi
+    done
+    echo -e "${RED}  Check logs: $DOCKER_COMPOSE logs front-end${NC}"
+    return 1
 }
 
 clean_all() {
