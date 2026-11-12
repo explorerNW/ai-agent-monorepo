@@ -5,8 +5,7 @@ FROM node:22-slim AS dependencies
 
 WORKDIR /app
 
-ENV COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
-## https://registry.npmmirror.com http://192.168.88.118:4873
+ENV COREPACK_NPM_REGISTRY=http://192.168.88.118:4873
 
 RUN npm install -g pnpm@latest
 
@@ -29,14 +28,39 @@ COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/
 RUN --mount=type=cache,id=pnpm-store-front-end,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
-# 再复制全部源码
-COPY packages/ ./packages/
+
+# ======================
+# 2. Datatwin 基座编译（独立缓存层）
+# ======================
+# 🔑 关键优化：单独一个 stage，只有 datatwin 源码变更才会使此层失效
+# front-end 源码变更不会触发 datatwin 重编
+FROM dependencies AS datatwin-build
+
+# 只复制 datatwin 和 monitor-sdk 源码，不复制 front-end
+COPY packages/datatwin-core/ ./packages/datatwin-core/
+COPY packages/datatwin-elements/ ./packages/datatwin-elements/
+COPY packages/datatwin-react/ ./packages/datatwin-react/
+COPY packages/datatwin-chart-core/ ./packages/datatwin-chart-core/
+COPY packages/datatwin-chart-element/ ./packages/datatwin-chart-element/
+COPY packages/datatwin-chart-react/ ./packages/datatwin-chart-react/
+COPY packages/monitor-sdk/ ./packages/monitor-sdk/
+
+# 编译所有 datatwin 包
+RUN pnpm \
+    --filter='./packages/datatwin-core' \
+    --filter='./packages/datatwin-elements' \
+    --filter='./packages/datatwin-react' \
+    --filter='./packages/datatwin-chart-core' \
+    --filter='./packages/datatwin-chart-element' \
+    --filter='./packages/datatwin-chart-react' \
+    --filter='./packages/monitor-sdk' \
+    --parallel run build
 
 
 # ======================
-# 2. 构建阶段 (Builder)
+# 3. Front-end 构建（只依赖 datatwin 编译产物）
 # ======================
-FROM dependencies AS builder
+FROM datatwin-build AS builder
 
 WORKDIR /app
 
@@ -48,25 +72,16 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
-# 构建所有 workspace 包，排除 front-end 自身（避免重复构建）
-RUN pnpm \
-    --filter='./packages/datatwin-core' \
-    --filter='./packages/datatwin-elements' \
-    --filter='./packages/datatwin-react' \
-    --filter='./packages/datatwin-chart-core' \
-    --filter='./packages/datatwin-chart-element' \
-    --filter='./packages/datatwin-chart-react' \
-    --filter='./packages/monitor-sdk' \
-    --filter='!./packages/back-end' \
-    --parallel run build
+# 🔑 最后才复制 front-end 源码，这一层变更不影响上面的 datatwin 编译缓存
+COPY packages/front-end/ ./packages/front-end/
 
-# 再编译 front-end
+# 编译 front-end
 WORKDIR /app/packages/front-end
 RUN pnpm run build
 
 
 # ======================
-# 3. 生产阶段 - Nginx (Production)
+# 4. 生产阶段 - Nginx (Production)
 # ======================
 FROM nginx:alpine AS production
 
