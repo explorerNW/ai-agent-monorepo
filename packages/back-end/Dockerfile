@@ -1,7 +1,7 @@
 # ======================
 # 1. Base + Manifests（依赖清单，命中层缓存的关键层）
 # ======================
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 
 WORKDIR /app
 
