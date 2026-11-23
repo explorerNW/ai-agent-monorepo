@@ -17,7 +17,8 @@ import { McpModule } from './mcp/mcp.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // 使配置模块全局可用
-      envFilePath: '.env', // 指定 .env 文件路径
+      envFilePath: '.env', // 指定 .env 文件路径（开发环境使用）
+      ignoreEnvFile: process.env.NODE_ENV === 'production', // 生产环境优先读环境变量
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

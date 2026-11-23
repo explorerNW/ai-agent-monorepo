@@ -56,4 +56,4 @@ clickhouse-data/
 grafana-data/
 
 venv
-venv/.deploy-commit-hash
+.deploy-commit-hash

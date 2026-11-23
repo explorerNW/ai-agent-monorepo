@@ -33,3 +33,10 @@ export const dateCheck = (fromDate: Date, toDate: Date): Record<string, any> => 
 
   return { fromDay,  toDay, dayDiff, isRecentOneDay};
 };
+
+
+export function toClickHouseDateTime(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}.${pad(d.getUTCMilliseconds(), 3)}`;
+}
