@@ -191,7 +191,7 @@ detect_changed_services() {
         last_commit=$(cat "$last_commit_file")
     fi
     
-    # 首次部署 / 无记录 / force 模式 / last_commit 不存在于 git 历史 → 全量重建
+    # 首次部署 / 无记录 / last_commit 不存在于 git 历史 → 全量重建
     if [ -z "$last_commit" ] || ! git rev-parse "$last_commit" &>/dev/null; then
         echo "back-end front-end rabbit-mq-service"
         return
@@ -200,14 +200,22 @@ detect_changed_services() {
     local current_commit
     current_commit=$(git rev-parse HEAD)
     
-    if [ "$last_commit" = "$current_commit" ]; then
-        # 没有新提交
-        echo ""
-        return
+    # 收集所有变更文件：commit 间差异 + 未提交的本地修改
+    local changed_files=""
+    
+    # 1. Commit 间差异
+    if [ "$last_commit" != "$current_commit" ]; then
+        changed_files=$(git diff --name-only "$last_commit" "$current_commit" 2>/dev/null)
     fi
     
-    local changed_files
-    changed_files=$(git diff --name-only "$last_commit" "$current_commit" 2>/dev/null)
+    # 2. 未提交的本地修改（已暂存 + 未暂存）
+    local uncommitted
+    uncommitted=$(git diff --name-only HEAD 2>/dev/null; git diff --name-only --cached 2>/dev/null)
+    
+    # 合并并去重
+    if [ -n "$uncommitted" ]; then
+        changed_files=$(printf '%s\n' "$changed_files" "$uncommitted" | grep -v '^$' | sort -u)
+    fi
     
     if [ -z "$changed_files" ]; then
         echo ""
@@ -217,10 +225,13 @@ detect_changed_services() {
     local services=()
     local rebuild_all=false
     
-    # 根目录文件变更 → 全部重建
+    # 映射文件变更到服务
     while IFS= read -r file; do
+        # 跳过 .deploy-commit-hash 自身（已在 .gitignore 中）
+        [ "$file" = ".deploy-commit-hash" ] && continue
+        
         case "$file" in
-            docker-compose.yml|docker-compose*.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.npmrc)
+            docker-compose.yml|docker-compose*.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml)
                 rebuild_all=true
                 ;;
             packages/front-end/*)
@@ -231,6 +242,14 @@ detect_changed_services() {
                 ;;
             packages/back-end/*)
                 services+=("back-end")
+                ;;
+            # 以下文件不是 Docker 构建上下文，变更不触发重建：
+            #   docker.sh    — 部署脚本，不影响任何镜像
+            #   .npmrc       — registry 配置已通过 ARG NPM_REGISTRY 传入
+            #   .gitignore   — 不影响构建
+            #   .secrets     — 运行时文件
+            .npmrc|docker.sh|.gitignore|.secrets|.deploy-commit-hash)
+                # 跳过，不触发任何重建
                 ;;
         esac
     done <<< "$changed_files"
@@ -272,8 +291,9 @@ deploy_rolling() {
     fi
     
     if [ -z "$services_to_build" ]; then
-        echo -e "${GREEN}No code changes detected. Starting services with existing images...${NC}"
-        $DOCKER_COMPOSE up -d
+        echo -e "${GREEN}No code changes detected. Ensuring all services are running...${NC}"
+        # 🔑 只启动已停止的容器，不重建任何容器（避免服务停机）
+        $DOCKER_COMPOSE up -d --no-recreate 2>/dev/null
         verify_deployment
         return
     fi

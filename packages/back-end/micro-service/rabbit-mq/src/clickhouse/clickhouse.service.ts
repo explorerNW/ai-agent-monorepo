@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { createClient, ClickHouseClient } from '@clickhouse/client';
-import { dateCheck, fmt, formatTimestamp } from './tools';
+import { dateCheck, fmt, formatTimestamp, toClickHouseDateTime } from './tools';
 
 interface APIMetricData {
   url?: string;
@@ -166,7 +166,7 @@ export class ClickHouseService implements OnModuleDestroy {
       id: Math.floor(Date.now() / 1000),
       pageUrl: this.sanitizeString(data.pageUrl),
       userAgent: this.sanitizeString(data.userAgent),
-      timestamp: Number(data.timestamp),
+      timestamp: toClickHouseDateTime(Number(data.timestamp)),
       fcp: data.eventData?.fcp != null ? Number(data.eventData.fcp) : null,
       lcp: data.eventData?.lcp != null ? Number(data.eventData.lcp) : null,
       cls: data.eventData?.cls != null ? Number(data.eventData.cls) : null,
@@ -220,6 +220,7 @@ export class ClickHouseService implements OnModuleDestroy {
   }
 
   async insertAPIData(data: APIMetricData) {
+    // this.logger.log('Inserting API data---->', data);
     const record: APIRecord = {
       id: Math.floor(Date.now() / 1000),
       url: this.sanitizeString(data.eventData.url),
@@ -229,7 +230,7 @@ export class ClickHouseService implements OnModuleDestroy {
       size: data.size != null ? Number(data.size) : null,
       pageUrl: this.sanitizeString(data.pageUrl),
       userAgent: this.sanitizeString(data.userAgent),
-      timestamp: Number(data.timestamp),
+      timestamp: toClickHouseDateTime(Number(data.timestamp)),
     };
 
     this.apiBuffer.push(record);

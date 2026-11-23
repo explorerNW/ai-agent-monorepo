@@ -62,7 +62,6 @@ export class AppController {
     @Payload() data: { fromDate: string; toDate: string },
   ) {
     try {
-      this.logger.log('Received performance summary request:', data);
       return await this.clickHouseService.getPerformanceSummary(
         new Date(data.fromDate),
         new Date(data.toDate),
