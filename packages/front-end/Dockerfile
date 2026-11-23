@@ -28,7 +28,17 @@ COPY packages/datatwin-chart-element/package.json ./packages/datatwin-chart-elem
 COPY packages/datatwin-elements/package.json ./packages/datatwin-elements/
 
 # 🔑 加 --prefer-offline 优先使用本地缓存
-RUN --mount=type=cache,id=pnpm-store-front-end,target=/root/.local/share/pnpm/store \
+# 🔑 同时缓存 store 和 node_modules
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    --mount=type=cache,id=pnpm-nm-root,target=/app/node_modules \
+    --mount=type=cache,id=pnpm-nm-fe,target=/app/packages/front-end/node_modules \
+    --mount=type=cache,id=pnpm-nm-dt-core,target=/app/packages/datatwin-core/node_modules \
+    --mount=type=cache,id=pnpm-nm-dt-react,target=/app/packages/datatwin-react/node_modules \
+    --mount=type=cache,id=pnpm-nm-dt-elements,target=/app/packages/datatwin-elements/node_modules \
+    --mount=type=cache,id=pnpm-nm-chart-core,target=/app/packages/datatwin-chart-core/node_modules \
+    --mount=type=cache,id=pnpm-nm-chart-react,target=/app/packages/datatwin-chart-react/node_modules \
+    --mount=type=cache,id=pnpm-nm-chart-element,target=/app/packages/datatwin-chart-element/node_modules \
+    --mount=type=cache,id=pnpm-nm-monitor,target=/app/packages/monitor-sdk/node_modules \
     pnpm install --frozen-lockfile --prod=false --ignore-scripts --prefer-offline
 
 
