@@ -1,7 +1,7 @@
 # ======================
 # 1. 依赖安装阶段 (Dependencies)
 # ======================
-FROM node:22-alpine AS dependencies
+FROM node:22-slim AS dependencies
 
 WORKDIR /app
 
